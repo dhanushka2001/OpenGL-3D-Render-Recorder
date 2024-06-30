@@ -11,5 +11,8 @@ Using www.learnopengl.com as my main resource
 * I feel like 3 fragment shaders, 3 VBOs, 3VAOs, and 3EBOs is overkill just to render 3 different colors for 3 sets of 2 triangles. There's probably a way to have all 6 triangles in one VBO with their color attributes also included.
   This will probably be explained in the next chapters.
 
+![OpenGL EBO explained](images/OpenGL_EBO.png)
+![LearnOpenGL 3D RGB cube](images/learnopengl.png)
+
 ## License
 GNU General Public License v3.0
