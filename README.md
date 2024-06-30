@@ -13,6 +13,7 @@ Using www.learnopengl.com as my main resource
 
 ![OpenGL EBO explained](images/OpenGL_EBO.png)
 ![LearnOpenGL 3D RGB cube](images/learnopengl.png)
+![LearnOpenGL 3D RGB cube](images/learnopengl2.png)
 
 ## License
 GNU General Public License v3.0
