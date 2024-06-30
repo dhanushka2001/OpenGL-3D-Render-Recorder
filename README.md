@@ -8,7 +8,7 @@ Using www.learnopengl.com as my main resource
 * The VAO essentially stores the pointers (memory addresses) for all the vertex attributes (position, color, etc.) in a specific VBO, which stores the actual values of those vertex attributes.
 * An EBO fixes the issue of duplicate vertices when they overlap by storing only the unique vertices and an index to render them in the correct order.
 * Was able to render a static 3D RGB cube using 3 fragment shaders and 3 VBOs, 3VAOs, and 3 EBOs.
-* I feel like 3 fragment shaders, 3 VBOs, 3VAOs, and 3EBOs is overkill just to render 3 different colors for 3 sets of 2 triangles. There's probably a way to have all 6 triangles in one VBO with their color attributes also included.
+* I feel like 3 fragment shaders, 3 VBOs, 3VAOs, and 3 EBOs is overkill just to render 3 different colors for 3 sets of 2 triangles. There's probably a way to have all 6 triangles in one VBO with their color attributes also included.
   This will probably be explained in the next chapters.
 
 ![OpenGL EBO explained](images/OpenGL_EBO.png)
