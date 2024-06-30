@@ -3,7 +3,7 @@
 Learning to use OpenGL (and OpenCL) so I can do high performance scientific computing and modelling on the GPU.
 Using www.learnopengl.com as my main resource
 
-## Progress update 1 - 30/06/24
+## Progress update 1 - Hello Triangle - 30/06/24
 * I understand how VBOs (vertex buffer objects), VAOs (vertex array objects), and EBOs (element buffer objects) work and why we need them.
 * The VAO essentially stores the pointers (memory addresses) for all the vertex attributes (position, color, etc.) in a specific VBO, which stores the actual values of those vertex attributes.
 * An EBO fixes the issue of duplicate vertices when they overlap by storing only the unique vertices and an index to render them in the correct order.
