@@ -12,7 +12,7 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 const char *vertexShaderSource = "#version 330 core\n"
-    "layout (location = 0) in vec3 aPos;\n"   // the position variable has attribute position 0      
+    "layout (location = 0) in vec3 aPos;\n"   // the position variable has attribute position 0
     "layout (location = 1) in vec3 aColor;\n" // the color variable has attribute position 1
     "out vec3 ourColor;\n" // output a color to the fragment shader
     "void main()\n"
@@ -110,10 +110,10 @@ int main()
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     float vertices[] = {
-    // positions           // colors
-     0.5f, -0.5f, 0.0f,    1.0f, 0.0f, 0.0f,   // bottom right
-    -0.5f, -0.5f, 0.0f,    0.0f, 1.0f, 0.0f,   // bottom left
-     0.0f,  0.5f, 0.0f,    0.0f, 0.0f, 1.0f    // top 
+   // positions         // colors
+     0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
+    -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
+     0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
     };    
     
     // ..:: Initialization code (done once (unless your object frequently changes)) :: ..

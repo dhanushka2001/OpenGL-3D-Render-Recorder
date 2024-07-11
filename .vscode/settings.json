@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "glad.h": "c"
+        "glad.h": "c",
+        "cmath": "cpp",
+        "iostream": "cpp"
     }
 }
