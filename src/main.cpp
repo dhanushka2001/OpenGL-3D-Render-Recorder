@@ -105,7 +105,7 @@ int main()
         ourShader.use();
 
         // update the color
-        float timeValue = 100*glfwGetTime();
+        float timeValue = 1*glfwGetTime();
         float newvertices[] = {
         // positions         // colors
         xRotate(0.7f, 0.0f, timeValue), yRotate(0.7f, 0.0f, timeValue), 0.0f,  redValue(timeValue),           greenValue(timeValue),          blueValue(timeValue),  // bottom right
