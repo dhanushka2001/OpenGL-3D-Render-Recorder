@@ -5,8 +5,14 @@
 
 #include <iostream>
 
+# define M_PI           3.14159265358979323846
+#include <cmath>
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
+float redValue(float timeValue);
+float blueValue(float timeValue);
+float greenValue(float timeValue);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -66,7 +72,7 @@ int main()
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
@@ -93,9 +99,22 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // render the triangle
+        // activate the shader
         ourShader.use();
+
+        // update the uniform color
+        float timeValue = glfwGetTime();
+        float newvertices[] = {
+        // positions         // colors
+         0.5f, -0.5f, 0.0f,  redValue(timeValue),           greenValue(timeValue),          blueValue(timeValue),  // bottom right
+        -0.5f, -0.5f, 0.0f,  redValue(timeValue+2*M_PI/3),  greenValue(timeValue+2*M_PI/3), blueValue(timeValue+2*M_PI/3),  // bottom left
+         0.0f,  0.5f, 0.0f,  redValue(timeValue+4*M_PI/3),  greenValue(timeValue+4*M_PI/3), blueValue(timeValue+4*M_PI/3)   // top 
+        };
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(newvertices), newvertices, GL_DYNAMIC_DRAW);
         ourShader.setFloat("xOffset", offset);
+
+        // render the triangle
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -131,4 +150,22 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
+}
+
+float redValue(float timeValue)
+{
+    float redValue = cos(timeValue) / 2.0f + 0.5f;
+    return redValue;
+}
+
+float greenValue(float timeValue)
+{
+    float greenValue = sin(timeValue - M_PI/6) / 2.0f + 0.5f;
+    return greenValue;
+}
+
+float blueValue(float timeValue)
+{
+    float blueValue = -(cos(timeValue) - M_PI/3) / 2.0f + 0.5f;
+    return blueValue;
 }
