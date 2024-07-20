@@ -24,7 +24,7 @@ Using www.learnopengl.com as my main resource
 [![Watch the video](https://img.youtube.com/vi/yrFo1_Izlk0/maxresdefault.jpg)](https://www.youtube.com/watch?v=yrFo1_Izlk0)
 * At 21:11 it talks about the specifier and how you can omit the specifier but if you don't then you can change the variable name in the next shader, and vertex attributes and uniforms are stored in different arrays so you can have seemingly two different variables stored in "location=0" but they are actually in different arrays.
 
-![Green animated triangle](images/shaders.mp4)
+https://github.com/user-attachments/assets/e2bdee00-6a7d-4f6b-a29b-513f5611c3d3
 * This animation was done by storing a green color uniform variable in the render loop that changes over time, this uniform variable can be accessed by the fragment shader to render the triangle with a changing color.
 ![Rainbow triangle](images/rainbow-shader.png)
 * This rainbow triangle was done by storing a red, green, and blue color value as a second vertex attribute for each of the 3 vertices. "Fragment interpolation" occurs, where a linear combination of the colors is used for all the fragments (can think of them as pixels) between the 3 vertices.
