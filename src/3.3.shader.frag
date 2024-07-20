@@ -1,8 +1,8 @@
 #version 430 core
-out vec4 FragColor;
+layout (location = 0) out vec4 FragColor;
 
 layout (location = 2) in vec4 ourPosition;
-layout (location = 3) in vec3 ourColor;
+//layout (location = 3) in vec3 ourColor;
 
 void main()
 {
