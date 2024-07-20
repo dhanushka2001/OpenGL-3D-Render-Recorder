@@ -20,16 +20,18 @@ Using www.learnopengl.com as my main resource
 * Removed the vertex shader and fragment shader GLSL code from the main.cpp file and put them into separate "shader.vert" and "shader.frag" text files (I recommend installing a GLSL syntax highlighter extension).
 * Made a shader class and header file that can handle retrieving source code; compiling, linking, deleting, and activating shaders; defining utility functions; and handling errors.
 * I understand what uniform variables are (basically global variables that all shaders can access), you need to define them in the main.cpp file and give them to the shader (using utility uniform functions if you have a separate shader header file, or just by giving the uniform location with "glUniform[](...))".
-* Switched from OpenGL 3.3 to 4.3 so that I can specify the "layout (location=...)" for uniforms, for some reason in OpenGL 3.3 that didn't work. This is a really nice video that helped me understand the "layout (location=...)" specifier:
+* Switched from OpenGL 3.3 to 4.3 so that I can specify the "layout (location=...)" for uniforms, for some reason in OpenGL 3.3 that didn't work. This is a really nice video that helped me understand the "layout (location=...)" specifier. At 21:11 it talks about the specifier and how you can omit the specifier but if you don't then you can change the variable name in the next shader, and vertex attributes and uniforms are stored in different arrays so you can have seemingly two different variables stored in "location=0" but they are actually in different arrays.
 [![Watch the video](https://img.youtube.com/vi/yrFo1_Izlk0/maxresdefault.jpg)](https://www.youtube.com/watch?v=yrFo1_Izlk0)
-* At 21:11 it talks about the specifier and how you can omit the specifier but if you don't then you can change the variable name in the next shader, and vertex attributes and uniforms are stored in different arrays so you can have seemingly two different variables stored in "location=0" but they are actually in different arrays.
+
+* This animation was done by storing a green color uniform variable in the render loop that changes over time, this uniform variable can be accessed by the fragment shader to render the triangle with a changing color.
 
 https://github.com/user-attachments/assets/e2bdee00-6a7d-4f6b-a29b-513f5611c3d3
-* This animation was done by storing a green color uniform variable in the render loop that changes over time, this uniform variable can be accessed by the fragment shader to render the triangle with a changing color.
-![Rainbow triangle](images/rainbow-shader.png)
+
 * This rainbow triangle was done by storing a red, green, and blue color value as a second vertex attribute for each of the 3 vertices. "Fragment interpolation" occurs, where a linear combination of the colors is used for all the fragments (can think of them as pixels) between the 3 vertices.
+![Rainbow triangle](images/rainbow-shader.png)
+
+* This flipped offset gradient color triangle was done by setting an offset float variable in the main.cpp file, then setting it as a uniform in the render loop using the utility uniform functions created in the shader header file. The weird colors were done by defining the FragColor to be the positions of the 3 vertices rather than the color (Exercise 3), and fragment interpolation causes the gradient effect. (One thing to note is that if you input a negative float into one of the RGB channels it will be clamped to 0.0f (black)). 
 ![Interpolated flipped triangle with uniform offset](images/rainbow-shader2.png)
-* This flipped offset gradient color triangle was done by setting an offset float variable in the main.cpp file, then setting it as a uniform in the render loop using the utility uniform functions created in the shader header file. The weird colors were done by defining the FragColor to be the positions of the 3 vertices rather than the color (Exercise 3), and fragment interpolation causes the gradient effect. 
 
 ## License
 GNU General Public License v3.0
