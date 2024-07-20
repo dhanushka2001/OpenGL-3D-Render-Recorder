@@ -13,10 +13,12 @@ void processInput(GLFWwindow *window);
 float redValue(float timeValue);
 float blueValue(float timeValue);
 float greenValue(float timeValue);
+float xRotate(float r, float theta, float timeValue);
+float yRotate(float r, float theta, float timeValue);
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1440;
+const unsigned int SCR_HEIGHT = 1440;
 
 int main()
 {
@@ -59,9 +61,9 @@ int main()
     // ------------------------------------------------------------------
     float vertices[] = {
         // positions         // colors
-         0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  // bottom right
-        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  // bottom left
-         0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top 
+         1.0f, -1.0f, 0.0f,  1.0f, 0.0f, 0.0f,  // bottom right
+        -1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // bottom left
+         0.0f,  (float)sqrt(3), 0.0f,  0.0f, 0.0f, 1.0f   // top 
     };
     float offset = 0.5f;
 
@@ -102,13 +104,13 @@ int main()
         // activate the shader
         ourShader.use();
 
-        // update the uniform color
-        float timeValue = glfwGetTime();
+        // update the color
+        float timeValue = 100*glfwGetTime();
         float newvertices[] = {
         // positions         // colors
-         0.5f, -0.5f, 0.0f,  redValue(timeValue),           greenValue(timeValue),          blueValue(timeValue),  // bottom right
-        -0.5f, -0.5f, 0.0f,  redValue(timeValue+2*M_PI/3),  greenValue(timeValue+2*M_PI/3), blueValue(timeValue+2*M_PI/3),  // bottom left
-         0.0f,  0.5f, 0.0f,  redValue(timeValue+4*M_PI/3),  greenValue(timeValue+4*M_PI/3), blueValue(timeValue+4*M_PI/3)   // top 
+        xRotate(0.7f, 0.0f, timeValue), yRotate(0.7f, 0.0f, timeValue), 0.0f,  redValue(timeValue),           greenValue(timeValue),          blueValue(timeValue),  // bottom right
+        xRotate(0.7f, (float)2*M_PI/3, timeValue), yRotate(0.7f, (float)2*M_PI/3, timeValue), 0.0f, redValue(timeValue+2*M_PI/3),  greenValue(timeValue+2*M_PI/3), blueValue(timeValue+2*M_PI/3),  // bottom left
+        xRotate(0.7f, (float)4*M_PI/3, timeValue), yRotate(0.7f, (float)4*M_PI/3, timeValue), 0.0f, redValue(timeValue+4*M_PI/3),  greenValue(timeValue+4*M_PI/3), blueValue(timeValue+4*M_PI/3)   // top 
         };
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(newvertices), newvertices, GL_DYNAMIC_DRAW);
@@ -168,4 +170,20 @@ float blueValue(float timeValue)
 {
     float blueValue = -(cos(timeValue) - M_PI/3) / 2.0f + 0.5f;
     return blueValue;
+}
+
+float xRotate(float r, float theta, float timeValue)
+{
+    float x = r*cos(theta);
+    float y = r*sin(theta);
+    float xRotate = x*cos(timeValue) - y*sin(timeValue);
+    return xRotate;
+}
+
+float yRotate(float r, float theta, float timeValue)
+{
+    float x = r*cos(theta);
+    float y = r*sin(theta);
+    float yRotate = x*sin(timeValue) + y*cos(timeValue);
+    return yRotate;
 }
