@@ -15,5 +15,12 @@ Using www.learnopengl.com as my main resource
 ![LearnOpenGL 3D RGB cube](images/learnopengl.png)
 ![LearnOpenGL 3D RGB cube](images/learnopengl2.png)
 
+## Progress update 2 - Shaders - 20/07/24
+* Gave each vertex a color attribute as well as a position attribute, so instead of having 3 VBOs, 3 VAOs, and 3 EBOs, we just have 1 of each and 2 vertex attributes. One for each object makes sense (I assume when we get to rendering 1000s of identical objects we will encounter "instancing").
+* Removed the vertex shader and fragment shader GLSL code from the main.cpp file and put them into separate shader.vert and shader.frag text files (recommend installing a GLSL syntax highlighter extension).
+* Made a shader class and header file that can handle retrieving source code; compiling, linking, deleting, and activating shaders; defining utility functions; and handling errors.
+* I understand what uniform variables are (basically global variables that all shaders can access), you need to define them in the main.cpp file and give them to the shader (using utility uniform functions if you have a separate shader header file, or just by giving the uniform location with glUniform[](...)).
+* Switched from OpenGL 3.3 to 4.3 so that I can specify the layout (location=...) for uniforms, for some reason in OpenGL 3.3 that didn't work.
+
 ## License
 GNU General Public License v3.0
