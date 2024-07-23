@@ -66,6 +66,9 @@ int main()
          0.0f,  (float)sqrt(3), 0.0f,  0.0f, 0.0f, 1.0f   // top 
     };
     float offset = 0.5f;
+    float r = 0.7f;
+    float ang_vel = 1.0f;
+    float color_vel = 1.0f;
 
     unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO);
@@ -105,14 +108,12 @@ int main()
         ourShader.use();
 
         // update the color
-        float timeValue = 1*glfwGetTime();
-        float r = 0.7f;
-        float ang_vel = 1.0f;
+        float timeValue = glfwGetTime();
         float newvertices[] = {
         // positions         // colors
-        xRotate(r,            0.0f, ang_vel*timeValue), yRotate(r,            0.0f, ang_vel*timeValue), 0.0f, redValue(timeValue),           greenValue(timeValue),          blueValue(timeValue),           // bottom right
-        xRotate(r, (float)2*M_PI/3, ang_vel*timeValue), yRotate(r, (float)2*M_PI/3, ang_vel*timeValue), 0.0f, redValue(timeValue+2*M_PI/3),  greenValue(timeValue+2*M_PI/3), blueValue(timeValue+2*M_PI/3),  // bottom left
-        xRotate(r, (float)4*M_PI/3, ang_vel*timeValue), yRotate(r, (float)4*M_PI/3, ang_vel*timeValue), 0.0f, redValue(timeValue+4*M_PI/3),  greenValue(timeValue+4*M_PI/3), blueValue(timeValue+4*M_PI/3)   // top 
+        xRotate(r,            0.0f, ang_vel*timeValue), yRotate(r,            0.0f, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue),           greenValue(color_vel*timeValue),          blueValue(color_vel*timeValue),           // bottom right
+        xRotate(r, (float)2*M_PI/3, ang_vel*timeValue), yRotate(r, (float)2*M_PI/3, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue+2*M_PI/3),  greenValue(color_vel*timeValue+2*M_PI/3), blueValue(color_vel*timeValue+2*M_PI/3),  // bottom left
+        xRotate(r, (float)4*M_PI/3, ang_vel*timeValue), yRotate(r, (float)4*M_PI/3, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue+4*M_PI/3),  greenValue(color_vel*timeValue+4*M_PI/3), blueValue(color_vel*timeValue+4*M_PI/3)   // top 
         };
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(newvertices), newvertices, GL_DYNAMIC_DRAW);
