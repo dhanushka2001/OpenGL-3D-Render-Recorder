@@ -106,11 +106,13 @@ int main()
 
         // update the color
         float timeValue = 1*glfwGetTime();
+        float r = 0.7f;
+        float ang_vel = 1.0f;
         float newvertices[] = {
         // positions         // colors
-        xRotate(0.7f, 0.0f, timeValue), yRotate(0.7f, 0.0f, timeValue), 0.0f,  redValue(timeValue),           greenValue(timeValue),          blueValue(timeValue),  // bottom right
-        xRotate(0.7f, (float)2*M_PI/3, timeValue), yRotate(0.7f, (float)2*M_PI/3, timeValue), 0.0f, redValue(timeValue+2*M_PI/3),  greenValue(timeValue+2*M_PI/3), blueValue(timeValue+2*M_PI/3),  // bottom left
-        xRotate(0.7f, (float)4*M_PI/3, timeValue), yRotate(0.7f, (float)4*M_PI/3, timeValue), 0.0f, redValue(timeValue+4*M_PI/3),  greenValue(timeValue+4*M_PI/3), blueValue(timeValue+4*M_PI/3)   // top 
+        xRotate(r,            0.0f, ang_vel*timeValue), yRotate(r,            0.0f, ang_vel*timeValue), 0.0f, redValue(timeValue),           greenValue(timeValue),          blueValue(timeValue),           // bottom right
+        xRotate(r, (float)2*M_PI/3, ang_vel*timeValue), yRotate(r, (float)2*M_PI/3, ang_vel*timeValue), 0.0f, redValue(timeValue+2*M_PI/3),  greenValue(timeValue+2*M_PI/3), blueValue(timeValue+2*M_PI/3),  // bottom left
+        xRotate(r, (float)4*M_PI/3, ang_vel*timeValue), yRotate(r, (float)4*M_PI/3, ang_vel*timeValue), 0.0f, redValue(timeValue+4*M_PI/3),  greenValue(timeValue+4*M_PI/3), blueValue(timeValue+4*M_PI/3)   // top 
         };
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(newvertices), newvertices, GL_DYNAMIC_DRAW);
