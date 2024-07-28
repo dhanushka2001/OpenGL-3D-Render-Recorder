@@ -13,15 +13,10 @@
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-float redValue(float timeValue);
-float blueValue(float timeValue);
-float greenValue(float timeValue);
-float xRotate(float r, float theta, float timeValue);
-float yRotate(float r, float theta, float timeValue);
 
 // settings
-const unsigned int SCR_WIDTH = 1080;
-const unsigned int SCR_HEIGHT = 1080;
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
 
 int main()
 {
@@ -79,22 +74,60 @@ int main()
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+    // once a VAO is bound, any subsequent vertex attribute calls will be stored inside that VAO. (only have to make the calls once)
     glBindVertexArray(VAO);
 
+    // copy our vertices array in a buffer for OpenGL to use
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // The last element buffer object (EBO) that gets bound while a VAO is bound, is stored as that VAO's EBO.
+    // Binding to a VAO then also automatically binds that EBO.
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    // texture coord attribute
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
     // glBindVertexArray(0);
 
+    // uncomment this call to draw in wireframe polygons.
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    // load and create a texture 
+    // -------------------------
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // load image, create texture and generate mipmaps
+    int width, height, nrChannels;
+    // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
+    unsigned char *data = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
 
     // render loop
     // -----------
@@ -109,24 +142,13 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // activate the shader
+        // bind Texture
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        // render container
         ourShader.use();
-
-        // update the color
-        float timeValue = glfwGetTime();
-        float newvertices[] = {
-        // positions                                                                            // colors
-        xRotate(r,     0.0f, ang_vel*timeValue), yRotate(r,     0.0f, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue),           greenValue(color_vel*timeValue),          blueValue(color_vel*timeValue),           // bottom right
-        xRotate(r, 2*M_PI/3, ang_vel*timeValue), yRotate(r, 2*M_PI/3, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue+2*M_PI/3),  greenValue(color_vel*timeValue+2*M_PI/3), blueValue(color_vel*timeValue+2*M_PI/3),  // bottom left
-        xRotate(r, 4*M_PI/3, ang_vel*timeValue), yRotate(r, 4*M_PI/3, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue+4*M_PI/3),  greenValue(color_vel*timeValue+4*M_PI/3), blueValue(color_vel*timeValue+4*M_PI/3)   // top 
-        };
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(newvertices), newvertices, GL_DYNAMIC_DRAW);
-        ourShader.setFloat("xOffset", offset);
-
-        // render the triangle
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -138,6 +160,7 @@ int main()
     // ------------------------------------------------------------------------
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -160,38 +183,4 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
-}
-
-float redValue(float timeValue)
-{
-    float redValue = cos(timeValue) / 2.0f + 0.5f;
-    return redValue;
-}
-
-float greenValue(float timeValue)
-{
-    float greenValue = sin(timeValue - M_PI/6) / 2.0f + 0.5f;
-    return greenValue;
-}
-
-float blueValue(float timeValue)
-{
-    float blueValue = -(cos(timeValue) - M_PI/3) / 2.0f + 0.5f;
-    return blueValue;
-}
-
-float xRotate(float r, float theta, float timeValue)
-{
-    float x = r*cos(theta);
-    float y = r*sin(theta);
-    float xRotate = x*cos(timeValue) - y*sin(timeValue);
-    return xRotate;
-}
-
-float yRotate(float r, float theta, float timeValue)
-{
-    float x = r*cos(theta);
-    float y = r*sin(theta);
-    float yRotate = x*sin(timeValue) + y*cos(timeValue);
-    return yRotate;
 }
