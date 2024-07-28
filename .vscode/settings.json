@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "glad.h": "c",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "xstring": "cpp",
+        "xutility": "cpp"
     }
 }
