@@ -5,7 +5,6 @@
             "label": "C/C++: gcc.exe build active file",
             "command": "C:\\msys64\\mingw64\\bin\\g++.exe",
             "args": [
-                //"-fdiagnostics-color=always",
                 "-g",
                 "-Wall",
                 "-std=c++17",
