@@ -251,8 +251,8 @@ int main()
 
         // "index" is used to read pixels from framebuffer to a PBO
         // "nextIndex" is used to update pixels in the other PBO
-        index = (index + 1) % 2;
-        nextIndex = (index + 1) % 2;
+        index = (index + 1) % PBO_COUNT;
+        nextIndex = (index + 1) % PBO_COUNT;
         GLsizei stride = CHANNEL_COUNT * SCR_WIDTH;
         //stride += (stride % 4) ? (4 - stride % 4) : 0;
         //glPixelStorei(GL_PACK_ALIGNMENT, 4);
