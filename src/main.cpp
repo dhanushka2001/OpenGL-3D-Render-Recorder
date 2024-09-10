@@ -32,10 +32,17 @@ void saveImage(char* filepath, GLFWwindow* window);
 const unsigned int SCR_WIDTH = 1080;
 const unsigned int SCR_HEIGHT = 1080;
 const unsigned int CHANNEL_COUNT = 3;
-
 const int DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
 const int PBO_COUNT = 2;
+const int msaa = 4;
+const bool offscreen_render = 1;
+int frame = 0;
+int index = 0;
+int nextIndex = 1;
+// int index_stride = 0;
 GLuint pboIds[PBO_COUNT];
+GLuint fboMsaaId, rboColorId, rboDepthId;
+GLuint fboId, rboId;
 
 int main()
 {
@@ -107,35 +114,55 @@ int main()
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
     // glBindVertexArray(0);
 
-    int frame = 0;
+    if (offscreen_render)
+    {
+        // create 2 pixel buffer objects, you need to delete them when program exits.
+        // glBufferData() with NULL pointer reserves only memory space.
+        glGenBuffers(PBO_COUNT, pboIds);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[0]);
+        glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[1]);
+        glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
 
-    int index = 0;
-    int nextIndex = 1;
-    // int index_stride = 0;
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
-    // create 2 pixel buffer objects, you need to delete them when program exits.
-    // glBufferData() with NULL pointer reserves only memory space.
-    glGenBuffers(PBO_COUNT, pboIds);
-    glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[0]);
-    glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
-    glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[1]);
-    glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
+        //Somewhere at initialization
+        /*  Framebuffer */
+        glGenFramebuffers(1,&fboMsaaId);
+        glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
 
-    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+        /* 4x MSAA renderbuffer object for colorbuffer */
+        glGenRenderbuffers(1,&rboColorId);
+        glBindRenderbuffer(GL_RENDERBUFFER, rboColorId);
+        /* Storage must be one of: */
+        /* GL_RGBA4, GL_RGB565, GL_RGB5_A1, GL_DEPTH_COMPONENT16, GL_STENCIL_INDEX8. */
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa, GL_RGBA4, SCR_WIDTH, SCR_HEIGHT);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rboColorId);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        
+        /* 4x MSAA renderbuffer object for depthbuffer */
+        glGenRenderbuffers(1, &rboDepthId);
+        glBindRenderbuffer(GL_RENDERBUFFER, rboDepthId);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
 
-    //Somewhere at initialization
-    /*  Framebuffer */
-    GLuint fbo, render_buf;
-    glGenFramebuffers(1,&fbo);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+        // attach depthbuffer image to FBO
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER,       // 1. fbo target: GL_FRAMEBUFFER
+                                GL_DEPTH_ATTACHMENT,  // 2. depth attachment point
+                                GL_RENDERBUFFER,      // 3. rbo target: GL_RENDERBUFFER
+                                rboDepthId);          // 4. rbo ID
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-    /* Color renderbuffer. */
-    glGenRenderbuffers(1,&render_buf);
-    glBindRenderbuffer(GL_RENDERBUFFER, render_buf);
-    /* Storage must be one of: */
-    /* GL_RGBA4, GL_RGB565, GL_RGB5_A1, GL_DEPTH_COMPONENT16, GL_STENCIL_INDEX8. */
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA4, SCR_WIDTH, SCR_HEIGHT);
-    glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, render_buf);
+        // create a normal (no MSAA) FBO to hold a render-to-texture
+        glGenFramebuffers(1, &fboId);
+        glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+
+        glGenRenderbuffers(1, &rboId);
+        glBindRenderbuffer(GL_RENDERBUFFER, rboId);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA4, SCR_WIDTH, SCR_HEIGHT);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rboId);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    }
+
 
     // render loop
     // -----------
@@ -145,8 +172,11 @@ int main()
         // -----
         processInput(window);
 
-        //Before drawing
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+        if (offscreen_render)
+        {
+            //Before drawing
+            glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+        }
 
         // render
         // ------
@@ -159,10 +189,10 @@ int main()
         // update the color
         float timeValue = glfwGetTime();
         float newvertices[] = {
-        // positions                                                                            // colors
-        xRotate(r,     0.0f, ang_vel*timeValue), yRotate(r,     0.0f, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue),           greenValue(color_vel*timeValue),          blueValue(color_vel*timeValue),           // bottom right
-        xRotate(r, 2*M_PI/3, ang_vel*timeValue), yRotate(r, 2*M_PI/3, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue+2*M_PI/3),  greenValue(color_vel*timeValue+2*M_PI/3), blueValue(color_vel*timeValue+2*M_PI/3),  // bottom left
-        xRotate(r, 4*M_PI/3, ang_vel*timeValue), yRotate(r, 4*M_PI/3, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue+4*M_PI/3),  greenValue(color_vel*timeValue+4*M_PI/3), blueValue(color_vel*timeValue+4*M_PI/3)   // top 
+            // positions                                                                            // colors
+            xRotate(r,     0.0f, ang_vel*timeValue), yRotate(r,     0.0f, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue),           greenValue(color_vel*timeValue),          blueValue(color_vel*timeValue),           // bottom right
+            xRotate(r, 2*M_PI/3, ang_vel*timeValue), yRotate(r, 2*M_PI/3, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue+2*M_PI/3),  greenValue(color_vel*timeValue+2*M_PI/3), blueValue(color_vel*timeValue+2*M_PI/3),  // bottom left
+            xRotate(r, 4*M_PI/3, ang_vel*timeValue), yRotate(r, 4*M_PI/3, ang_vel*timeValue), 0.0f, redValue(color_vel*timeValue+4*M_PI/3),  greenValue(color_vel*timeValue+4*M_PI/3), blueValue(color_vel*timeValue+4*M_PI/3)   // top 
         };
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(newvertices), newvertices, GL_DYNAMIC_DRAW);
@@ -172,57 +202,66 @@ int main()
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
-
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
-
-        char filepath[256];
-        sprintf(filepath, "../images/output/frame%03d.png", frame+1);
-        // saveImage(filepath, window);
-        frame++;
-
-        // "index" is used to read pixels from framebuffer to a PBO
-        // "nextIndex" is used to update pixels in the other PBO
-        // index = (index + 1) % PBO_COUNT;
-        // nextIndex = (index + 1) % PBO_COUNT;
-        GLsizei stride = CHANNEL_COUNT * SCR_WIDTH;
-        //stride += (stride % 4) ? (4 - stride % 4) : 0;
-        //glPixelStorei(GL_PACK_ALIGNMENT, 4);
-
         // set the target framebuffer to read
         /* GL_BACK, GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 */
-        glReadBuffer(GL_READ_FRAMEBUFFER);
+        glReadBuffer(GL_BACK);
 
-        // read pixels from framebuffer to PBO
-        // glReadPixels() should return immediately.
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[index]);
-        glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, 0);
-
-        // map the PBO to process its data by CPU
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[nextIndex]);
-        GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-        if(ptr)
+        if (offscreen_render)
         {
-            stbi_flip_vertically_on_write(true);
-            stbi_write_png(filepath, SCR_WIDTH, SCR_HEIGHT, CHANNEL_COUNT, ptr, stride);
-            glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, fboMsaaId);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId);
+            glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,             // src rect
+                            0, 0, SCR_WIDTH, SCR_HEIGHT,             // dst rect
+                            GL_COLOR_BUFFER_BIT,                     // buffer mask
+                            GL_LINEAR);                              // scale filter
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
+
+            char filepath[256];
+            sprintf(filepath, "../images/output/frame%03d.png", frame+1);
+            // saveImage(filepath, window);
+            frame++;
+
+            GLsizei stride = CHANNEL_COUNT * SCR_WIDTH;
+            //stride += (stride % 4) ? (4 - stride % 4) : 0;
+            //glPixelStorei(GL_PACK_ALIGNMENT, 4);
+
+            
+
+            // read pixels from framebuffer to PBO
+            // glReadPixels() should return immediately.
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[index]);
+            glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, 0);
+
+            // // map the PBO to process its data by CPU
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[nextIndex]);
+            GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+            if(ptr)
+            {
+                stbi_flip_vertically_on_write(true);
+                stbi_write_png(filepath, SCR_WIDTH, SCR_HEIGHT, CHANNEL_COUNT, ptr, stride);
+                glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+            }
+
+            // if (index == 4)
+            // {
+            //     for (int i = 0; i<5; i++)
+            //     {
+            //         sprintf(filepath, "../images/output/frame%03d.png", i + PBO_COUNT*index_stride);
+            //         glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[i]);
+            //         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+            //         stbi_flip_vertically_on_write(true);
+            //         stbi_write_png(filepath, SCR_WIDTH, SCR_HEIGHT, CHANNEL_COUNT, ptr, stride);
+            //         glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+            //     }
+
+            //     index_stride++;
+            // }
+
+            // "index" is used to read pixels from framebuffer to a PBO
+            // "nextIndex" is used to update pixels in the other PBO
+            index = (index + 1) % PBO_COUNT;
+            nextIndex = (nextIndex + 1) % PBO_COUNT;
         }
-
-        // if (index == 4)
-        // {
-        //     for (int i = 0; i<5; i++)
-        //     {
-        //         sprintf(filepath, "../images/output/frame%03d.png", i + PBO_COUNT*index_stride);
-        //         glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[i]);
-        //         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-        //         stbi_flip_vertically_on_write(true);
-        //         stbi_write_png(filepath, SCR_WIDTH, SCR_HEIGHT, CHANNEL_COUNT, ptr, stride);
-        //         glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-        //     }
-
-        //     index_stride++;
-        // }
-        index = (index + 1) % PBO_COUNT;
-        nextIndex = (nextIndex + 1) % PBO_COUNT;
 
         // back to conventional pixel operation
         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -242,8 +281,11 @@ int main()
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(PBO_COUNT, pboIds);
     //At deinit:
-    glDeleteFramebuffers(1,&fbo);
-    glDeleteRenderbuffers(1,&render_buf);
+    glDeleteFramebuffers(1,&fboMsaaId);
+    glDeleteFramebuffers(1,&fboId);
+    glDeleteRenderbuffers(1,&rboColorId);
+    glDeleteRenderbuffers(1,&rboDepthId);
+    glDeleteRenderbuffers(1,&rboId);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
