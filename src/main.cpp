@@ -35,7 +35,7 @@ const unsigned int CHANNEL_COUNT = 3;
 const int DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
 const int PBO_COUNT = 2;
 const int msaa = 4;
-const bool offscreen_render = 1;
+const bool offscreen_render = 0;
 int frame = 0;
 int index = 0;
 int nextIndex = 1;
@@ -161,6 +161,9 @@ int main()
         glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA4, SCR_WIDTH, SCR_HEIGHT);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rboId);
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+        //Before drawing
+        glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
     }
 
 
@@ -171,12 +174,6 @@ int main()
         // input
         // -----
         processInput(window);
-
-        if (offscreen_render)
-        {
-            //Before drawing
-            glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
-        }
 
         // render
         // ------
@@ -261,12 +258,14 @@ int main()
             // "nextIndex" is used to update pixels in the other PBO
             index = (index + 1) % PBO_COUNT;
             nextIndex = (nextIndex + 1) % PBO_COUNT;
+            glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+
         }
 
         // back to conventional pixel operation
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        // glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+        // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        // glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -279,13 +278,15 @@ int main()
     // ------------------------------------------------------------------------
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(PBO_COUNT, pboIds);
-    //At deinit:
-    glDeleteFramebuffers(1,&fboMsaaId);
-    glDeleteFramebuffers(1,&fboId);
-    glDeleteRenderbuffers(1,&rboColorId);
-    glDeleteRenderbuffers(1,&rboDepthId);
-    glDeleteRenderbuffers(1,&rboId);
+    if (offscreen_render)
+    {
+        glDeleteBuffers(PBO_COUNT, pboIds);
+        glDeleteFramebuffers(1,&fboMsaaId);
+        glDeleteFramebuffers(1,&fboId);
+        glDeleteRenderbuffers(1,&rboColorId);
+        glDeleteRenderbuffers(1,&rboDepthId);
+        glDeleteRenderbuffers(1,&rboId);
+    }
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
