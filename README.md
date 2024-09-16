@@ -33,5 +33,10 @@ https://github.com/user-attachments/assets/e2bdee00-6a7d-4f6b-a29b-513f5611c3d3
 * This flipped offset gradient color triangle was done by setting an offset float variable in the main.cpp file, then setting it as a uniform in the render loop using the utility uniform functions created in the shader header file. The weird colors were done by defining the FragColor to be the positions of the 3 vertices rather than the color (Exercise 3), and fragment interpolation causes the gradient effect. (One thing to note is that if you input a negative float into one of the RGB channels it will be clamped to 0.0f (black)). 
 ![Interpolated flipped triangle with uniform offset](images/rainbow-shader2.png)
 
+## Progress update 2 - Textures - 20/07/24
+* Alongside learning how to use textures, I wanted to do a mini-project rendering a rotating animated RGB triangle and learning how to render off-screen frames as images to memory rather than to a window on-screen.
+* The texture section introduced me to the [stb](https://github.com/nothings/stb) repo by Sean Barrett, in particular the stb_image.h header, a single header image loading library, used to load an image into a texture, and the stb_image_write.h header, used for image writing from OpenGL to disk (PNG).
+* In order to make the triangle spin I used a rotation matrix
+
 ## License
 GNU General Public License v3.0
