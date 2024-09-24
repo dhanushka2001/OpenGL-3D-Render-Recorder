@@ -20,7 +20,7 @@ Using www.learnopengl.com as my main resource
 * Removed the vertex shader and fragment shader GLSL code from the main.cpp file and put them into separate "shader.vert" and "shader.frag" text files (I recommend installing a GLSL syntax highlighter extension).
 * Made a shader class and header file that can handle retrieving source code; compiling, linking, deleting, and activating shaders; defining utility functions; and handling errors.
 * I understand what uniform variables are (basically global variables that all shaders can access), you need to define them in the main.cpp file and give them to the shader (using utility uniform functions if you have a separate shader header file, or just by giving the uniform location with "glUniform[](...)").
-* Switched from OpenGL 3.3 to 4.3 so that I can specify the "layout (location=...)" for uniforms, for some reason in OpenGL 3.3 that didn't work. This is a really nice video that helped me understand the "layout (location=...)" specifier. At 21:11 it talks about the specifier and how you can omit the specifier but if you don't then you can change the variable name in the next shader, and vertex attributes and uniforms are stored in different arrays so you can have seemingly two different variables stored in "location=0" but they are actually in different arrays.
+* Switched from OpenGL 3.3 to 4.3 so that I can specify the "layout (location=...)" for uniforms, for some reason in OpenGL 3.3 that didn't work. This is a really nice video that helped me understand the "layout (location=...)" specifier. At [21:11](https://youtu.be/yrFo1_Izlk0?si=YLplgGlBy1hqR0u2&t=1271) it talks about the specifier and how you can omit the specifier but if you don't then you can change the variable name in the next shader, and vertex attributes and uniforms are stored in different arrays so you can have seemingly two different variables stored in "location=0" but they are actually in different arrays.
   [![Watch the video](https://img.youtube.com/vi/yrFo1_Izlk0/maxresdefault.jpg)](https://www.youtube.com/watch?v=yrFo1_Izlk0)
 
 * This animation was done by storing a green color uniform variable in the render loop that changes over time, this uniform variable can be accessed by the fragment shader to render the triangle with a changing color.
@@ -37,15 +37,14 @@ Using www.learnopengl.com as my main resource
 
 ## Progress update 3 - Textures - 22/08/24
 * Alongside learning how to use textures, I wanted to do a mini-project rendering a rotating animated RGB triangle and learning how to render off-screen frames as images to memory rather than to a window on-screen.
-* The texture section introduced me to the [stb](https://github.com/nothings/stb) repo by Sean Barrett, in particular the stb_image.h header, a single header image loading library, used to load an image into a texture, and the stb_image_write.h header, used for image writing from OpenGL to disk (PNG).
-* In order to make the triangle spin I used a standard 2D [rotation matrix](https://en.wikipedia.org/wiki/Rotation_matrix).
+* The texture section introduced me to the [stb](https://github.com/nothings/stb) repo by Sean Barrett, in particular the stb_image.h header, a single header image loading library used to load an image into a texture; and the stb_image_write.h header, used for image writing from OpenGL to disk (PNG).
+* In order to make the triangle spin I used the standard 2D [rotation matrix](https://en.wikipedia.org/wiki/Rotation_matrix).
 
-  [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl-rotation-matrix.png" width=75%>](https://en.wikipedia.org/wiki/Rotation_matrix)
+  [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl-rotation-matrix.png" width=45%>](https://en.wikipedia.org/wiki/Rotation_matrix)&nbsp;&nbsp;<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl2.png" width=45%>
   
 * In order to make the colors inside the triangle spin I used the [Sinebow](https://basecase.org/env/on-rainbows) over the HSV function as it has no branches making it faster for GPGPUs[<sup>[3]</sup>](https://basecase.org/env/on-rainbows).
 
-  [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/HSV-vs-Sinebow.png" width=50%>](https://basecase.org/env/on-rainbows)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl3.1.png" width=40%>
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl2.png" width=50%><img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl4.1.png" width=40%>
+  [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/HSV-vs-Sinebow.png" width=40%>](https://basecase.org/env/on-rainbows)<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl3.1.png" width=30%><img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl4.1.png" width=30%>
   
 * In order to implement off-screen rendering I initially found [this blog post](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/) which worked fine but I felt like the rendering could be done faster which led me to a [few posts](https://stackoverflow.com/a/25127895) from Stack Overflow that said to use PBOs, which allow for asynchronous readback, which means rendering to system memory later rather than as soon as possible in the hopes of it being faster. Unfortunately, I found PBOs to not make any difference in performance, which led me to discover FBOs (framebuffer objects) which are essentially a non-default [framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer) (unlike the FRONT and BACK buffers which are) that allows you to do proper off-screen rendering (OpenGL forces a window to be loaded on-screen but with FBOs it will be black and you can just hide the screen (but don't minimize!), Vulkan is designed to support off-screen rendering better than OpenGL[<sup>[2]</sup>](https://stackoverflow.com/a/14324292) but is more verbose and thus harder to learn (maybe in the future...)) to a memory buffer instead of the default screen buffers[<sup>[1]</sup>](https://stackoverflow.com/a/12159293). FBOs are optimized for data to be read back to CPU, while the default buffers are made to stay on the GPU and display pixels on-screen[<sup>[2]</sup>](https://stackoverflow.com/a/14324292).
 
@@ -62,6 +61,7 @@ Using www.learnopengl.com as my main resource
 
   <!-- MENTION ABOUT FFMPEG TO CONVERT SEQUENCE OF IMAGES TO MP4, ALSO MENTION HOW IT WOULD BE IDEAL TO MAKE THE VIDEO WHILE IMAGES COMING IN RATHER THAN PILING UP STORAGE WITH IMAGES -->
   <!-- ADD ANOTHER VIDEO TO SHOW WITH/WITHOUT MSAA -->
+  <!-- ACKNOWLEDGE THAT THE RGB TRIANGLE ISN'T EXACTLY RGB BUT COLOR SCHEME LOOKS BETTER UNINTENTIONALLY, UNSURE WHY IT ISN'T PROPER RGB -->
   <!-- ADD BIBLIOGRAPHY -->
   <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
   <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
