@@ -11,9 +11,9 @@ Using www.learnopengl.com as my main resource
 * I feel like 3 fragment shaders, 3 VBOs, 3 VAOs, and 3 EBOs is overkill just to render 3 different colors for 3 sets of 2 triangles. There's probably a way to have all 6 triangles in one VBO with their color attributes also included.
   This will probably be explained in the next chapters.
 
-![OpenGL EBO explained](images/OpenGL_EBO.png)
-![LearnOpenGL 3D RGB cube](images/learnopengl.png)
-![LearnOpenGL 3D RGB cube](images/learnopengl2.png)
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/OpenGL_EBO.png" width=100%>
+
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/learnopengl.png" width=45%>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/learnopengl2.png" width=45%>
 
 ## Progress update 2 - Shaders - 20/07/24
 * Gave each vertex a color attribute as well as a position attribute, so instead of having 3 VBOs, 3 VAOs, and 3 EBOs, we just have 1 of each and 2 vertex attributes. One for each object makes sense (I assume when we get to rendering 1000s of identical objects we will encounter "instancing").
@@ -21,22 +21,58 @@ Using www.learnopengl.com as my main resource
 * Made a shader class and header file that can handle retrieving source code; compiling, linking, deleting, and activating shaders; defining utility functions; and handling errors.
 * I understand what uniform variables are (basically global variables that all shaders can access), you need to define them in the main.cpp file and give them to the shader (using utility uniform functions if you have a separate shader header file, or just by giving the uniform location with "glUniform[](...)").
 * Switched from OpenGL 3.3 to 4.3 so that I can specify the "layout (location=...)" for uniforms, for some reason in OpenGL 3.3 that didn't work. This is a really nice video that helped me understand the "layout (location=...)" specifier. At 21:11 it talks about the specifier and how you can omit the specifier but if you don't then you can change the variable name in the next shader, and vertex attributes and uniforms are stored in different arrays so you can have seemingly two different variables stored in "location=0" but they are actually in different arrays.
-[![Watch the video](https://img.youtube.com/vi/yrFo1_Izlk0/maxresdefault.jpg)](https://www.youtube.com/watch?v=yrFo1_Izlk0)
+  [![Watch the video](https://img.youtube.com/vi/yrFo1_Izlk0/maxresdefault.jpg)](https://www.youtube.com/watch?v=yrFo1_Izlk0)
 
 * This animation was done by storing a green color uniform variable in the render loop that changes over time, this uniform variable can be accessed by the fragment shader to render the triangle with a changing color.
 
-https://github.com/user-attachments/assets/e2bdee00-6a7d-4f6b-a29b-513f5611c3d3
+  https://github.com/user-attachments/assets/e2bdee00-6a7d-4f6b-a29b-513f5611c3d3
 
 * This rainbow triangle was done by storing a red, green, and blue color value as a second vertex attribute for each of the 3 vertices. "Fragment interpolation" occurs, where a linear combination of the colors is used for all the fragments (can think of them as pixels) between the 3 vertices.
-![Rainbow triangle](images/rainbow-shader.png)
 
-* This flipped offset gradient color triangle was done by setting an offset float variable in the main.cpp file, then setting it as a uniform in the render loop using the utility uniform functions created in the shader header file. The weird colors were done by defining the FragColor to be the positions of the 3 vertices rather than the color (Exercise 3), and fragment interpolation causes the gradient effect. (One thing to note is that if you input a negative float into one of the RGB channels it will be clamped to 0.0f (black)). 
-![Interpolated flipped triangle with uniform offset](images/rainbow-shader2.png)
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/rainbow-shader.png" width=80%>
 
-## Progress update 2 - Textures - 20/07/24
+* This flipped offset gradient color triangle was done by setting an offset float variable in the main.cpp file, then setting it as a uniform in the render loop using the utility uniform functions created in the shader header file. The weird colors were done by defining the FragColor to be the positions of the 3 vertices rather than the color (Exercise 3), and fragment interpolation causes the gradient effect. (One thing to note is that if you input a negative float into one of the RGB channels it will be clamped to 0.0f (black)).
+
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/rainbow-shader2.png" width=80%>
+
+## Progress update 3 - Textures - 22/08/24
 * Alongside learning how to use textures, I wanted to do a mini-project rendering a rotating animated RGB triangle and learning how to render off-screen frames as images to memory rather than to a window on-screen.
 * The texture section introduced me to the [stb](https://github.com/nothings/stb) repo by Sean Barrett, in particular the stb_image.h header, a single header image loading library, used to load an image into a texture, and the stb_image_write.h header, used for image writing from OpenGL to disk (PNG).
-* In order to make the triangle spin I used a rotation matrix
+* In order to make the triangle spin I used a standard 2D [rotation matrix](https://en.wikipedia.org/wiki/Rotation_matrix).
+
+  [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl-rotation-matrix.png" width=75%>](https://en.wikipedia.org/wiki/Rotation_matrix)
+  
+* In order to make the colors inside the triangle spin I used the [Sinebow](https://basecase.org/env/on-rainbows) over the HSV function as it has no branches making it faster for GPGPUs[<sup>[3]</sup>](https://basecase.org/env/on-rainbows).
+
+  [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/HSV-vs-Sinebow.png" width=50%>](https://basecase.org/env/on-rainbows)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl3.1.png" width=40%>
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl2.png" width=50%><img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl4.1.png" width=40%>
+  
+* In order to implement off-screen rendering I initially found [this blog post](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/) which worked fine but I felt like the rendering could be done faster which led me to a [few posts](https://stackoverflow.com/a/25127895) from Stack Overflow that said to use PBOs, which allow for asynchronous readback, which means rendering to system memory later rather than as soon as possible in the hopes of it being faster. Unfortunately, I found PBOs to not make any difference in performance, which led me to discover FBOs (framebuffer objects) which are essentially a non-default [framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer) (unlike the FRONT and BACK buffers which are) that allows you to do proper off-screen rendering (OpenGL forces a window to be loaded on-screen but with FBOs it will be black and you can just hide the screen (but don't minimize!), Vulkan is designed to support off-screen rendering better than OpenGL[<sup>[2]</sup>](https://stackoverflow.com/a/14324292) but is more verbose and thus harder to learn (maybe in the future...)) to a memory buffer instead of the default screen buffers[<sup>[1]</sup>](https://stackoverflow.com/a/12159293). FBOs are optimized for data to be read back to CPU, while the default buffers are made to stay on the GPU and display pixels on-screen[<sup>[2]</sup>](https://stackoverflow.com/a/14324292).
+
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl5.1.png" width=80%>
+  
+* Learning about FBOs naturally led me to learn about [RBOs (renderbuffer objects)](https://www.khronos.org/opengl/wiki/Renderbuffer_Object) which are specifically used by FBOs as a render target. Textures can alternatively be used if you want to re-use the pixels on-screen (e.g. a naive "security camera" in a game)[<sup>[1]</sup>](https://stackoverflow.com/a/12159293) or [sample the pixels for post-processing](https://www.songho.ca/opengl/gl_pbo.html#pack), however since we just want to read-back the pixels and render off-screen, RBOs are the logical choice.
+* I have decided to keep the code with the PBO as even though it doesn't make any perfomative difference and just adds more lines of code, I may need them in the future. I ended up using 2 PBOs, while one has pixel data from the FBO written into it, the other is being mapped for reading. This has no perfomative benefit to just reading and writing to system memory from the FBO directly on every cycle since on every cycle I am still invoking glReadPixels which stalls the pipeline "because it has to safely map the data from the read buffer to the PBO and to a block of memory in main RAM", and I am mapping the other PBO which also stalls the pipeline until the pixel data has been converted to a png and saved to system memory[<sup>[1]</sup>](https://stackoverflow.com/a/12159293).
+* I have tried to implement multiple PBOs to delay the writing to system memory step till every n<sup>th</sup> cycle, however it doesn't seem to work properly. For some reason after every every n<sup>th</sup> cycle the rendered frames jump ahead, seemingly skipping multiple frames, is mapping the data not stalling the pipeline?
+* Implemented [off-screen MSAA](https://learnopengl.com/Advanced-OpenGL/Anti-Aliasing) (multisample anti-aliasing) which is an advanced topic but I skipped ahead. Needed to use 2 FBOs now since MSAA requires one to be multisample storage and the other to be a normal FBO to downsample the result to a single-sample image using glBlitFramebuffer(), as we cannot directly use the result from MSAA FBO (see: https://www.songho.ca/opengl/gl_fbo.html#msaa). Also required creating a depthbuffer alongside the colorbuffer for the MSAA FBO.
+
+  [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/gl_fbo04.png" width=50%>](https://www.songho.ca/opengl/gl_fbo.html#msaa)
+
+  https://github.com/user-attachments/assets/66e9a3a9-d633-4e1d-adf6-1e6356896643
+
+  <!-- MENTION ABOUT FFMPEG TO CONVERT SEQUENCE OF IMAGES TO MP4, ALSO MENTION HOW IT WOULD BE IDEAL TO MAKE THE VIDEO WHILE IMAGES COMING IN RATHER THAN PILING UP STORAGE WITH IMAGES -->
+  <!-- ADD ANOTHER VIDEO TO SHOW WITH/WITHOUT MSAA -->
+  <!-- ADD BIBLIOGRAPHY -->
+  <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
+  <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
+
+
+
+
+1. [How to render offscreen on OpenGL?](https://stackoverflow.com/a/12159293)
+2. [How to use GLUT/OpenGL to render to a file?](https://stackoverflow.com/a/14324292)
+3. [On rainbows by Charlie Loyd](https://basecase.org/env/on-rainbows)
+4. [Save the OpenGL rendering to an image file - Lencerfs Walk](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/)
 
 ## License
 GNU General Public License v3.0
