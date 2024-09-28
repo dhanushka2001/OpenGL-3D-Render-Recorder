@@ -41,12 +41,90 @@ Using www.learnopengl.com as my main resource
 * In order to make the triangle spin I used the standard 2D [rotation matrix](https://en.wikipedia.org/wiki/Rotation_matrix).
 
   [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl-rotation-matrix.png" width=45%>](https://en.wikipedia.org/wiki/Rotation_matrix)&nbsp;&nbsp;<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl2.png" width=53%>
-  
+
+  ```cpp
+  // set up vertex data (and buffer(s)) and configure vertex attributes
+  // ------------------------------------------------------------------
+  float vertices[] = {
+      // positions                   // colors
+       1.0f,           -1.0f, 0.0f,  1.0f, 0.0f, 0.0f,  // bottom right
+      -1.0f,           -1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // bottom left
+       0.0f,  (float)sqrt(3), 0.0f,  0.0f, 0.0f, 1.0f   // top 
+  };
+  float offset = 0.5f;
+  float r = 0.7f;
+  float ang_vel = 0.2f;
+  float color_vel = 1.0f;
+  ```
+
 * In order to make the colors inside the triangle spin I used the [Sinebow](https://basecase.org/env/on-rainbows) over the HSV function as it has no branches making it faster for GPGPUs[<sup>[3]</sup>](https://basecase.org/env/on-rainbows).
 
   [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/HSV-vs-Sinebow.png" width=40%>](https://basecase.org/env/on-rainbows)
 
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl3.1.png" width=48%><img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl4.1.png" width=45%>
+
+  ```cpp
+  float redValue(float T)
+  {
+      float redValue = cos(T) / 2.0f + 0.5f;
+      return redValue;
+  }
+  
+  float greenValue(float T)
+  {
+      float greenValue = sin(T - M_PI/6) / 2.0f + 0.5f;
+      return greenValue;
+  }
+  
+  float blueValue(float T)
+  {
+      float blueValue = -(cos(T) - M_PI/3) / 2.0f + 0.5f;
+      return blueValue;
+  }
+  
+  float xRotate(float r, float theta, float T)
+  {
+      float x = cos(theta);
+      float y = sin(theta);
+      float xRotate = x*cos(T) - y*sin(T);
+      return r*xRotate;
+  }
+  
+  float yRotate(float r, float theta, float T)
+  {
+      float x = cos(theta);
+      float y = sin(theta);
+      float yRotate = x*sin(T) + y*cos(T);
+      return r*yRotate;
+  }
+  ```
+  ```cpp
+  // update the color
+  float timeValue = glfwGetTime();
+  float newvertices[] = {
+                               // bottom right
+           xRotate(r, 0.0f, ang_vel*timeValue),  // x
+           yRotate(r, 0.0f, ang_vel*timeValue),  // y
+                                          0.0f,  // z
+                 redValue(color_vel*timeValue),  // R
+               greenValue(color_vel*timeValue),  // G
+                blueValue(color_vel*timeValue),  // B
+                                // bottom left           
+       xRotate(r, 2*M_PI/3, ang_vel*timeValue),  // x
+       yRotate(r, 2*M_PI/3, ang_vel*timeValue),  // y
+                                          0.0f,  // z
+        redValue(color_vel*timeValue+2*M_PI/3),  // R
+      greenValue(color_vel*timeValue+2*M_PI/3),  // G
+       blueValue(color_vel*timeValue+2*M_PI/3),  // B
+                                        // top 
+       xRotate(r, 4*M_PI/3, ang_vel*timeValue),  // x
+       yRotate(r, 4*M_PI/3, ang_vel*timeValue),  // y
+                                          0.0f,  // z
+        redValue(color_vel*timeValue+4*M_PI/3),  // R
+      greenValue(color_vel*timeValue+4*M_PI/3),  // G
+       blueValue(color_vel*timeValue+4*M_PI/3)   // B
+  };
+  ```
   
 * In order to implement off-screen rendering I initially found [this blog post](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/) which worked fine but I felt like the rendering could be done faster which led me to a [few posts](https://stackoverflow.com/a/25127895) from Stack Overflow that said to use [PBOs (pixel buffer objects)](https://www.khronos.org/opengl/wiki/Pixel_Buffer_Object), which allow for [asynchronous readback](https://www.songho.ca/opengl/gl_pbo.html#pack), which means rendering to system memory later rather than as soon as possible in the hopes of it being faster. Unfortunately, I found PBOs to not make any difference in performance, which led me to discover FBOs (framebuffer objects) which are essentially a non-default [framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer) (unlike the FRONT and BACK buffers which are) that allows you to do proper off-screen rendering to a memory buffer instead of the default screen buffers[<sup>[1]</sup>](https://stackoverflow.com/a/12159293) (OpenGL forces a window to be loaded on-screen but with FBOs it will be black and you can just hide the screen (but don't minimize!), Vulkan is designed to support off-screen rendering better than OpenGL[<sup>[2]</sup>](https://stackoverflow.com/a/14324292) but is more verbose and thus harder to learn (maybe in the future...)). FBOs are optimized for data to be read back to CPU, while the default buffers are made to stay on the GPU and display pixels on-screen[<sup>[2]</sup>](https://stackoverflow.com/a/14324292).
 
@@ -67,9 +145,6 @@ Using www.learnopengl.com as my main resource
   <!-- ADD BIBLIOGRAPHY -->
   <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
   <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
-
-
-
 
 1. [How to render offscreen on OpenGL?](https://stackoverflow.com/a/12159293)
 2. [How to use GLUT/OpenGL to render to a file?](https://stackoverflow.com/a/14324292)
