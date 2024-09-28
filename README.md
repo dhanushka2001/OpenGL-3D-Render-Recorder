@@ -40,7 +40,7 @@ Using www.learnopengl.com as my main resource
 * The texture section introduced me to the [stb](https://github.com/nothings/stb) repo by Sean Barrett, in particular the stb_image.h header, a single header image loading library used to load an image into a texture; and the stb_image_write.h header, used for image writing from OpenGL to disk (PNG).
 * In order to make the triangle spin I used the standard 2D [rotation matrix](https://en.wikipedia.org/wiki/Rotation_matrix).
 
-  [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl-rotation-matrix.png" width=45%>](https://en.wikipedia.org/wiki/Rotation_matrix)&nbsp;&nbsp;<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl2.png" width=53%>
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl-rotation-matrix.png" width=45%>&nbsp;&nbsp;<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl2.png" width=53%>
 
   ```cpp
   // set up vertex data (and buffer(s)) and configure vertex attributes
@@ -59,7 +59,7 @@ Using www.learnopengl.com as my main resource
 
 * In order to make the colors inside the triangle spin I used the [Sinebow](https://basecase.org/env/on-rainbows) over the HSV function as it has no branches making it faster for GPGPUs[<sup>[3]</sup>](https://basecase.org/env/on-rainbows).
 
-  [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/HSV-vs-Sinebow.png" width=40%>](https://basecase.org/env/on-rainbows)
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/HSV-vs-Sinebow.png" width=40%>
 
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl3.1.png" width=48%><img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl4.1.png" width=45%>
 
@@ -135,7 +135,7 @@ Using www.learnopengl.com as my main resource
 * I have tried to implement multiple PBOs to delay the writing to system memory step till every n<sup>th</sup> cycle, however it doesn't seem to work properly. For some reason after every every n<sup>th</sup> cycle the rendered frames jump ahead, seemingly skipping multiple frames, is mapping the data not stalling the pipeline?
 * Implemented [off-screen MSAA](https://learnopengl.com/Advanced-OpenGL/Anti-Aliasing) (multisample anti-aliasing) which is an advanced topic but I skipped ahead. Needed to use 2 FBOs now since MSAA requires one to be multisample storage and the other to be a normal FBO to downsample the result to a single-sample image using glBlitFramebuffer(), as we cannot directly use the result from MSAA FBO (see: https://www.songho.ca/opengl/gl_fbo.html#msaa). Also required creating a depthbuffer alongside the colorbuffer for the MSAA FBO.
 
-  [<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/gl_fbo04.png" width=50%>](https://www.songho.ca/opengl/gl_fbo.html#msaa)
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/gl_fbo04.png" width=50%>
 
   https://github.com/user-attachments/assets/66e9a3a9-d633-4e1d-adf6-1e6356896643
 
