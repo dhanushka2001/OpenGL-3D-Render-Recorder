@@ -137,6 +137,12 @@ Using www.learnopengl.com as my main resource
 
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/gl_fbo04.png" width=50%>
 
+* The video below was rendered using the ffmpeg command below after running off-screen rendering for around 1 minute, converting ~300 frames to a 10s video at 30fps.                                                                  
+
+  ```cmd
+  ffmpeg -framerate 30 -start_number 2 -i "frame%03d.png" -c:v libx264 -pix_fmt yuv420p out.mp4
+  ```
+  
   https://github.com/user-attachments/assets/66e9a3a9-d633-4e1d-adf6-1e6356896643
 
   <!-- MENTION ABOUT FFMPEG TO CONVERT SEQUENCE OF IMAGES TO MP4, ALSO MENTION HOW IT WOULD BE IDEAL TO MAKE THE VIDEO WHILE IMAGES COMING IN RATHER THAN PILING UP STORAGE WITH IMAGES -->
