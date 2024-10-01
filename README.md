@@ -16,6 +16,10 @@ Using www.learnopengl.com as my main resource
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/learnopengl.png" width=45%>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/learnopengl2.png" width=45%>
 
 ## Progress update 2 - Shaders - 20/07/24
+* I understand the render pipeline for OpenGL and what all the shaders in the pipeline do.
+
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/OpenGL_graphics-shader-pipeline.png" width=50%>
+  
 * Gave each vertex a color attribute as well as a position attribute, so instead of having 3 VBOs, 3 VAOs, and 3 EBOs, we just have 1 of each and 2 vertex attributes. One for each object makes sense (I assume when we get to rendering 1000s of identical objects we will encounter "instancing").
 * Removed the vertex shader and fragment shader GLSL code from the main.cpp file and put them into separate "shader.vert" and "shader.frag" text files (I recommend installing a GLSL syntax highlighter extension).
 * Made a shader class and header file that can handle retrieving source code; compiling, linking, deleting, and activating shaders; defining utility functions; and handling errors.
@@ -137,7 +141,7 @@ Using www.learnopengl.com as my main resource
 
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/gl_fbo04.png" width=50%>
 
-* The video below was rendered using the ffmpeg command below after running off-screen rendering for around 1 minute, converting ~300 frames to a 10s video at 30fps.                                                                  
+* The video below was rendered using the ffmpeg command below after running off-screen rendering for around 1 minute, converting 300 frames to a 10s video at 30fps. In the future, I'd like to make it so that the program feeds the frames into ffmpeg and continually builds the video at runtime rather than generating losslessly compressed frames which is costly for memory, especially for longer videos. For reference, the 300 frames total 35.3MB while the video rendered using those frames is just 856KB, ~40x less memory used.                                               
 
   ```cmd
   ffmpeg -framerate 30 -start_number 2 -i "frame%03d.png" -c:v libx264 -pix_fmt yuv420p out.mp4
@@ -145,9 +149,8 @@ Using www.learnopengl.com as my main resource
   
   https://github.com/user-attachments/assets/66e9a3a9-d633-4e1d-adf6-1e6356896643
 
-  <!-- MENTION ABOUT FFMPEG TO CONVERT SEQUENCE OF IMAGES TO MP4, ALSO MENTION HOW IT WOULD BE IDEAL TO MAKE THE VIDEO WHILE IMAGES COMING IN RATHER THAN PILING UP STORAGE WITH IMAGES -->
-  <!-- ADD ANOTHER VIDEO TO SHOW WITH/WITHOUT MSAA -->
-  <!-- ACKNOWLEDGE THAT THE RGB TRIANGLE ISN'T EXACTLY RGB BUT COLOR SCHEME LOOKS BETTER UNINTENTIONALLY, UNSURE WHY IT ISN'T PROPER RGB -->
+* The triangle isn't actually cycling through the Sinebow properly so it isn't true RGB, I'm not sure why yet, however I actually prefer the color scheme it's cycling through so I just kept it.
+
   <!-- ADD BIBLIOGRAPHY -->
   <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
   <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
@@ -156,6 +159,10 @@ Using www.learnopengl.com as my main resource
 2. [How to use GLUT/OpenGL to render to a file?](https://stackoverflow.com/a/14324292)
 3. [On rainbows by Charlie Loyd](https://basecase.org/env/on-rainbows)
 4. [Save the OpenGL rendering to an image file - Lencerfs Walk](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/)
+
+* As for the Textures chapter, I now understand how they work, and was able to render this rectangle with a crate png texture with an RGB overlay and the "Awesome face" png.
+
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/textures.png" width=50%>
 
 ## License
 GNU General Public License v3.0
