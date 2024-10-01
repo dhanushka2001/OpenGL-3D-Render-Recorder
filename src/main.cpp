@@ -18,14 +18,15 @@
 #endif
 
 #include <vector>
+#include <windows.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-float redValue(float timeValue);
-float blueValue(float timeValue);
-float greenValue(float timeValue);
-float xRotate(float r, float theta, float timeValue);
-float yRotate(float r, float theta, float timeValue);
+float redValue(float T);
+float blueValue(float T);
+float greenValue(float T);
+float xRotate(float r, float theta, float T);
+float yRotate(float r, float theta, float T);
 void saveImage(char* filepath, GLFWwindow* window);
 
 // settings
@@ -34,12 +35,14 @@ const unsigned int SCR_HEIGHT = 1080;
 const unsigned int CHANNEL_COUNT = 3;
 const int DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
 const int PBO_COUNT = 2;
-const int msaa = 4;
-const bool offscreen_render = 0;
+const int msaa = 4; // 0 = no anti-aliasing. 4 = 4xMSAA
+const bool offscreen_render = 1;
+
+
 int frame = 0;
 int index = 0;
 int nextIndex = 1;
-// int index_stride = 0;
+int index_stride = 0;
 GLuint pboIds[PBO_COUNT];
 GLuint fboMsaaId, rboColorId, rboDepthId;
 GLuint fboId, rboId;
@@ -84,14 +87,14 @@ int main()
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     float vertices[] = {
-        // positions         // colors
-         1.0f, -1.0f, 0.0f,  1.0f, 0.0f, 0.0f,  // bottom right
-        -1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // bottom left
+        // positions                   // colors
+         1.0f,           -1.0f, 0.0f,  1.0f, 0.0f, 0.0f,  // bottom right
+        -1.0f,           -1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // bottom left
          0.0f,  (float)sqrt(3), 0.0f,  0.0f, 0.0f, 1.0f   // top 
     };
     float offset = 0.5f;
     float r = 0.7f;
-    float ang_vel = 0.1f;
+    float ang_vel = 0.2f;
     float color_vel = 1.0f;
 
     unsigned int VBO, VAO;
@@ -120,9 +123,15 @@ int main()
         // glBufferData() with NULL pointer reserves only memory space.
         glGenBuffers(PBO_COUNT, pboIds);
         glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[0]);
-        glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
+        glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE*2, 0, GL_DYNAMIC_READ);
         glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[1]);
-        glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
+        glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE*2, 0, GL_DYNAMIC_READ);
+        // glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[2]);
+        // glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
+        // glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[3]);
+        // glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
+        // glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[4]);
+        // glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
 
         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
@@ -166,7 +175,6 @@ int main()
         glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
     }
 
-
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -206,11 +214,11 @@ int main()
         if (offscreen_render)
         {
             glBindFramebuffer(GL_READ_FRAMEBUFFER, fboMsaaId);
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId);
-            glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,             // src rect
-                            0, 0, SCR_WIDTH, SCR_HEIGHT,             // dst rect
-                            GL_COLOR_BUFFER_BIT,                     // buffer mask
-                            GL_LINEAR);                              // scale filter
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
+            glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                              0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
+                                      GL_COLOR_BUFFER_BIT,           // buffer mask
+                                               GL_LINEAR);           // scale filter
             glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
 
             char filepath[256];
@@ -222,14 +230,12 @@ int main()
             //stride += (stride % 4) ? (4 - stride % 4) : 0;
             //glPixelStorei(GL_PACK_ALIGNMENT, 4);
 
-            
-
             // read pixels from framebuffer to PBO
             // glReadPixels() should return immediately.
             glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[index]);
             glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, 0);
 
-            // // map the PBO to process its data by CPU
+            // map the PBO to process its data by CPU
             glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[nextIndex]);
             GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
             if(ptr)
@@ -239,9 +245,9 @@ int main()
                 glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
             }
 
-            // if (index == 4)
+            // if (index == PBO_COUNT-1)
             // {
-            //     for (int i = 0; i<5; i++)
+            //     for (int i = 0; i < PBO_COUNT; i++)
             //     {
             //         sprintf(filepath, "../images/output/frame%03d.png", i + PBO_COUNT*index_stride);
             //         glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[i]);
@@ -311,38 +317,38 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-float redValue(float timeValue)
+float redValue(float T)
 {
-    float redValue = cos(timeValue) / 2.0f + 0.5f;
+    float redValue = cos(T) / 2.0f + 0.5f;
     return redValue;
 }
 
-float greenValue(float timeValue)
+float greenValue(float T)
 {
-    float greenValue = sin(timeValue - M_PI/6) / 2.0f + 0.5f;
+    float greenValue = sin(T - M_PI/6) / 2.0f + 0.5f;
     return greenValue;
 }
 
-float blueValue(float timeValue)
+float blueValue(float T)
 {
-    float blueValue = -(cos(timeValue) - M_PI/3) / 2.0f + 0.5f;
+    float blueValue = -(cos(T) - M_PI/3) / 2.0f + 0.5f;
     return blueValue;
 }
 
-float xRotate(float r, float theta, float timeValue)
+float xRotate(float r, float theta, float T)
 {
-    float x = r*cos(theta);
-    float y = r*sin(theta);
-    float xRotate = x*cos(timeValue) - y*sin(timeValue);
-    return xRotate;
+    float x = cos(theta);
+    float y = sin(theta);
+    float xRotate = x*cos(T) - y*sin(T);
+    return r*xRotate;
 }
 
-float yRotate(float r, float theta, float timeValue)
+float yRotate(float r, float theta, float T)
 {
-    float x = r*cos(theta);
-    float y = r*sin(theta);
-    float yRotate = x*sin(timeValue) + y*cos(timeValue);
-    return yRotate;
+    float x = cos(theta);
+    float y = sin(theta);
+    float yRotate = x*sin(T) + y*cos(T);
+    return r*yRotate;
 }
 
 // https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/#:~:text=Quick%20answer,data%20to%20file%20using%20stbi_write_png%20.&text=I%20used%20GLFW%20to%20create,image%20data%20to%20png%20files.
