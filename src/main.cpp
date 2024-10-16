@@ -1,24 +1,16 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
 #include <learnopengl/shader_s.h>
-
 #include <iostream>
-
+#include <cstdio>
 # define M_PI           3.14159265358979323846
 #include <cmath>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include <vector>
+#include <windows.h>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
-
-#include <vector>
-#include <windows.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -27,25 +19,25 @@ float blueValue(float T);
 float greenValue(float T);
 float xRotate(float r, float theta, float T);
 float yRotate(float r, float theta, float T);
-void saveImage(char* filepath, GLFWwindow* window);
+void startFFmpeg();
+void sendFrameToFFmpeg(unsigned char* frame);
+void stopFFmpeg();
+void flipFrameVertically(unsigned char* frame);
 
 // settings
 const unsigned int SCR_WIDTH = 1080;
 const unsigned int SCR_HEIGHT = 1080;
 const unsigned int CHANNEL_COUNT = 3;
 const int DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
-const int PBO_COUNT = 2;
 const int msaa = 4; // 0 = no anti-aliasing. 4 = 4xMSAA
 const bool offscreen_render = 1;
-
-
-int frame = 0;
-int index = 0;
-int nextIndex = 1;
-int index_stride = 0;
-GLuint pboIds[PBO_COUNT];
 GLuint fboMsaaId, rboColorId, rboDepthId;
 GLuint fboId, rboId;
+
+// Path to ffmpeg binary, if it's not in the system path, provide the full path.
+const char* FFmpegCommand = "ffmpeg -y -f rawvideo -pixel_format rgb24 -video_size 1080x1080 -framerate 30 -i - -c:v libx264 -pix_fmt yuv420p output.mp4 2> ffmpeg_log.txt";
+
+FILE* ffmpeg;
 
 int main()
 {
@@ -119,22 +111,6 @@ int main()
 
     if (offscreen_render)
     {
-        // create 2 pixel buffer objects, you need to delete them when program exits.
-        // glBufferData() with NULL pointer reserves only memory space.
-        glGenBuffers(PBO_COUNT, pboIds);
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[0]);
-        glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE*2, 0, GL_DYNAMIC_READ);
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[1]);
-        glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE*2, 0, GL_DYNAMIC_READ);
-        // glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[2]);
-        // glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
-        // glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[3]);
-        // glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
-        // glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[4]);
-        // glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
-
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
         //Somewhere at initialization
         /*  Framebuffer */
         glGenFramebuffers(1,&fboMsaaId);
@@ -173,7 +149,19 @@ int main()
 
         //Before drawing
         glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+
+        // Initialize GLFW
+        if (!glfwInit()) {
+            std::cerr << "Failed to initialize GLFW" << std::endl;
+            return -1;
+        }
+
+        // Start ffmpeg process
+        startFFmpeg();
     }
+
+    // Frame buffer to hold the raw frame data (RGB)
+    std::vector<unsigned char> frame(SCR_WIDTH * SCR_HEIGHT * 3);
 
     // render loop
     // -----------
@@ -220,50 +208,16 @@ int main()
                                       GL_COLOR_BUFFER_BIT,           // buffer mask
                                                GL_LINEAR);           // scale filter
             glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
+            glReadBuffer(GL_READ_FRAMEBUFFER);
 
-            char filepath[256];
-            sprintf(filepath, "../images/output/frame%03d.png", frame+1);
-            // saveImage(filepath, window);
-            frame++;
+            glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame.data());
 
-            GLsizei stride = CHANNEL_COUNT * SCR_WIDTH;
-            //stride += (stride % 4) ? (4 - stride % 4) : 0;
-            //glPixelStorei(GL_PACK_ALIGNMENT, 4);
+            // Flip the frame vertically
+            flipFrameVertically(frame.data());
 
-            // read pixels from framebuffer to PBO
-            // glReadPixels() should return immediately.
-            glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[index]);
-            glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, 0);
+            // Send the frame data to ffmpeg
+            sendFrameToFFmpeg(frame.data());
 
-            // map the PBO to process its data by CPU
-            glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[nextIndex]);
-            GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-            if(ptr)
-            {
-                stbi_flip_vertically_on_write(true);
-                stbi_write_png(filepath, SCR_WIDTH, SCR_HEIGHT, CHANNEL_COUNT, ptr, stride);
-                glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-            }
-
-            // if (index == PBO_COUNT-1)
-            // {
-            //     for (int i = 0; i < PBO_COUNT; i++)
-            //     {
-            //         sprintf(filepath, "../images/output/frame%03d.png", i + PBO_COUNT*index_stride);
-            //         glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[i]);
-            //         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-            //         stbi_flip_vertically_on_write(true);
-            //         stbi_write_png(filepath, SCR_WIDTH, SCR_HEIGHT, CHANNEL_COUNT, ptr, stride);
-            //         glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-            //     }
-
-            //     index_stride++;
-            // }
-
-            // "index" is used to read pixels from framebuffer to a PBO
-            // "nextIndex" is used to update pixels in the other PBO
-            index = (index + 1) % PBO_COUNT;
-            nextIndex = (nextIndex + 1) % PBO_COUNT;
             glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
 
         }
@@ -286,16 +240,20 @@ int main()
     glDeleteBuffers(1, &VBO);
     if (offscreen_render)
     {
-        glDeleteBuffers(PBO_COUNT, pboIds);
+        // glDeleteBuffers(PBO_COUNT, pboIds);
         glDeleteFramebuffers(1,&fboMsaaId);
         glDeleteFramebuffers(1,&fboId);
         glDeleteRenderbuffers(1,&rboColorId);
         glDeleteRenderbuffers(1,&rboDepthId);
         glDeleteRenderbuffers(1,&rboId);
+
+        // Stop ffmpeg
+        stopFFmpeg();
     }
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
+    glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }
@@ -351,18 +309,35 @@ float yRotate(float r, float theta, float T)
     return r*yRotate;
 }
 
-// https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/#:~:text=Quick%20answer,data%20to%20file%20using%20stbi_write_png%20.&text=I%20used%20GLFW%20to%20create,image%20data%20to%20png%20files.
-void saveImage(char* filepath, GLFWwindow* window) {
- int width, height;
- glfwGetFramebufferSize(window, &width, &height);
- GLsizei nrChannels = 3;
- GLsizei stride = nrChannels * width;
- stride += (stride % 4) ? (4 - stride % 4) : 0;
- GLsizei bufferSize = stride * height;
- std::vector<char> buffer(bufferSize);
- glPixelStorei(GL_PACK_ALIGNMENT, 4);
- glReadBuffer(GL_FRONT);
- glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer.data());
- stbi_flip_vertically_on_write(true);
- stbi_write_png(filepath, width, height, nrChannels, buffer.data(), stride);
+// Function to start the ffmpeg process
+void startFFmpeg() {
+    ffmpeg = _popen(FFmpegCommand, "wb");
+    if (!ffmpeg) {
+        std::cerr << "Error: Unable to open FFmpeg process." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+// Function to send a frame to ffmpeg
+void sendFrameToFFmpeg(unsigned char* frame) {
+    if (ffmpeg) {
+        fwrite(frame, 3, SCR_WIDTH * SCR_HEIGHT, ffmpeg);  // Each pixel has 3 bytes (RGB)
+    }
+}
+
+// Function to stop the ffmpeg process
+void stopFFmpeg() {
+    if (ffmpeg) {
+        _pclose(ffmpeg);
+        ffmpeg = nullptr;
+    }
+}
+
+void flipFrameVertically(unsigned char* frame) {
+    for (unsigned int y = 0; y < SCR_HEIGHT / 2; ++y) {
+        int oppositeY = SCR_HEIGHT - 1 - y;
+        for (unsigned int x = 0; x < SCR_WIDTH * 3; ++x) {
+            std::swap(frame[y * SCR_WIDTH * 3 + x], frame[oppositeY * SCR_WIDTH * 3 + x]);
+        }
+    }
 }
