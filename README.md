@@ -1,6 +1,6 @@
 *Coding Project*
 # LearnOpenGL
-Learning to use OpenGL (and OpenCL) so I can do high-performance scientific computing and modelling on the GPU.
+Learning to use OpenGL so I can do high-performance scientific computing and modelling on the GPU.
 Using www.learnopengl.com as my main resource
 
 ## Progress update 1 - Hello Triangle - 30/06/24
