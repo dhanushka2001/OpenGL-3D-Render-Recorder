@@ -145,7 +145,7 @@ Using www.learnopengl.com as my main resource
 
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/gl_fbo04.png" width=50%>
 
-* The video below was rendered using the ffmpeg command below after running off-screen rendering for around 1 minute, converting 300 frames to a 10s video at 30fps. In the future, I'd like to make it so that the program feeds the frames into ffmpeg and continually builds the video at runtime rather than generating losslessly compressed frames which is costly for memory, especially for longer videos. For reference, the 300 frames total 35.3MB while the video rendered using those frames is just 856KB, ~40x less memory used.                                               
+* The video below was rendered using the FFmpeg command below after running off-screen rendering for around 1 minute, converting 300 frames to a 10s video at 30fps. In the future, I'd like to make it so that the program feeds the frames into ffmpeg and continually builds the video at runtime rather than generating losslessly compressed frames which is costly for memory, especially for longer videos. For reference, the 300 frames total 35.3MB while the video rendered using those frames is just 856KB, ~40x less memory used.                                               
 
   ```cmd
   ffmpeg -framerate 30 -start_number 2 -i "frame%03d.png" -c:v libx264 -pix_fmt yuv420p out.mp4
@@ -160,11 +160,77 @@ Using www.learnopengl.com as my main resource
   <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
 
 1. [How to render offscreen on OpenGL?](https://stackoverflow.com/a/12159293)
-2. [How to use GLUT/OpenGL to render to a file?](https://stackoverflow.com/a/14324292)
+2. [How to use GLUT/OpenGL to render to a file?](https://stackoverflow.com/a/14324292) 
 3. [On rainbows by Charlie Loyd](https://basecase.org/env/on-rainbows)
 4. [Save the OpenGL rendering to an image file - Lencerfs Walk](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/)
 
+## Progress update 4 - Off-screen recording - 18/10/24
 
+* I have finally figured out how to render an mp4 at runtime off-screen, as mentioned earlier this is much better than rendering an image sequence which is an I/O bottleneck. Previously it would render the PNGs at ~4 fps (which I would have to convert to an mp4 after runtime) but now the program encodes the video from the raw binary data using FFmpeg at runtime and outputs the mp4 after terminating instantly, so seemingly at 60+ fps, I know this since the rendered video is pretty much identical to the on-screen animation, compared to the image sequence→mp4 which skips frames. A 1-minute mp4 is just 3MB, assuming the same memory ratio as earlier, the image sequence equivalent would be 120MB, not to mention it would not look nearly as smooth.
 
+* Trying to decipher the code from [this](https://stackoverflow.com/a/36488003) Stack Overflow answer was too difficult, so I ended up resorting to using ChatGPT, which, after a few tweaks, gave me the code to encode videos in real-time. The code is very concise and does the job. The only requirement is that FFmpeg is installed and in your system's ``PATH``.
+
+  ```cpp
+  // Path to ffmpeg binary, if it's not in the system path, provide the full path.
+  const char* FFmpegCommand = "ffmpeg -y -f rawvideo -pixel_format rgb24 -video_size 1080x1080 -framerate 30 -i - -c:v libx264 -pix_fmt yuv420p output.mp4 2> ffmpeg_log.txt";
+  ```
+  * ``y``: Overwrites the output file if it exists.
+  * ``-f rawvideo``: Tells FFmpeg to expect raw video frames.
+  * ``-pixel_format rgb24``: The format of the raw pixel data (RGB, 8 bits per channel).
+  * ``-video_size 800x600``: The resolution of each frame.
+  * ``-framerate 30``: The frame rate of the video.
+  * ``-i -``: Tells FFmpeg to read input from stdin (``-``).
+  * ``-c:v libx264``: Uses the H.264 codec to compress the video.
+  * ``-pix_fmt yuv420p``: Sets the pixel format to YUV 4:2:0, which is widely supported by media players.
+  * ``output.mp4``: The output file name.
+  * ``2> ffmpeg_log.txt``: Saves FFmpeg’s output and error messages to a file called ``ffmpeg_log.txt``.
+  &nbsp;
+* Use the ``_popen()`` function to start an FFmpeg process. FFmpeg will read the raw RGB frames from stdin, encode them, and write the output to an MP4 file.
+* On Windows, using GCC (MinGW), the functions ``popen()`` and ``pclose()`` are not directly available because these functions are POSIX-specific. To solve this issue, you can use ``_popen()`` and ``_pclose()``, which are Windows-specific equivalents of ``popen()`` and ``pclose()``.
+* On Windows, it's important to use ``"wb"`` (write binary) mode when opening a pipe for writing raw data.
+  ```cpp
+  FILE* ffmpeg;
+  // Function to start the ffmpeg process
+  void startFFmpeg() {
+      ffmpeg = _popen(FFmpegCommand, "wb");
+      if (!ffmpeg) {
+          std::cerr << "Error: Unable to open FFmpeg process." << std::endl;
+          exit(EXIT_FAILURE);
+      }
+  }
+  ```
+  
+  ```cpp
+  // Flip the frame vertically
+  void flipFrameVertically(unsigned char* frame) {
+      for (unsigned int y = 0; y < SCR_HEIGHT / 2; ++y) {
+          int oppositeY = SCR_HEIGHT - 1 - y;
+          for (unsigned int x = 0; x < SCR_WIDTH * 3; ++x) {
+              std::swap(frame[y * SCR_WIDTH * 3 + x], frame[oppositeY * SCR_WIDTH * 3 + x]);
+          }
+      }
+  }
+  ```
+
+  ```cpp
+  // Function to send a frame to ffmpeg
+  void sendFrameToFFmpeg(unsigned char* frame) {
+      if (ffmpeg) {
+          fwrite(frame, 3, SCR_WIDTH * SCR_HEIGHT, ffmpeg);  // Each pixel has 3 bytes (RGB)
+      }
+  }
+  ```
+
+  ```cpp
+  // Function to stop the ffmpeg process
+  void stopFFmpeg() {
+      if (ffmpeg) {
+          _pclose(ffmpeg);
+          ffmpeg = nullptr;
+      }
+  }
+  ```
+
+  
 ## License
 GNU General Public License v3.0
