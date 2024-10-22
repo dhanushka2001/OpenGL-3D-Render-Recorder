@@ -174,7 +174,7 @@ Using www.learnopengl.com as my main resource
   // Path to ffmpeg binary, if it's not in the system path, provide the full path.
   const char* FFmpegCommand = "ffmpeg -y -f rawvideo -pixel_format rgb24 -video_size 1080x1080 -framerate 30 -i - -c:v libx264 -pix_fmt yuv420p output.mp4 2> ffmpeg_log.txt";
   ```
-  * ``y``: Overwrites the output file if it exists.
+  * ``-y``: Overwrites the output file if it exists.
   * ``-f rawvideo``: Tells FFmpeg to expect raw video frames.
   * ``-pixel_format rgb24``: The format of the raw pixel data (RGB, 8 bits per channel).
   * ``-video_size 800x600``: The resolution of each frame.
