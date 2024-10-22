@@ -19,7 +19,7 @@ Using www.learnopengl.com as my main resource
 ## Progress update 2 - Shaders - 20/07/24
 * I understand the render pipeline for OpenGL and what all the shaders in the pipeline do.
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/OpenGL_graphics-shader-pipeline.png" width=50%>
+  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/OpenGL_graphics-shader-pipeline.png" width=70%>
   
 * Gave each vertex a colour attribute as well as a position attribute, so instead of having 3 VBOs, 3 VAOs, and 3 EBOs, we just have 1 of each and 2 vertex attributes. One for each object makes sense (I assume when we get to rendering 1000s of identical objects we will encounter "instancing").
 * Removed the vertex shader and fragment shader GLSL code from the main.cpp file and put them into separate "shader.vert" and "shader.frag" text files (I recommend installing a GLSL syntax highlighter extension).
@@ -169,11 +169,13 @@ Using www.learnopengl.com as my main resource
 
 * I have finally figured out how to render an mp4 at runtime off-screen, as mentioned earlier this is much better than rendering an image sequence which is an I/O bottleneck. Previously it would render the PNGs at ~4 fps (which I would have to convert to an mp4 after runtime) but now the program encodes the video from the raw binary data using FFmpeg at runtime and outputs the mp4 after terminating instantly, so seemingly at 60+ fps, I know this since the rendered video is pretty much identical to the on-screen animation, compared to the image sequence→mp4 which skips frames. A 1-minute mp4 is just 3MB, assuming the same memory ratio as earlier, the image sequence equivalent would be 120MB, not to mention it would not look nearly as smooth.
 
-* Trying to decipher the code from [this](https://stackoverflow.com/a/36488003) Stack Overflow answer was too difficult, so I ended up resorting to using ChatGPT, which, after a few tweaks, gave me the code to encode videos in real-time. The code is very concise and does the job. The only requirement is that FFmpeg is installed and in your system's ``PATH``.
+* Trying to decipher the code from [this Stack Overflow answer](https://stackoverflow.com/a/36488003) was too difficult, so I ended up resorting to using ChatGPT, which, after a few tweaks, gave me the code to encode videos in real-time. The code is very concise and does the job. The only requirement is that FFmpeg is installed and in your system's ``PATH``.
 
   ```cpp
   // Path to ffmpeg binary, if it's not in the system path, provide the full path.
   const char* FFmpegCommand = "ffmpeg -y -f rawvideo -pixel_format rgb24 -video_size 1080x1080 -framerate 30 -i - -c:v libx264 -pix_fmt yuv420p output.mp4 2> ffmpeg_log.txt";
+  // Frame buffer to hold the raw frame data (RGB)
+  std::vector<unsigned char> frame(SCR_WIDTH * SCR_HEIGHT * 3);
   ```
   * ``-y``: Overwrites the output file if it exists.
   * ``-f rawvideo``: Tells FFmpeg to expect raw video frames.
@@ -231,7 +233,8 @@ Using www.learnopengl.com as my main resource
       }
   }
   ```
-
+* Writing frames to FFmpeg via ``popen()`` can be I/O bound, so performance depends on your disk and CPU speed. However, this is a major improvement over trying to render PNGs every frame at runtime, which is immensely I/O bound.
+* OpenGL reads pixels starting from the bottom-left of the window, but many image or video formats expect pixels to start from the top-left (i.e., row 0 is at the top). This was done for the PNG sequence using the ``stbi_flip_vertically_on_write(true);`` function call in the render loop, likewise with the function call ``flipFrameVertically(frame.data());`` for each frame of the real-time encoded video.
   
 ## License
 GNU General Public License v3.0
