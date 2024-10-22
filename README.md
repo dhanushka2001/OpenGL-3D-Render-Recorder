@@ -1,7 +1,8 @@
 *Coding Project*
 # LearnOpenGL
-Learning to use OpenGL so I can do high-performance scientific computing and modelling on the GPU.
-Using www.learnopengl.com as my main resource
+Learning to use OpenGL (GLFW) so I can do high-performance scientific computing and modelling on the GPU.
+Using www.learnopengl.com as my main resource.
+Read [this forum thread](https://news.ycombinator.com/item?id=19674197) and watch [this video](https://www.youtube.com/watch?v=zQUYsMYElC0) for an explanation of what GLFW is and a comparison between other popular OpenGL API libraries.
 
 ## Progress update 1 - Hello Triangle - 30/06/24
 * [This blog](https://medium.com/@vivekjha92/setup-opengl-with-vs-code-82852c653c43#:~:text=The%20Setup,clone%20it%20and%20get%20started.) helped a lot with setting up OpenGL with VSCode.
