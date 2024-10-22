@@ -333,6 +333,7 @@ void stopFFmpeg() {
     }
 }
 
+// Flip the frame vertically
 void flipFrameVertically(unsigned char* frame) {
     for (unsigned int y = 0; y < SCR_HEIGHT / 2; ++y) {
         int oppositeY = SCR_HEIGHT - 1 - y;
