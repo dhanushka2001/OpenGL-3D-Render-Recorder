@@ -4,6 +4,7 @@ Learning to use OpenGL so I can do high-performance scientific computing and mod
 Using www.learnopengl.com as my main resource
 
 ## Progress update 1 - Hello Triangle - 30/06/24
+* [This blog](https://medium.com/@vivekjha92/setup-opengl-with-vs-code-82852c653c43#:~:text=The%20Setup,clone%20it%20and%20get%20started.) helped a lot with setting up OpenGL with VSCode.
 * I understand how VBOs (vertex buffer objects), VAOs (vertex array objects), and EBOs (element buffer objects) work and why we need them.
 * The VAO essentially stores the pointers (memory addresses) for all the vertex attributes (position, colour, etc.) in a specific VBO, which stores the actual values of those vertex attributes.
 * An EBO fixes the issue of duplicate vertices when they overlap by storing only the unique vertices and an index to render them in the correct order.
