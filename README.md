@@ -181,7 +181,7 @@
   * ``-y``: Overwrites the output file if it exists.
   * ``-f rawvideo``: Tells FFmpeg to expect raw video frames.
   * ``-pixel_format rgb24``: The format of the raw pixel data (RGB, 8 bits per channel).
-  * ``-video_size 800x600``: The resolution of each frame.
+  * ``-video_size 1000x1000``: The resolution of each frame.
   * ``-framerate 30``: The frame rate of the video.
   * ``-i -``: Tells FFmpeg to read input from stdin (``-``).
   * ``-c:v libx264``: Uses the H.264 codec to compress the video.
