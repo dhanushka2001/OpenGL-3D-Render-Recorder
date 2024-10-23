@@ -247,7 +247,7 @@
 
 * I have finished all the exercises for the **Textures** chapter, and I did my own small project to allow the user to move around the object and control the opacity. Now the real-time encoded video starts to show signs of deviating from the on-screen render, the object in the encoded video moves slower than in the on-screen render, which I assume is the result of the video frames not being encoded at ~60fps, due to the I/O bottleneck. The solution would have to be implementing the buffer method mentioned above.
 
-https://github.com/user-attachments/assets/d86f9581-7abe-4446-9abc-8528bee0bff9
+  https://github.com/user-attachments/assets/d86f9581-7abe-4446-9abc-8528bee0bff9
 
 
 
