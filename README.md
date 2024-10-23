@@ -42,7 +42,7 @@
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/rainbow-shader2.png" width=80%>
 
 ## Progress update 3 - Textures - 22/08/24
-* I now understand how textures work, and I was able to render this rectangle with a crate PNG texture with an RGB overlay and the "Awesome face" PNG. I have also finished the exercises, which included learning how to let keyboard input manipulate the program at runtime, in this exercise it allowed the up/down arrow keys to change the mix opacity of the two textures. If I wanted the program to record that as an encoded video afterwards I would need to implement on-screen rendering, allowing me to see the screen and also record it at runtime.
+* I now understand how textures work, and I was able to render this rectangle with a crate PNG texture with an RGB overlay and the "Awesome face" PNG. I still need to do the exercises.
 
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/textures.png" width=50%>
 
@@ -244,6 +244,12 @@
     My program currently encodes frame by frame which works fine right now, however, I may need to use a buffer for longer renders or when the renders are more intensive.
   
 * OpenGL reads pixels starting from the bottom-left of the window, but many image or video formats expect pixels to start from the top-left (i.e., row 0 is at the top). This was done for the PNG sequence using the ``stbi_flip_vertically_on_write(true);`` function call in the render loop, likewise with the function call ``flipFrameVertically(frame.data());`` for each frame of the real-time encoded video.
-  
+
+* I have finished all the exercises for the **Textures** chapter, and I did my own small project to allow the user to move around the object and control the opacity. Now the real-time encoded video starts to show signs of deviating from the on-screen render, the object in the encoded video moves slower than in the on-screen render, which I assume is the result of the video frames not being encoded at ~60fps, due to the I/O bottleneck. The solution would have to be implementing the buffer method mentioned above.
+
+https://github.com/user-attachments/assets/d86f9581-7abe-4446-9abc-8528bee0bff9
+
+
+
 ## License
 GNU General Public License v3.0
