@@ -42,7 +42,7 @@
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/rainbow-shader2.png" width=80%>
 
 ## Progress update 3 - Textures - 22/08/24
-* I now understand how textures work, and I was able to render this rectangle with a crate PNG texture with an RGB overlay and the "Awesome face" PNG. I still need to do the exercises.
+* I now understand how textures work, and I was able to render this rectangle with a crate PNG texture with an RGB overlay and the "Awesome face" PNG. I have also finished the exercises, which included learning how to let keyboard input manipulate the program at runtime, in this exercise it allowed the up/down arrow keys to change the mix opacity of the two textures. If I wanted the program to record that as an encoded video afterwards I would need to implement on-screen rendering, allowing me to see the screen and also record it at runtime.
 
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/textures.png" width=50%>
 
