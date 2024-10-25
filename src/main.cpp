@@ -18,6 +18,7 @@
 #endif
 
 #include <vector>
+#include <array>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -25,6 +26,8 @@ void startFFmpeg();
 void sendFrameToFFmpeg(unsigned char* frame);
 void stopFFmpeg();
 void flipFrameVertically(unsigned char* frame);
+void setupQuad();
+void renderQuadWithTexture(GLuint texture, Shader& shader);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -41,6 +44,8 @@ const bool onscreen_render = 1;
 // int nextIndex = 1;
 GLuint fboMsaaId, rboColorId, rboDepthId;
 GLuint fboId, rboId;
+GLuint fboTexture;
+GLuint quadVAO, quadVBO;
 
 // uniform variables
 float mixValue = 0.2f;
@@ -88,6 +93,8 @@ int main()
     // build and compile our shader program
     // ------------------------------------
     Shader ourShader("4.1.shader.vert", "4.1.shader.frag"); // you can name your shader files however you like
+    Shader quadShader("quad.vert", "quad.frag");
+    setupQuad();
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
@@ -132,7 +139,7 @@ int main()
 
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    // glBindVertexArray(0);
+    glBindVertexArray(0);
 
     // uncomment this call to draw in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -218,35 +225,53 @@ int main()
 
         // glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
-        // //Somewhere at initialization
-        // /*  Framebuffer */
-        // glGenFramebuffers(1,&fboMsaaId);
-        // glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+        //Somewhere at initialization
+        /*  Framebuffer */
+        glGenFramebuffers(1,&fboMsaaId);
+        glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
 
-        // /* 4x MSAA renderbuffer object for colorbuffer */
-        // glGenRenderbuffers(1,&rboColorId);
-        // glBindRenderbuffer(GL_RENDERBUFFER, rboColorId);
-        // /* Storage must be one of: */
-        // /* GL_RGBA4, GL_RGB565, GL_RGB5_A1, GL_DEPTH_COMPONENT16, GL_STENCIL_INDEX8. */
-        // glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa, GL_RGBA4, SCR_WIDTH, SCR_HEIGHT);
-        // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rboColorId);
-        // glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        /* 4x MSAA renderbuffer object for colorbuffer */
+        glGenRenderbuffers(1,&rboColorId);
+        glBindRenderbuffer(GL_RENDERBUFFER, rboColorId);
+        /* Storage must be one of: */
+        /* GL_RGBA4, GL_RGB565, GL_RGB5_A1, GL_DEPTH_COMPONENT16, GL_STENCIL_INDEX8. */
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa, GL_RGBA4, SCR_WIDTH, SCR_HEIGHT);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rboColorId);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
         
-        // /* 4x MSAA renderbuffer object for depthbuffer */
-        // glGenRenderbuffers(1, &rboDepthId);
-        // glBindRenderbuffer(GL_RENDERBUFFER, rboDepthId);
-        // glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+        /* 4x MSAA renderbuffer object for depthbuffer */
+        glGenRenderbuffers(1, &rboDepthId);
+        glBindRenderbuffer(GL_RENDERBUFFER, rboDepthId);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
 
-        // // attach depthbuffer image to FBO
-        // glFramebufferRenderbuffer(GL_FRAMEBUFFER,       // 1. fbo target: GL_FRAMEBUFFER
-        //                         GL_DEPTH_ATTACHMENT,  // 2. depth attachment point
-        //                         GL_RENDERBUFFER,      // 3. rbo target: GL_RENDERBUFFER
-        //                         rboDepthId);          // 4. rbo ID
-        // glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        // attach depthbuffer image to FBO
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER,       // 1. fbo target: GL_FRAMEBUFFER
+                                GL_DEPTH_ATTACHMENT,  // 2. depth attachment point
+                                GL_RENDERBUFFER,      // 3. rbo target: GL_RENDERBUFFER
+                                rboDepthId);          // 4. rbo ID
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-        // // create a normal (no MSAA) FBO to hold a render-to-texture
-        // glGenFramebuffers(1, &fboId);
-        // glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+        // Check if the MSAA FBO is complete
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            std::cout << "ERROR::FRAMEBUFFER:: Framebuffer fboMsaaId is not complete!\n" << std::endl;
+        }
+
+
+        // create a normal (no MSAA) FBO to hold a render-to-texture
+        glGenFramebuffers(1, &fboId);
+        glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+
+        // create a texture object
+        glGenTextures(1, &fboTexture);
+        glBindTexture(GL_TEXTURE_2D, fboTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        // glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE); // automatic mipmap
+        // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+        // glBindTexture(GL_TEXTURE_2D, 0);
 
         // glGenRenderbuffers(1, &rboId);
         // glBindRenderbuffer(GL_RENDERBUFFER, rboId);
@@ -254,15 +279,34 @@ int main()
         // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rboId);
         // glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-        // //Before drawing
-        // glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+        // Before drawing
+        glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+
+        // attach the texture to FBO color attachment point
+        glFramebufferTexture2D(GL_FRAMEBUFFER,        // 1. fbo target: GL_FRAMEBUFFER
+                               GL_COLOR_ATTACHMENT0,  // 2. attachment point
+                               GL_TEXTURE_2D,         // 3. tex target: GL_TEXTURE_2D
+                               fboTexture,               // 4. tex ID
+                               0);                    // 5. mipmap level: 0(base)
+
+        // // attach the renderbuffer to depth attachment point
+        // glFramebufferRenderbuffer(GL_FRAMEBUFFER,      // 1. fbo target: GL_FRAMEBUFFER
+        //                           GL_DEPTH_ATTACHMENT, // 2. attachment point
+        //                           GL_RENDERBUFFER,     // 3. rbo target: GL_RENDERBUFFER
+        //                           rboId);              // 4. rbo ID 
+
+        // Check if the FBO is complete
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            std::cout << "ERROR::FRAMEBUFFER:: Framebuffer fboId is not complete!\n" << std::endl;
+        }
 
         // Start ffmpeg process
         startFFmpeg();
     }
 
     // Frame buffer to hold the raw frame data (RGB)
-    std::vector<unsigned char> frame(SCR_WIDTH * SCR_HEIGHT * 3);
+    // std::vector<unsigned char> frame(SCR_WIDTH * SCR_HEIGHT * 3);
+    std::array<unsigned char, SCR_WIDTH * SCR_HEIGHT * 3> frame;
 
     // render loop
     // -----------
@@ -277,39 +321,92 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        float newvertices[] = {
-        // positions                          // colors           // texture coords
-         0.5f+xOffset,  0.5f+yOffset, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
-         0.5f+xOffset, -0.5f+yOffset, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
-        -0.5f+xOffset, -0.5f+yOffset, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
-        -0.5f+xOffset,  0.5f+yOffset, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
-        };
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(newvertices), newvertices, GL_DYNAMIC_DRAW);
+        // float newvertices[] = {
+        // // positions                          // colors           // texture coords
+        //  0.5f+xOffset,  0.5f+yOffset, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+        //  0.5f+xOffset, -0.5f+yOffset, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+        // -0.5f+xOffset, -0.5f+yOffset, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+        // -0.5f+xOffset,  0.5f+yOffset, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
+        // };
+        // glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        // glBufferData(GL_ARRAY_BUFFER, sizeof(newvertices), newvertices, GL_DYNAMIC_DRAW);
 
-        // set the texture mix value in the shader (this needs to be in the render loop)
-        ourShader.setFloat("mixValue", mixValue);
+        // // set the texture mix value in the shader (this needs to be in the render loop)
+        // ourShader.use();
+        // ourShader.setFloat("mixValue", mixValue);
 
         // ourShader.setFloat("xOffset", xOffset);
         // ourShader.setFloat("yOffset", yOffset);
 
-        // render the crate
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        // // render the crate
+        // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // set the target framebuffer to read
         /* GL_BACK, GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 */
-        glReadBuffer(GL_BACK);
+        // glReadBuffer(GL_BACK);
 
         if (onscreen_render)
         {
-            // glBindFramebuffer(GL_READ_FRAMEBUFFER, fboMsaaId);
-            // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
-            // glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
-            //                   0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
-            //                           GL_COLOR_BUFFER_BIT,           // buffer mask
-            //                                    GL_LINEAR);           // scale filter
-            // glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
+            // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            float newvertices[] = {
+            // positions                          // colors           // texture coords
+             0.5f+xOffset,  0.5f+yOffset, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+             0.5f+xOffset, -0.5f+yOffset, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+            -0.5f+xOffset, -0.5f+yOffset, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+            -0.5f+xOffset,  0.5f+yOffset, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
+            };
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(newvertices), newvertices, GL_DYNAMIC_DRAW);
+            glBindVertexArray(0);
+
+            // set the texture mix value in the shader (this needs to be in the render loop)
+            ourShader.use();
+            ourShader.setFloat("mixValue", mixValue);
+
+            ourShader.setFloat("xOffset", xOffset);
+            ourShader.setFloat("yOffset", yOffset);
+
+            // render the crate
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, fboMsaaId);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
+            glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                              0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
+                                      GL_COLOR_BUFFER_BIT,           // buffer mask
+                                               GL_LINEAR);           // scale filter
+            glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+            // glBindFramebuffer(GL_FRAMEBUFFER, 0);
             // glReadBuffer(GL_READ_FRAMEBUFFER);
+
+            glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame.data());
+            
+            // Flip the frame vertically
+            flipFrameVertically(frame.data());
+
+            // Send the frame data to ffmpeg
+            sendFrameToFFmpeg(frame.data());
+
+            // // Read pixels from the texture
+            // std::vector<unsigned char> pixels(width * height * 3); // Assuming RGB
+            // glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+
+            // // Inspect pixels in debugging tool or log
+            // for (int i = 0; i < 100; i++) { // Print first 100 pixel values as a test
+            //     std::cout << "Pixel " << i << ": (" 
+            //             << static_cast<int>(pixels[3*i]) << ", " 
+            //             << static_cast<int>(pixels[3*i+1]) << ", " 
+            //             << static_cast<int>(pixels[3*i+2]) << ")" << std::endl;
+            // }
+
+            // Clear the off-screen framebuffer
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+            quadShader.use();
+            renderQuadWithTexture(fboTexture, quadShader);  // Render the texture to a full-screen quad
 
             // char filepath[256];
             // sprintf(filepath, "../images/output/frame%03d.png", frame+1);
@@ -340,15 +437,13 @@ int main()
             // index = (index + 1) % PBO_COUNT;
             // nextIndex = (index + 1) % PBO_COUNT;
 
-            glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame.data());
+            // glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame.data());
             
-            // Flip the frame vertically
-            flipFrameVertically(frame.data());
+            // // Flip the frame vertically
+            // flipFrameVertically(frame.data());
 
-            // Send the frame data to ffmpeg
-            sendFrameToFFmpeg(frame.data());
-
-            // glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+            // // Send the frame data to ffmpeg
+            // sendFrameToFFmpeg(frame.data());
         }
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -468,4 +563,54 @@ void flipFrameVertically(unsigned char* frame) {
             std::swap(frame[y * SCR_WIDTH * 3 + x], frame[oppositeY * SCR_WIDTH * 3 + x]);
         }
     }
+}
+
+void setupQuad()
+{
+    // Create a quad with texture coordinates
+    float quadVertices[] = {
+        // positions   // texture coords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+    };
+
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+    // Position attribute
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // TexCoord attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0);
+}
+
+void renderQuadWithTexture(GLuint texture, Shader& shader)
+{
+    // Use the shader program through your Shader class
+    shader.use();
+
+    // Bind the texture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    shader.setInt("screenTexture", 0);  // Assuming sampler2D in fragment
+
+    // Render the quad
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+
+    // Optionally, unbind the shader program
+    glUseProgram(0);
 }
