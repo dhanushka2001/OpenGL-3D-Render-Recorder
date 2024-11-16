@@ -10,33 +10,38 @@ ffmpeg version 4.4.1-essentials_build-www.gyan.dev Copyright (c) 2000-2021 the F
   libswresample   3.  9.100 /  3.  9.100
   libpostproc    55.  9.100 / 55.  9.100
 Input #0, rawvideo, from 'pipe:':
-  Duration: N/A, start: 0.000000, bitrate: 345600 kb/s
-  Stream #0:0: Video: rawvideo (RGB[24] / 0x18424752), rgb24, 800x600, 345600 kb/s, 30 tbr, 30 tbn, 30 tbc
+  Duration: N/A, start: 0.000000, bitrate: 691200 kb/s
+  Stream #0:0: Video: rawvideo (RGB[24] / 0x18424752), rgb24, 800x600, 691200 kb/s, 60 tbr, 60 tbn, 60 tbc
 Stream mapping:
   Stream #0:0 -> #0:0 (rawvideo (native) -> h264 (libx264))
-[libx264 @ 0000024a4a102d80] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
-[libx264 @ 0000024a4a102d80] profile High, level 3.1, 4:2:0, 8-bit
-[libx264 @ 0000024a4a102d80] 264 - core 164 r3075 66a5bc1 - H.264/MPEG-4 AVC codec - Copyleft 2003-2021 - http://www.videolan.org/x264.html - options: cabac=1 ref=3 deblock=1:0:0 analyse=0x3:0x113 me=hex subme=7 psy=1 psy_rd=1.00:0.00 mixed_ref=1 me_range=16 chroma_me=1 trellis=1 8x8dct=1 cqm=0 deadzone=21,11 fast_pskip=1 chroma_qp_offset=-2 threads=12 lookahead_threads=2 sliced_threads=0 nr=0 decimate=1 interlaced=0 bluray_compat=0 constrained_intra=0 bframes=3 b_pyramid=2 b_adapt=1 b_bias=0 direct=1 weightb=1 open_gop=0 weightp=2 keyint=250 keyint_min=25 scenecut=40 intra_refresh=0 rc_lookahead=40 rc=crf mbtree=1 crf=23.0 qcomp=0.60 qpmin=0 qpmax=69 qpstep=4 ip_ratio=1.40 aq=1:1.00
+[libx264 @ 000001bdfa2f2d80] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+[libx264 @ 000001bdfa2f2d80] profile High, level 3.2, 4:2:0, 8-bit
+[libx264 @ 000001bdfa2f2d80] 264 - core 164 r3075 66a5bc1 - H.264/MPEG-4 AVC codec - Copyleft 2003-2021 - http://www.videolan.org/x264.html - options: cabac=1 ref=3 deblock=1:0:0 analyse=0x3:0x113 me=hex subme=7 psy=1 psy_rd=1.00:0.00 mixed_ref=1 me_range=16 chroma_me=1 trellis=1 8x8dct=1 cqm=0 deadzone=21,11 fast_pskip=1 chroma_qp_offset=-2 threads=12 lookahead_threads=2 sliced_threads=0 nr=0 decimate=1 interlaced=0 bluray_compat=0 constrained_intra=0 bframes=3 b_pyramid=2 b_adapt=1 b_bias=0 direct=1 weightb=1 open_gop=0 weightp=2 keyint=250 keyint_min=25 scenecut=40 intra_refresh=0 rc_lookahead=40 rc=crf mbtree=1 crf=23.0 qcomp=0.60 qpmin=0 qpmax=69 qpstep=4 ip_ratio=1.40 aq=1:1.00
 Output #0, mp4, to 'output.mp4':
   Metadata:
     encoder         : Lavf58.76.100
-  Stream #0:0: Video: h264 (avc1 / 0x31637661), yuv420p(tv, progressive), 800x600, q=2-31, 30 fps, 15360 tbn
+  Stream #0:0: Video: h264 (avc1 / 0x31637661), yuv420p(tv, progressive), 800x600, q=2-31, 60 fps, 15360 tbn
     Metadata:
       encoder         : Lavc58.134.100 libx264
     Side data:
       cpb: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
-frame=    1 fps=0.0 q=0.0 size=       0kB time=00:00:00.00 bitrate=N/A speed=   0x    frame=   34 fps=0.0 q=0.0 size=       0kB time=00:00:00.00 bitrate=N/A speed=   0x    frame=   66 fps= 66 q=29.0 size=       0kB time=00:00:00.23 bitrate=   1.6kbits/s speed=0.232x    frame=   78 fps= 59 q=-1.0 Lsize=       5kB time=00:00:02.50 bitrate=  15.2kbits/s speed=1.89x    
-video:3kB audio:0kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 60.922661%
-[libx264 @ 0000024a4a102d80] frame I:1     Avg QP:10.16  size:   151
-[libx264 @ 0000024a4a102d80] frame P:20    Avg QP:12.80  size:    33
-[libx264 @ 0000024a4a102d80] frame B:57    Avg QP:16.67  size:    25
-[libx264 @ 0000024a4a102d80] consecutive B-frames:  2.6%  0.0%  0.0% 97.4%
-[libx264 @ 0000024a4a102d80] mb I  I16..4: 100.0%  0.0%  0.0%
-[libx264 @ 0000024a4a102d80] mb P  I16..4:  0.0%  0.0%  0.0%  P16..4:  0.0%  0.0%  0.0%  0.0%  0.0%    skip:100.0%
-[libx264 @ 0000024a4a102d80] mb B  I16..4:  0.0%  0.0%  0.0%  B16..8:  0.0%  0.0%  0.0%  direct: 0.0%  skip:100.0%
-[libx264 @ 0000024a4a102d80] 8x8 transform intra:0.0%
-[libx264 @ 0000024a4a102d80] coded y,uvDC,uvAC intra: 0.0% 0.1% 0.0% inter: 0.0% 0.0% 0.0%
-[libx264 @ 0000024a4a102d80] i16 v,h,dc,p: 97%  0%  3%  0%
-[libx264 @ 0000024a4a102d80] i8c dc,h,v,p: 97%  3%  0%  0%
-[libx264 @ 0000024a4a102d80] Weighted P-Frames: Y:0.0% UV:0.0%
-[libx264 @ 0000024a4a102d80] kb/s:6.95
+frame=    1 fps=0.0 q=0.0 size=       0kB time=00:00:00.00 bitrate=N/A speed=   0x    frame=   34 fps=0.0 q=0.0 size=       0kB time=00:00:00.00 bitrate=N/A speed=   0x    frame=   67 fps= 65 q=31.0 size=       0kB time=00:00:00.13 bitrate=   2.9kbits/s speed=0.13x    frame=  101 fps= 66 q=31.0 size=       0kB time=00:00:00.70 bitrate=   0.5kbits/s speed=0.458x    frame=  135 fps= 66 q=31.0 size=       0kB time=00:00:01.26 bitrate=   0.3kbits/s speed=0.623x    frame=  169 fps= 67 q=31.0 size=       0kB time=00:00:01.83 bitrate=   0.2kbits/s speed=0.722x    frame=  204 fps= 67 q=31.0 size=       0kB time=00:00:02.41 bitrate=   0.2kbits/s speed=0.791x    frame=  238 fps= 67 q=31.0 size=       0kB time=00:00:02.98 bitrate=   0.1kbits/s speed=0.839x    frame=  270 fps= 66 q=31.0 size=       0kB time=00:00:03.51 bitrate=   0.1kbits/s speed=0.856x    frame=  270 fps= 65 q=-1.0 Lsize=     176kB time=00:00:04.45 bitrate= 323.9kbits/s speed=1.07x    
+video:172kB audio:0kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 2.321435%
+[libx264 @ 000001bdfa2f2d80] frame I:2     Avg QP:15.65  size: 30912
+[libx264 @ 000001bdfa2f2d80] frame P:69    Avg QP:19.15  size:  1135
+[libx264 @ 000001bdfa2f2d80] frame B:199   Avg QP:21.12  size:   177
+[libx264 @ 000001bdfa2f2d80] consecutive B-frames:  1.1%  1.5%  1.1% 96.3%
+[libx264 @ 000001bdfa2f2d80] mb I  I16..4: 49.7% 37.2% 13.1%
+[libx264 @ 000001bdfa2f2d80] mb P  I16..4:  0.1%  0.9%  0.0%  P16..4:  4.0%  0.7%  0.6%  0.0%  0.0%    skip:93.7%
+[libx264 @ 000001bdfa2f2d80] mb B  I16..4:  0.0%  0.0%  0.0%  B16..8:  4.6%  0.7%  0.1%  direct: 0.1%  skip:94.6%  L0:46.0% L1:50.7% BI: 3.3%
+[libx264 @ 000001bdfa2f2d80] 8x8 transform intra:49.9% inter:67.5%
+[libx264 @ 000001bdfa2f2d80] coded y,uvDC,uvAC intra: 18.8% 19.9% 19.0% inter: 0.7% 0.6% 0.1%
+[libx264 @ 000001bdfa2f2d80] i16 v,h,dc,p: 92%  3%  5%  0%
+[libx264 @ 000001bdfa2f2d80] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 19% 16% 60%  1%  1%  1%  1%  1%  1%
+[libx264 @ 000001bdfa2f2d80] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 18% 25% 19%  7%  6%  6%  6%  7%  7%
+[libx264 @ 000001bdfa2f2d80] i8c dc,h,v,p: 69% 23%  5%  3%
+[libx264 @ 000001bdfa2f2d80] Weighted P-Frames: Y:0.0% UV:0.0%
+[libx264 @ 000001bdfa2f2d80] ref P L0: 77.0%  6.9% 14.2%  1.8%
+[libx264 @ 000001bdfa2f2d80] ref B L0: 80.6% 19.1%  0.3%
+[libx264 @ 000001bdfa2f2d80] ref B L1: 95.1%  4.9%
+[libx264 @ 000001bdfa2f2d80] kb/s:311.84

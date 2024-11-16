@@ -12,4 +12,5 @@ uniform sampler2D texture2;	// awesome face
 void main()
 {
 	FragColor = mix(texture(texture1, vec2(TexCoord.x, TexCoord.y)), texture(texture2, vec2(TexCoord.x, TexCoord.y)), mixValue) * vec4(ourColor, 1.0); 
+	// FragColor = vec4(1.0, 0.0, 0.0, 1.0);  // Output solid red to test shader
 }
