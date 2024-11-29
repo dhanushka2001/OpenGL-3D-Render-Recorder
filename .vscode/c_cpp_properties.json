@@ -3,7 +3,12 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/include/freetype2",
+                "${workspaceFolder}/include/brotli",
+                "${workspaceFolder}/include/harfbuzz",
+                "${workspaceFolder}/include/graphite2"
             ],
             "defines": [
                 "_DEBUG",
@@ -11,10 +16,9 @@
                 "_UNICODE"
             ],
             "windowsSdkVersion": "10.0.22621.0",
-            "compilerPath": "cl.exe",
-            "cStandard": "c17",
+            "compilerPath": "C:\\msys64\\mingw64\\bin\\g++.exe",
             "cppStandard": "c++17",
-            "intelliSenseMode": "windows-msvc-x64"
+            "intelliSenseMode": "gcc-x64"
         }
     ],
     "version": 4

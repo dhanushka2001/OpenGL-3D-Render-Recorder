@@ -7,6 +7,9 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 class Shader
 {
@@ -68,11 +71,17 @@ public:
         glDeleteShader(vertex);
         glDeleteShader(fragment);
     }
-    // activate the shader
+    // Activates the Shader Program
     // ------------------------------------------------------------------------
-    void use() 
+    void Activate() 
     { 
         glUseProgram(ID); 
+    }
+    // Deletes the Shader Program
+    // ------------------------------------------------------------------------
+    void Delete() 
+    { 
+        glDeleteProgram(ID);
     }
     // utility uniform functions
     // ------------------------------------------------------------------------
@@ -89,6 +98,22 @@ public:
     void setFloat(const std::string &name, float value) const
     { 
         glUniform1f(glGetUniformLocation(ID, name.c_str()), value); 
+    }
+    void setVec3(const std::string &name, const glm::vec3 &value) const
+    { 
+        // Get the location of the uniform variable in the shader program
+        GLint location = glGetUniformLocation(ID, name.c_str()); // ID is your shader program's ID
+        
+        // Check if the location is valid
+        if (location == -1) {
+            std::cerr << "Warning: Uniform '" << name << "' doesn't exist!" << std::endl;
+        }
+        
+        // Set the uniform value using glUniform3fv (3 float values)
+        glUniform3fv(location, 1, &value[0]); 
+    }
+    void setMat4(const std::string &name, const glm::mat4 &mat) const {
+        glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat));
     }
 
 private:
