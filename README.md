@@ -2,6 +2,7 @@
 # LearnOpenGL
 * Learning to use OpenGL (GLFW) so I can do high-performance scientific computing and modelling on the GPU.
 * Read [this forum thread](https://news.ycombinator.com/item?id=19674197) and watch [this video](https://www.youtube.com/watch?v=zQUYsMYElC0) for an explanation of what GLFW is and a comparison between other popular OpenGL API libraries.
+* ["GLFW is the library to create the window, OpenGL context, and handle all the input-related stuff. Its version is not related to the OpenGL version you use in any way." "The version of glad is the version of OpenGL you can use. The version of GLFW is irrelevant."](https://www.reddit.com/r/opengl/comments/1dwz5i2/confused_as_to_which_version_of_glad_to_use/)
 * Using www.learnopengl.com as my main resource.
 
 ## Progress update 1 - Hello Triangle - 30/06/24
