@@ -294,10 +294,38 @@
   std::array<unsigned char, SCR_WIDTH * SCR_HEIGHT * 3> frame;
   ```
 
-
 6. [OpenGL rendering from FBO to screen?](https://stackoverflow.com/a/10400048)
 7. [OpenGL - Is there an easier way to fill window with a texture, instead using VBO,etc?](https://stackoverflow.com/a/31487085) 
 8. [OpenGL Frame Buffer Object (FBO) - Example: Render To Texture - Songho](http://www.songho.ca/opengl/gl_fbo.html#example)
+
+## Progress update 6 - Text rendering - 29/11/24
+* I wanted to be able to render text on-screen, to display the FPS for example. Rendering text in OpenGL is surprisingly non-trivial, a quick and easy way to see the FPS is to display it on the title of the window.
+  ```cpp
+  // FPS Counter: https://www.youtube.com/watch?v=BA6aR_5C_BM
+	crntTime = glfwGetTime();
+  newTime = crntTime;
+  deltaTime = newTime - oldTime;
+  prevTime = crntTime;
+	counter++;
+  // update FPS every 30th of a second (you can change this)
+	if (deltaTime >= 1.0 / 30.0)
+	{
+	// Creates new title
+	std::string FPS = std::to_string((1.0 / deltaTime) * counter);
+	std::string ms = std::to_string((deltaTime / counter) * 1000);
+	std::string newTitle = "LearnOpenGL - " + FPS + "FPS / " + ms + "ms";
+	glfwSetWindowTitle(window, newTitle.c_str());
+
+	// Resets times and counter
+  counter = 0;
+	}
+  ```
+<!-- PICTURE OF FPS IN TITLE BUT NOT ON SCREEN AS TEXT HERE -->
+* This is fine but it would be nice to see the FPS as text on-screen as then I can see it in the encoded video recording too. Getting text to appear on screen turned out to be very difficult.
+* There are two main ways to render text in OpenGL, the old way of rendering text using bitmap fonts, which is fast but you're limited with the number of characters and size, or the modern way which involves TrueType fonts that use mathematical equations (splines) to give better quality and you can change the size easily, but this method is more involved. I opted for the modern way as I felt it would be more useful to learn, however it was a pain to set up.
+* The [chapter](https://learnopengl.com/In-Practice/Text-Rendering) on LearnOpenGL.com for modern text rendering actually doesn't give the best way to do TrueType font rendering, they generate a texture for each glyph/character of the text, which they even admit is not good performance-wise. They did however recommend at the end that the best way would be to combine the old and new approach, dynamically generating a rasterized bitmap font texture atlas featuring all TrueType character glyphs as loaded with FreeType, which is what I decided to try implementing.
+* Before doing this I first had to download and import FreeType, which is used to load the TrueType fonts. I wish I could say it was as simple as downloading FreeType and adding the include statements, but it wasn't. FreeType has a lot of dependencies which I had in my ``C:\msys64\mingw64\lib`` and ``C:\msys64\mingw64\include`` folders but they weren't being recognised. I wanted to make my project folder self-contained so I decided to move all dependencies to the project lib and include folders, this took quite a while as there was a lot of dependencies that weren't explicitly told and I was only made aware after being given error after error and checking online which dependency files needed to be added and then linking to them in the ``tasks.json`` file's ``args`` and the ``c_cpp_properties.json`` file's ``includePath``. I was honestly ready to give up but after copying over enough headers (.h files) and statically linked library files (.a files) I no longer had any errors.
+
 
 <!-- ADD BIBLIOGRAPHY -->
 <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
