@@ -15,7 +15,7 @@
 
   </details>
   
-* I am using MinGW-w64 (GCC) to compile the C++ code. I recommend installing it using [MSYS2](https://www.msys2.org/), [here](https://www.youtube.com/watch?v=C3IxeHthNnM) is a good tutorial. Make sure to install MSYS2 in the C drive (``C:\msys64``), and to run this command in MSYS2:
+* I am using MinGW-w64 (GCC) to compile the C++ code. I recommend installing it using [MSYS2](https://www.msys2.org/), [here](https://www.youtube.com/watch?v=C3IxeHthNnM) is a good tutorial. Make sure to install MSYS2 in the C drive (``C:\msys64``), and to run this command in MSYS2 (ensure you're using the ``mingw64`` [environment](https://www.msys2.org/docs/environments/)):
 
   ```console
   pacman -S --needed base-devel mingw-w64-x86_64-toolchain
@@ -325,6 +325,65 @@
 * There are two main ways to render text in OpenGL, the old way of rendering text using bitmap fonts, which is fast but you're limited with the number of characters and size, or the modern way which involves TrueType fonts that use mathematical equations (splines) to give better quality and you can change the size easily, but this method is more involved. I opted for the modern way as I felt it would be more useful to learn, however it was a pain to set up.
 * The [chapter](https://learnopengl.com/In-Practice/Text-Rendering) on LearnOpenGL.com for modern text rendering actually doesn't give the best way to do TrueType font rendering, they generate a texture for each glyph/character of the text, which they even admit is not good performance-wise. They did however recommend at the end that the best way would be to combine the old and new approach, dynamically generating a rasterized bitmap font texture atlas featuring all TrueType character glyphs as loaded with FreeType, which is what I decided to try implementing.
 * Before doing this I first had to download and import FreeType, which is used to load the TrueType fonts. I wish I could say it was as simple as downloading FreeType and adding the include statements, but it wasn't. FreeType has a lot of dependencies which I had in my ``C:\msys64\mingw64\lib`` and ``C:\msys64\mingw64\include`` folders but they weren't being recognised. I wanted to make my project folder self-contained so I decided to move all dependencies to the project lib and include folders, this took quite a while as there was a lot of dependencies that weren't explicitly told and I was only made aware after being given error after error and checking online which dependency files needed to be added and then linking to them in the ``tasks.json`` file's ``args`` and the ``c_cpp_properties.json`` file's ``includePath``. I was honestly ready to give up but after copying over enough headers (.h files) and statically linked library files (.a files) I no longer had any errors.
+* I used MSYS2 to build FreeType and all its dependencies, running this command (ensure you're using the ``mingw64`` [environment](https://www.msys2.org/docs/environments/)):
+
+   ```console
+  pacman -S mingw-w64-x86_64-freetype
+  ```
+
+* Verify installation:
+  * Library file: Look for ``libfreetype.a`` in ``/mingw64/lib``.
+  * Header files: Look for FreeType headers in ``/mingw64/include/freetype2``.
+  If these files exist, the installation was successful. 
+
+* On the [MSYS2 website](https://packages.msys2.org/packages/mingw-w64-x86_64-freetype) it shows the dependencies. I find that when building FreeType it will prompt you to also install the dependencies, so they should already be located in your ``C:\msys64\mingw64\lib`` and ``C:\msys64\mingw64\include`` folder, if you run ``main.cpp`` and you get ``undefined reference...`` errors then it probably means you are missing a dependency file.
+
+  |  Dependency  |             Description              |               MSYS2 command              | Library location | Header location | Compiler flag  | Linker flag   |
+  |     :---:    |                :---:                 |                    :---:                 |       :---:      |     :---:       |     :---:      |       :---:   |
+  | ``brotli``   | compression library                  | ``pacman -S mingw-w64-x86_64-brotli``    | ``C:\msys64\mingw64\lib\libbrotlicommon.a`` ``C:\msys64\mingw64\lib\libbrotlidec.a`` ``C:\msys64\mingw64\lib\libbrotlienc.a`` | ``C:\msys64\mingw64\include\brotli\`` | ``-I${workspaceFolder}/include/brotli`` | ``"-lbrotlidec", "-lbrotlienc", "-lbrotlicommon"`` |
+  | ``libpng``   | for PNG support                      | ``pacman -S mingw-w64-x86_64-libpng``    |                  |                |               |                 |
+  | ``zlib``     | compression library                  | ``pacman -S mingw-w64-x86_64-zlib``      |                  |                |               |                 |
+  | ``libbz2``   | optional, for BZip2-compressed fonts | ``pacman -S mingw-w64-x86_64-bzip2``     |                  |                |               |                 |
+  | ``HarfBuzz`` | text shaping library                 | ``pacman -S mingw-w64-x86_64-harfbuzz``  |                  |                |               |                 |
+  | ``Graphite2``| text shaping library                 | ``pacman -S mingw-w64-x86_64-graphite2`` |                  |                |               |                 |
+
+  
+  mingw-w64-x86_64-brotli
+  mingw-w64-x86_64-bzip2
+  mingw-w64-x86_64-gcc-libs
+  mingw-w64-x86_64-harfbuzz
+  mingw-w64-x86_64-libpng
+  mingw-w64-x86_64-zlib
+
+* Copy files to your local project folder:
+  * Copy the Library File: Copy ``libfreetype.a`` to your project's ``lib`` folder.
+    ```bash
+    YourProject/
+    ├── lib/
+    │   └── libfreetype.a
+    ```
+  * Copy the Header Files: Copy the entire ``freetype2`` folder into your ``include`` folder.
+    ```bash
+    YourProject/
+    ├── include/
+    │   └── freetype2/
+    │   │   ├── ft2build.h
+    │   │   ├── freetype/
+    │   │   │   ├── freetype.h
+    │   │   │   ├── ftglyph.h
+    │   │   │   ├── ...
+    ```
+* Update Compiler Flags in ``tasks.json`` (tell your compiler where to find the FreeType library and headers):
+  * Add ``-I${workspaceFolder}/include/freetype2`` to specify the include directory.
+  * Add ``-L${workspaceFolder}/lib`` to specify the library directory.
+  * Add ``-lfreetype`` to link the FreeType library.
+* In your ``main.cpp`` file, include FreeType by adding the following include statements:
+  ```cpp
+  #include <ft2build.h>
+  #include FT_FREETYPE_H
+  ```
+  ``ft2build.h`` is a configuration header provided by FreeType, this file is the entry point that sets up the necessary paths for the FreeType headers. You don't include ``freetype.h`` directly. Instead, after including ``ft2build.h``, you include ``freetype.h`` indirectly using ``#include FT_FREETYPE_H``. This macro is defined in ``ft2build.h`` and resolves the correct path for the ``freetype.h`` header based on your FreeType installation.
+
 
 
 <!-- ADD BIBLIOGRAPHY -->
