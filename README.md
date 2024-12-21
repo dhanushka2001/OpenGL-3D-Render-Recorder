@@ -17,14 +17,14 @@
 The reason why you need those function pointers is that the code is located in the driver (and some of it might even be on the gpu). OpenGL, Vulkan and DirectX are only specifications so Khronos (they make OpenGL and Vulkan) and Microsoft ( they make DirectX) do not provide an implementation for them; the gpu driver is charged with implementing all of the specification. You can see that a bit like Khronos is providing the OpenGL .h file and the driver provides the .cpp file. Also, the fact that OpenGL is a state machine has nothing to do about needing to load the function pointers (for example Vulkan is not a state machine and you also need to load the function pointers).
 GLEW and GLAD also come with the OpenGL headers because you also need those along with the function pointers, but you can also get those headers from Khronos directly."[^8]
 
-	[^1]: gl_drawelements. "Confused as to which version of glad to use ?" _Reddit_, 9 July 2024, [reddit.com/r/opengl/comments/1dwz5i2/comment/lcb0fkb/](https://www.reddit.com/r/opengl/comments/1dwz5i2/comment/lcb0fkb/).
-	[^2]: uke5273. "Confused as to which version of glad to use ?" _Reddit_, 6 July 2024, [reddit.com/r/opengl/comments/1dwz5i2/comment/lby4ai8/](https://www.reddit.com/r/opengl/comments/1dwz5i2/comment/lby4ai8/).
-	[^3]: Fredericvo. "GLFW or GLEW? Which OpenGL library should I use" _GameDev.net_, 22 July 2015, [gamedev.net/forums/topic/670250-glfw-or-glew-which-opengl-library-should-i-use/5241850/](https://gamedev.net/forums/topic/670250-glfw-or-glew-which-opengl-library-should-i-use/5241850/).
-	[^4]: unigeek, Roovy. "What does GLFW acronym stand for?" _Stack Overflow_, 11 Feb. 2014, 17 Sep. 2019, [stackoverflow.com/questions/21691755/what-does-glfw-acronym-stand-for](https://stackoverflow.com/questions/21691755/what-does-glfw-acronym-stand-for).
-	[^5]: Nicolas Iceberg. "What is Glew, Glut and glfw3? Which ones are deprecated in Opengl 3/4" _Stack Overflow_, 8 May 2020, [stackoverflow.com/a/61685993](https://stackoverflow.com/a/61685993).
-	[^6]: Eric Buitrón López. "Exploring Computer Graphics: Weekly Chronicle #1" _DEV Community_, 16 Oct 2023, [dev.to/ericbl3/exploring-computer-graphics-weekly-chronicle-1-3nlj](https://dev.to/ericbl3/exploring-computer-graphics-weekly-chronicle-1-3nlj).
-	[^7]: Criticize SE actions means ban. "Where to get GLEXT.h?" _Stack Overflow_, 21 Mar. 2024, [stackoverflow.com/a/78197031](https://stackoverflow.com/a/78197031).
-	[^8]: cppBestLanguage. "Good Explanations of differences between GLFW, GLUT, GLAD, GLEW, etc?" _Reddit_, 8 Jan. 2022, [reddit.com/r/cpp_questions/comments/ryr3fk/comment/hrqyder/](https://www.reddit.com/r/cpp_questions/comments/ryr3fk/comment/hrqyder/).
+[^1]: gl_drawelements. "Confused as to which version of glad to use ?" _Reddit_, 9 July 2024, [reddit.com/r/opengl/comments/1dwz5i2/comment/lcb0fkb/](https://www.reddit.com/r/opengl/comments/1dwz5i2/comment/lcb0fkb/).
+[^2]: uke5273. "Confused as to which version of glad to use ?" _Reddit_, 6 July 2024, [reddit.com/r/opengl/comments/1dwz5i2/comment/lby4ai8/](https://www.reddit.com/r/opengl/comments/1dwz5i2/comment/lby4ai8/).
+[^3]: Fredericvo. "GLFW or GLEW? Which OpenGL library should I use" _GameDev.net_, 22 July 2015, [gamedev.net/forums/topic/670250-glfw-or-glew-which-opengl-library-should-i-use/5241850/](https://gamedev.net/forums/topic/670250-glfw-or-glew-which-opengl-library-should-i-use/5241850/).
+[^4]: unigeek, Roovy. "What does GLFW acronym stand for?" _Stack Overflow_, 11 Feb. 2014, 17 Sep. 2019, [stackoverflow.com/questions/21691755/what-does-glfw-acronym-stand-for](https://stackoverflow.com/questions/21691755/what-does-glfw-acronym-stand-for).
+[^5]: Nicolas Iceberg. "What is Glew, Glut and glfw3? Which ones are deprecated in Opengl 3/4" _Stack Overflow_, 8 May 2020, [stackoverflow.com/a/61685993](https://stackoverflow.com/a/61685993).
+[^6]: Eric Buitrón López. "Exploring Computer Graphics: Weekly Chronicle #1" _DEV Community_, 16 Oct 2023, [dev.to/ericbl3/exploring-computer-graphics-weekly-chronicle-1-3nlj](https://dev.to/ericbl3/exploring-computer-graphics-weekly-chronicle-1-3nlj).
+[^7]: Criticize SE actions means ban. "Where to get GLEXT.h?" _Stack Overflow_, 21 Mar. 2024, [stackoverflow.com/a/78197031](https://stackoverflow.com/a/78197031).
+[^8]: cppBestLanguage. "Good Explanations of differences between GLFW, GLUT, GLAD, GLEW, etc?" _Reddit_, 8 Jan. 2022, [reddit.com/r/cpp_questions/comments/ryr3fk/comment/hrqyder/](https://www.reddit.com/r/cpp_questions/comments/ryr3fk/comment/hrqyder/).
 
   </details>
   
@@ -394,7 +394,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   mingw-w64-x86_64-harfbuzz
   mingw-w64-x86_64-libpng
   mingw-w64-x86_64-zlib
--->
+  -->
 
 * Copy files to your local project folder:
   * Copy the Library File: Copy ``libfreetype.a`` to your project's ``lib`` folder.
@@ -423,8 +423,9 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   #include <ft2build.h>
   #include FT_FREETYPE_H
   ```
-  ``ft2build.h`` is a configuration header provided by FreeType, this file is the entry point that sets up the necessary paths for the FreeType headers. You don't include ``freetype.h`` directly. Instead, after including ``ft2build.h``, you include ``freetype.h`` indirectly using ``#include FT_FREETYPE_H``. This macro is defined in ``ft2build.h`` and resolves the correct path for the ``freetype.h`` header based on your FreeType installation.
-
+  ``ft2build.h`` is a configuration header provided by FreeType, this file is the entry point that sets up the necessary paths for the FreeType headers. You don't include 
+  ``freetype.h`` directly. Instead, after including ``ft2build.h``, you include ``freetype.h`` indirectly using ``#include FT_FREETYPE_H``. This macro is defined in 
+  ``ft2build.h`` and resolves the correct path for the ``freetype.h`` header based on your FreeType installation.
 
 
 <!-- ADD BIBLIOGRAPHY -->
