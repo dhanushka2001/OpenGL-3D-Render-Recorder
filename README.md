@@ -446,6 +446,12 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   * Add ``-I${workspaceFolder}/include/freetype2`` to specify the include directory.
   * Add ``-L${workspaceFolder}/lib`` to specify the library directory.
   * Add ``-lfreetype`` to link the FreeType library.
+  * Add ``-lharfbuzz`` to link the HarfBuzz library.
+  * Add ``-lgraphite2`` to link the Graphite2 library.
+  * Add ``-lpng`` to link the libpng library.
+  * Add ``-lz`` to link the zlib library.
+  * Add ``-lbz2`` to link the libbz2 library.
+  * Add ``-lbrotlidec``, ``lbrotlienc``, ``lbrotlicommon`` to link the Brotli library.
 * In your ``main.cpp`` file, include FreeType by adding the following include statements:
   ```cpp
   #include <ft2build.h>
