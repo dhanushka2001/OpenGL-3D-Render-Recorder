@@ -381,11 +381,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   |  Dependency  |             Description              |               MSYS2 command              | Library location | Header location | Compiler flag  | Linker flag   |
   |     :---:    |                :---:                 |                    :---:                 |       :---:      |     :---:       |     :---:      |       :---:   |
   | ``brotli``   | compression library                  | ``pacman -S mingw-w64-x86_64-brotli``    | ``C:\msys64\mingw64\lib\libbrotlicommon.a`` ``C:\msys64\mingw64\lib\libbrotlidec.a`` ``C:\msys64\mingw64\lib\libbrotlienc.a`` | ``C:\msys64\mingw64\include\brotli\`` | ``-I${workspaceFolder}/include/brotli`` | ``"-lbrotlidec", "-lbrotlienc", "-lbrotlicommon"`` |
-  | ``libpng``   | for PNG support                      | ``pacman -S mingw-w64-x86_64-libpng``    |                  |                |               |                 |
-  | ``zlib``     | compression library                  | ``pacman -S mingw-w64-x86_64-zlib``      |                  |                |               |                 |
-  | ``libbz2``   | optional, for BZip2-compressed fonts | ``pacman -S mingw-w64-x86_64-bzip2``     |                  |                |               |                 |
-  | ``HarfBuzz`` | text shaping library                 | ``pacman -S mingw-w64-x86_64-harfbuzz``  |                  |                |               |                 |
-  | ``Graphite2``| text shaping library                 | ``pacman -S mingw-w64-x86_64-graphite2`` |                  |                |               |                 |
+  | ``libpng``   | for PNG support                      | ``pacman -S mingw-w64-x86_64-libpng``    | ``C:\msys64\mingw64\lib\libpng.a`` | ``C:\msys64\mingw64\include\libpng16\`` |  | ``"-lpng"`` |
+  | ``zlib``     | compression library                  | ``pacman -S mingw-w64-x86_64-zlib``      | ``C:\msys64\mingw64\lib\libz.a`` | ``C:\msys64\mingw64\include\zlib.h`` |  | ``"-lz"`` |
+  | ``libbz2``   | optional, for BZip2-compressed fonts | ``pacman -S mingw-w64-x86_64-bzip2``     | ``C:\msys64\mingw64\lib\libbz2.a`` | ``C:\msys64\mingw64\include\bzlib.h`` |  | ``"-lbz2"`` |
+  | ``HarfBuzz`` | text shaping library                 | ``pacman -S mingw-w64-x86_64-harfbuzz``  | ``C:\msys64\mingw64\lib\libharfbuzz.a`` | ``C:\msys64\mingw64\include\harfbuzz\`` | ``"-I${workspaceFolder}/include/harfbuzz"`` | ``"-lharfbuzz"`` |
+  | ``Graphite2``| text shaping library                 | ``pacman -S mingw-w64-x86_64-graphite2`` | ``C:\msys64\mingw64\lib\libgraphite2.a`` | ``C:\msys64\mingw64\include\graphite2\`` | ``"-I${workspaceFolder}/include/graphite2"`` | ``"-lgraphite2"`` |
 
   <!--
   mingw-w64-x86_64-brotli
@@ -397,23 +397,51 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   -->
 
 * Copy files to your local project folder:
-  * Copy the Library File: Copy ``libfreetype.a`` to your project's ``lib`` folder.
+  * Copy the Library Files:
     ```bash
-    YourProject/
-    ├── lib/
-    │   └── libfreetype.a
+    YourProject
+    └── lib
+        ├── libfreetype.a
+        ├── libbrotlicommon.a
+        ├── libbrotlidec.a
+        ├── libbrotlienc.a
+        ├── libpng.a
+        ├── libz.a
+        ├── libbz2.a
+        ├── libharfbuzz.a
+        └── libgraphite2.a
     ```
-  * Copy the Header Files: Copy the entire ``freetype2`` folder into your ``include`` folder.
+  
+  * Copy the Header Files: Copy the entire ``freetype2``, ``brotli``, ``graphite2``, ``harfbuzz`` and ``libpng16`` folders into your ``include`` folder as well as the ``zlib.h`` and ``bzlib.h`` files.
     ```bash
-    YourProject/
-    ├── include/
-    │   └── freetype2/
-    │   │   ├── ft2build.h
-    │   │   ├── freetype/
-    │   │   │   ├── freetype.h
-    │   │   │   ├── ftglyph.h
-    │   │   │   ├── ...
+    YourProject
+    └── include
+        ├── freetype2
+        │   ├── ft2build.h
+        │   └── freetype/
+        │       ├── freetype.h
+        │       ├── ftglyph.h
+        │       └── ...
+        ├── brotli
+        │   ├── decode.h
+        │   ├── encode.h
+        │   └── ...
+        ├── graphite2
+        │   ├── Font.h
+        │   ├── Log.h
+        │   └── ...
+        ├── harfbuzz
+        │   ├── hb.h
+        │   ├── hb-aat.h
+        │   └── ...
+        ├── libpng16
+        │   ├── png.h
+        │   ├── pngconf.h
+        │   └── ...
+        ├── zlib.h
+        └── bzlib.h
     ```
+  
 * Update Compiler Flags in ``tasks.json`` (tell your compiler where to find the FreeType library and headers):
   * Add ``-I${workspaceFolder}/include/freetype2`` to specify the include directory.
   * Add ``-L${workspaceFolder}/lib`` to specify the library directory.
@@ -426,6 +454,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   ``ft2build.h`` is a configuration header provided by FreeType, this file is the entry point that sets up the necessary paths for the FreeType headers. You don't include 
   ``freetype.h`` directly. Instead, after including ``ft2build.h``, you include ``freetype.h`` indirectly using ``#include FT_FREETYPE_H``. This macro is defined in 
   ``ft2build.h`` and resolves the correct path for the ``freetype.h`` header based on your FreeType installation.
+
 
 
 <!-- ADD BIBLIOGRAPHY -->
