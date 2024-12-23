@@ -458,8 +458,8 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   * Add ``"-lz",`` to link the zlib library.
   * Add ``"-lbz2",`` to link the libbz2 library.
   * Add ``"-lbrotlidec", "-lbrotlienc", "-lbrotlicommon",`` to link the Brotli library.
-  * Add ``"-lrpcrt4",`` to link the libbz2 library.
-  * Add ``"-lgdi32"`` to link the libbz2 library.
+  * Add ``"-lrpcrt4",`` to link the Windows RPC runtime library.
+  * Add ``"-lgdi32"`` to link the Windows GDI (Graphics Device Interface).
 * In your ``main.cpp`` file, include FreeType by adding the following include statements:
   ```cpp
   #include <ft2build.h>
