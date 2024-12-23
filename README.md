@@ -342,23 +342,22 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 * I wanted to be able to render text on-screen, to display the FPS for example. Rendering text in OpenGL is surprisingly non-trivial, a quick and easy way to see the FPS is to display it on the title of the window.
   ```cpp
   // FPS Counter: https://www.youtube.com/watch?v=BA6aR_5C_BM
-	crntTime = glfwGetTime();
-  newTime = crntTime;
+  newTime = glfwGetTime();
   deltaTime = newTime - oldTime;
-  prevTime = crntTime;
-	counter++;
+  counter++;
   // update FPS every 30th of a second (you can change this)
-	if (deltaTime >= 1.0 / 30.0)
-	{
-	// Creates new title
-	std::string FPS = std::to_string((1.0 / deltaTime) * counter);
-	std::string ms = std::to_string((deltaTime / counter) * 1000);
-	std::string newTitle = "LearnOpenGL - " + FPS + "FPS / " + ms + "ms";
-	glfwSetWindowTitle(window, newTitle.c_str());
-
-	// Resets times and counter
+  if (deltaTime >= 1.0 / 30.0)
+  {
+  // Creates new title
+  std::string FPS = std::to_string((1.0 / deltaTime) * counter);
+  std::string ms = std::to_string((deltaTime / counter) * 1000);
+  std::string newTitle = "LearnOpenGL - " + FPS + "FPS / " + ms + "ms";
+  glfwSetWindowTitle(window, newTitle.c_str());
+  
+  // Resets times and counter
+  oldTime = newTime;
   counter = 0;
-	}
+  }
   ```
 <!-- PICTURE OF FPS IN TITLE BUT NOT ON SCREEN AS TEXT HERE -->
 * This is fine but it would be nice to see the FPS as text on-screen as then I can see it in the encoded video recording too. Getting text to appear on screen turned out to be very difficult.
