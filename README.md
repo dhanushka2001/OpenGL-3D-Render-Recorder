@@ -376,7 +376,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   * Header files: Look for FreeType headers in ``/mingw64/include/freetype2``.
   If these files exist, the installation was successful. 
 
-* On the [MSYS2 website](https://packages.msys2.org/packages/mingw-w64-x86_64-freetype) it shows the dependencies. I find that when building FreeType it will prompt you to also install the dependencies, so they should already be located in your ``C:\msys64\mingw64\lib`` and ``C:\msys64\mingw64\include`` folder, if you run ``main.cpp`` and you get ``undefined reference...`` errors then it probably means you are missing a dependency file.
+* On the [MSYS2 website](https://packages.msys2.org/packages/mingw-w64-x86_64-freetype) it shows the dependencies. I find that when building FreeType it will prompt you to also install the dependencies, so they should already be located in your ``C:\msys64\mingw64\lib`` and ``C:\msys64\mingw64\include`` folder, I recommend copying the dependency files to your project's ``lib`` and ``include`` folders. If you run ``main.cpp`` and you get ``undefined reference...`` errors then it probably means you are missing a dependency file or haven't linked to them in your compiler flags. There are two additional dependencies that you will need to also add: ``rpcrt4`` (Windows RPC (Remote Procedure Call) runtime library) and ``gdi32`` (Windows GDI (Graphics Device Interface)).
 
   |  Dependency  |             Description              |               MSYS2 command              | Library location | Header location | Compiler flag  | Linker flag   |
   |     :---:    |                :---:                 |                    :---:                 |       :---:      |     :---:       |     :---:      |       :---:   |
@@ -386,6 +386,8 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   | ``libbz2``   | optional, for BZip2-compressed fonts | ``pacman -S mingw-w64-x86_64-bzip2``     | ``C:\msys64\mingw64\lib\libbz2.a`` | ``C:\msys64\mingw64\include\bzlib.h`` |  | ``"-lbz2"`` |
   | ``HarfBuzz`` | text shaping library                 | ``pacman -S mingw-w64-x86_64-harfbuzz``  | ``C:\msys64\mingw64\lib\libharfbuzz.a`` | ``C:\msys64\mingw64\include\harfbuzz\`` | ``"-I${workspaceFolder}/include/harfbuzz"`` | ``"-lharfbuzz"`` |
   | ``Graphite2``| text shaping library                 | ``pacman -S mingw-w64-x86_64-graphite2`` | ``C:\msys64\mingw64\lib\libgraphite2.a`` | ``C:\msys64\mingw64\include\graphite2\`` | ``"-I${workspaceFolder}/include/graphite2"`` | ``"-lgraphite2"`` |
+  | ``rpcrt4``| Windows RPC runtime library |  | ``C:\msys64\mingw64\lib\librpcrt4.a`` |  |  | ``"-lrpcrt4"`` |
+  | ``gdi32``| Windows GDI (Graphics Device Interface) |  | ``C:\msys64\mingw64\lib\libgdi32.a`` |  |  | ``"-lgdi32"`` |
 
   <!--
   mingw-w64-x86_64-brotli
@@ -409,7 +411,10 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
         ├── libz.a
         ├── libbz2.a
         ├── libharfbuzz.a
-        └── libgraphite2.a
+        ├── libgraphite2.a
+        ├── libharfbuzz.a
+        ├── librpcrt4.a
+        └── libgdi32.a
     ```
   
   * Copy the Header Files: Copy the entire ``freetype2``, ``brotli``, ``graphite2``, ``harfbuzz`` and ``libpng16`` folders into your ``include`` folder as well as the ``zlib.h`` and ``bzlib.h`` files.
@@ -442,16 +447,19 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
         └── bzlib.h
     ```
   
-* Update Compiler Flags in ``tasks.json`` (tell your compiler where to find the FreeType library and headers):
-  * Add ``-I${workspaceFolder}/include/freetype2`` to specify the include directory.
-  * Add ``-L${workspaceFolder}/lib`` to specify the library directory.
-  * Add ``-lfreetype`` to link the FreeType library.
-  * Add ``-lharfbuzz`` to link the HarfBuzz library.
-  * Add ``-lgraphite2`` to link the Graphite2 library.
-  * Add ``-lpng`` to link the libpng library.
-  * Add ``-lz`` to link the zlib library.
-  * Add ``-lbz2`` to link the libbz2 library.
-  * Add ``-lbrotlidec``, ``lbrotlienc``, ``lbrotlicommon`` to link the Brotli library.
+* Update Compiler Flags in ``tasks.json`` (tell your compiler where to find the libraries and headers):
+  * Add ``"-I${workspaceFolder}/include",`` to specify the include directory.
+  * Add ``"-I${workspaceFolder}/include/freetype2",`` to specify the freetype include directory.
+  * Add ``"-L${workspaceFolder}/lib2",`` to specify the library directory.
+  * Add ``"-lfreetype",`` to link the FreeType library.
+  * Add ``"-lharfbuzz",`` to link the HarfBuzz library.
+  * Add ``"-lgraphite2",`` to link the Graphite2 library.
+  * Add ``"-lpng",`` to link the libpng library.
+  * Add ``"-lz",`` to link the zlib library.
+  * Add ``"-lbz2",`` to link the libbz2 library.
+  * Add ``"-lbrotlidec", "-lbrotlienc", "-lbrotlicommon",`` to link the Brotli library.
+  * Add ``"-lrpcrt4",`` to link the libbz2 library.
+  * Add ``"-lgdi32"`` to link the libbz2 library.
 * In your ``main.cpp`` file, include FreeType by adding the following include statements:
   ```cpp
   #include <ft2build.h>
