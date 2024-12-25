@@ -16,6 +16,10 @@
     * "[GLEW and GLAD] handle function pointers. You technically don't need to use those libraries to actually use openGL, but you would need to load the function pointers yourself which is very very annoying to do. It's not difficult per se, it's just a long and tedious process. Just look at the headers from those libraries and you'll see that they have a large amount of code.
 The reason why you need those function pointers is that the code is located in the driver (and some of it might even be on the gpu). OpenGL, Vulkan and DirectX are only specifications so Khronos (they make OpenGL and Vulkan) and Microsoft ( they make DirectX) do not provide an implementation for them; the gpu driver is charged with implementing all of the specification. You can see that a bit like Khronos is providing the OpenGL .h file and the driver provides the .cpp file. Also, the fact that OpenGL is a state machine has nothing to do about needing to load the function pointers (for example Vulkan is not a state machine and you also need to load the function pointers).
 GLEW and GLAD also come with the OpenGL headers because you also need those along with the function pointers, but you can also get those headers from Khronos directly."[^8]
+    * "If you want to call any OpenGL function beyond OpenGL 1.1 (and that one is from 1997), you have to use the OpenGL extension mechanism in every case, as opengl32.dll does not provide these entry points at all, and the compiler/linker will of course not find them."[^9]
+    * "In simple words, GLAD manages function pointers for OpenGL. It is useful becuase OpenGL is only really a standard/specification it is up to the driver manufacturer to implement the specification to a driver that the specific graphics card supports. Since there are many different versions of OpenGL drivers, the location of most of its functions is not known at compile-time and needs to be queried at run-time. GLFW helps us at compile time only."[^10]
+    * "OpenGL functions (core or extension) must be loaded at runtime, dynamically, whenever the function in question is not part of the platforms original OpenGL ABI (application binary interface). For Windows the ABI covers is OpenGL-1.1. In Windows you're going to need a function loader for pretty much everything, except single textured, shaderless, fixed function drawing; it may be possible to load further functionality, but this is not a given. The difference between core OpenGL functions and extensions is, that core functions are found in the OpenGL specification, while extensions are functionality that may or may be not available in addition to what the OpenGL version available provides. Both extensions and newer version core functions are loaded through the same mechanism."[^11]
+    * "A long time ago, there was simply OpenGL. At this time, video cards were a new thing and hardware architecture was all over the place. Some computer scientists and software engineers said, "No, no, no, this will not do!" So what did they choose? To make an API that would interface with different hardware drivers as easily as bar and foo. It shipped with Windows as OpenGL 1.0 in 1992. OpenGL is a standard that was defined by the Khronos group before they moved on to Vulkan. They used to implement the standard themselves. At the time, C-style programming was well established, OOP was not a big thing yet, and the OpenGL functions had to be hooked up somehow with different drivers. Solution: Function pointers everywhere. OpenGL's header files are filled with #defines for function pointers. None of them are defined when main(...) begins to run."[^12]
 
 [^1]: gl_drawelements. "Confused as to which version of glad to use ?" _Reddit_, 9 July 2024, [reddit.com/r/opengl/comments/1dwz5i2/comment/lcb0fkb/](https://www.reddit.com/r/opengl/comments/1dwz5i2/comment/lcb0fkb/).
 [^2]: uke5273. "Confused as to which version of glad to use ?" _Reddit_, 6 July 2024, [reddit.com/r/opengl/comments/1dwz5i2/comment/lby4ai8/](https://www.reddit.com/r/opengl/comments/1dwz5i2/comment/lby4ai8/).
@@ -25,7 +29,31 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 [^6]: Eric Buitrón López. "Exploring Computer Graphics: Weekly Chronicle #1" _DEV Community_, 16 Oct 2023, [dev.to/ericbl3/exploring-computer-graphics-weekly-chronicle-1-3nlj](https://dev.to/ericbl3/exploring-computer-graphics-weekly-chronicle-1-3nlj).
 [^7]: Criticize SE actions means ban. "Where to get GLEXT.h?" _Stack Overflow_, 21 Mar. 2024, [stackoverflow.com/a/78197031](https://stackoverflow.com/a/78197031).
 [^8]: cppBestLanguage. "Good Explanations of differences between GLFW, GLUT, GLAD, GLEW, etc?" _Reddit_, 8 Jan. 2022, [reddit.com/r/cpp_questions/comments/ryr3fk/comment/hrqyder/](https://www.reddit.com/r/cpp_questions/comments/ryr3fk/comment/hrqyder/).
+[^9] derhass. "Why use 'glad' library for opengl initialization?" _Stack Overflow_, 20 Mar. 2019, [stackoverflow.com/a/55268023](https://stackoverflow.com/a/55268023).
+[^10] Avtar Sohi. "Why use 'glad' library for opengl initialization?" _Stack Overflow_, 11 Oct. 2021, [stackoverflow.com/questions/55267854/why-use-glad-library-for-opengl-initialization#comment122890513_55268023](https://stackoverflow.com/questions/55267854/why-use-glad-library-for-opengl-initialization#comment122890513_55268023).
+[^11] datenwolf. "When do I need to use an OpenGL function loader?" _Stack Overflow_, 10 Jan. 2015, [stackoverflow.com/a/27876187](https://stackoverflow.com/a/27876187).
+[^12] amdreallyfast. _Reddit_, 7 Jan. 2017, [reddit.com/r/opengl/comments/5m8iyp/comment/dc4h5g9](https://www.reddit.com/r/opengl/comments/5m8iyp/comment/dc4h5g9).
 
+  </details>
+
+* Info on OpenGL
+  <details><summary>Information on OpenGL and Vulkan</summary>
+  
+    * "In OpenGL getting something on the screen is by far easier. Even without classic fixed function, just rendering full-screen effects or image-processing takes only few lines of code. Vulkan’s level of verbosity to get to the first pixel on the screen is far higher. As hinted in the previous blog posts on resource bindings or memory management, these additional complexities will require more code to be written. Especially for people new to graphics, it may be better to use OpenGL or rendering middleware that hides this complexity and focus on the actual task."[^13]
+    * "Fixed-function OpenGL: Pre-assembled toy car, fun out of the box, not much room for customization. Modern AZDO (Approaching [Zero Driver Overhead](https://www.reddit.com/r/GraphicsProgramming/comments/2y9w93/zero_driver_overhead_misleading/)) OpenGL with Programmable Shaders: LEGO Kit, you build it yourself, comes with plenty of useful, pre-shaped pieces. Vulkan: Pine Wood Derby Kit, you build it yourself to race from raw materials, power tools used to assemble, adult supervision highly recommended."[^14]
+    * "The fixed-function pipeline is as the name suggests — the functionality is fixed. So someone wrote a list of different ways you'd be permitted to transform and rasterise geometry, and that's everything available. In broad terms, you can do linear transformations and then rasterise by texturing, interpolate a colour across a face, or by combinations and permutations of those things. But more than that, the fixed pipeline enshrines certain deficiencies. For example, it was obvious at the time of design that there wasn't going to be enough power to compute lighting per pixel. So lighting is computed at vertices and linearly interpolated across the face. [...] the programmable pipeline lets you do whatever you want at each stage, giving you complete flexibility. In the first place that allowed better lighting, then better general special effects (ripples on reflective water, imperfect glass, etc), and more recently has been used for things like deferred rendering that flip the pipeline on its end. All support for the fixed-functionality pipeline is implemented by programming the programmable pipeline on hardware of the last decade or so. The programmable pipeline is an advance on its predecessor, afforded by hardware improvements."[^15]
+    * "Graphics Processing Units started off very simply with fixed functions, that allowed for quick 3D maths (much faster than CPU maths), and texture lookup, and some simple lighting and shading options (flat, phong, etc). These were very basic but allowed the CPU to offload the very repetitive tasks of 3D rendering to the GPU. Once the Graphics was taken away from the CPU, and given to the GPU, Games made a massive leap forward. It wasn't long before the fixed functions needed to be changed to assembly programs and soon there was demand for doing more than simple shading, basic reflections, and single texture maps offered by the fixed function GPUs. So the 2nd breed of GPU was created, this had two distinct pipelines, one that processed vertex programs and moved verts around in 3D space, and the shader programs that worked with pixels allowing multiple textures to be merged, and more lights and shades to be created. Now in the latest form of GPU all the pipes in the card are generic, and can run any type of GPU assembler code. This increased in the number of uses for the pipe - they still do vertex mapping, and pixel color calculation, but they also do geometry shaders (tessellation), and even Compute shaders (where the parallel processor is used to do a non-graphics job). So fixed function is limited but easy, and now in the past for all but the most limited devices. Programmable function shaders using OpenGL (GLSL) or DirectX (HLSL) are the de-facto standard for modern GPUs."[^16]
+    * "The term Fixed Function Pipeline commonly refers to the set of configurable processing state present in older versions of OpenGL that have since been replaced by Shaders of some sort. While the current OpenGL pipeline still retains non-programmable state, that is not typically what people are referring to when they say "fixed function". The purpose of OpenGL is to expose features of the underlying graphics hardware to application developers. In the days before graphics hardware was programmable, such hardware exposed a different rendering pipeline based on user-provided configuration rather than user-provided programs."[^17]
+    * "The OpenGL specification defines the concept of the Context. The context contains all of the information that will be used by the OpenGL system to render, when the system is given a rendering command. A context effectively is OpenGL, because OpenGL cannot be used without one. The OpenGL context contains information used by the rendering system. This information is called State, which has given rise to the saying that OpenGL is a "state machine". A piece of state is simply some value stored in the OpenGL context."[^18]
+
+
+[^13]: "Transitioning from OpenGL to Vulkan" _NVIDIA Developer_, 12 Feb. 2016, [developer.nvidia.com/transitioning-opengl-vulkan](https://developer.nvidia.com/transitioning-opengl-vulkan).
+[^14]: Mark Kilgard. "Migrating from OpenGL to Vulkan" _NVIDIA_, 19 Jan. 2016, [my.eng.utah.edu/~cs5610/lectures/Migrating_from_OpenGL_to_Vulkan.pdf](https://my.eng.utah.edu/~cs5610/lectures/Migrating_from_OpenGL_to_Vulkan.pdf).
+[^15]: Tommy. "fixed function vs shader based" _Stack Overflow_, 23 Sep. 2013, [stackoverflow.com/a/18950521](https://stackoverflow.com/a/18950521).
+[^16]: Strings. "fixed function vs shader based" _Stack Overflow_, 23 Sep. 2013, [stackoverflow.com/a/18952580](https://stackoverflow.com/a/18952580).
+[^17]: Alfonse, et al. "Fixed Function Pipeline" _Khronos_, 9 Apr. 2015, [khronos.org/opengl/wiki/Fixed_Function_Pipeline](https://www.khronos.org/opengl/wiki/Fixed_Function_Pipeline).
+[^18]: Alfonse. "Portal:OpenGL Concepts" _Khronos_, 14 Sep. 2017, [khronos.org/opengl/wiki/Portal:OpenGL_Concepts](https://www.khronos.org/opengl/wiki/Portal:OpenGL_Concepts).
+    
   </details>
   
 * I am using MinGW-w64 (GCC) to compile the C++ code. I recommend installing it using [MSYS2](https://www.msys2.org/), [here](https://www.youtube.com/watch?v=C3IxeHthNnM) is a good tutorial. Make sure to install MSYS2 in the C drive (``C:\msys64``), and to run this command in MSYS2 (ensure you're using the ``mingw64`` [environment](https://www.msys2.org/docs/environments/)):
@@ -105,7 +133,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   float color_vel = 1.0f;
   ```
 
-* In order to make the colours inside the triangle spin I used the [Sinebow](https://basecase.org/env/on-rainbows) over the HSV function as it has no branches making it faster for GPGPUs.[^11]
+* In order to make the colours inside the triangle spin I used the [Sinebow](https://basecase.org/env/on-rainbows) over the HSV function as it has no branches making it faster for GPGPUs.[^21]
 
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/HSV-vs-Sinebow.png" width=40%>
 
@@ -177,12 +205,12 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   };
   ```
   
-* In order to implement off-screen rendering I initially found [this blog post](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/) which worked fine but I felt like the rendering could be done faster which led me to a [few posts](https://stackoverflow.com/a/25127895) from Stack Overflow that said to use [PBOs (pixel buffer objects)](https://www.khronos.org/opengl/wiki/Pixel_Buffer_Object), which allow for [asynchronous readback](https://www.songho.ca/opengl/gl_pbo.html#pack), which means rendering to system memory later rather than as soon as possible in the hopes of it being faster. Unfortunately, I found PBOs to not make any difference in performance, which led me to discover FBOs (framebuffer objects) which are essentially a non-default [framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer) (unlike the FRONT and BACK buffers which are) that allows you to do proper off-screen rendering to a memory buffer instead of the default screen buffers[^9] (OpenGL forces a window to be loaded on-screen, but with FBOs it will be black and you can just hide the screen (but don't minimize!), Vulkan is designed to support off-screen rendering better than OpenGL[^10] but is more verbose[^13] and thus harder to learn (maybe in the future...)). FBOs are optimized for data to be read back to the CPU, while the default buffers are made to stay on the GPU and display pixels on-screen.[^10]
+* In order to implement off-screen rendering I initially found [this blog post](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/) which worked fine but I felt like the rendering could be done faster which led me to a [few posts](https://stackoverflow.com/a/25127895) from Stack Overflow that said to use [PBOs (pixel buffer objects)](https://www.khronos.org/opengl/wiki/Pixel_Buffer_Object), which allow for [asynchronous readback](https://www.songho.ca/opengl/gl_pbo.html#pack), which means rendering to system memory later rather than as soon as possible in the hopes of it being faster. Unfortunately, I found PBOs to not make any difference in performance, which led me to discover FBOs (framebuffer objects) which are essentially a non-default [framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer) (unlike the FRONT and BACK buffers which are) that allows you to do proper off-screen rendering to a memory buffer instead of the default screen buffers[^19] (OpenGL forces a window to be loaded on-screen, but with FBOs it will be black and you can just hide the screen (but don't minimize!), Vulkan is designed to support off-screen rendering better than OpenGL[^20] but is more verbose[^13] and thus harder to learn (maybe in the future...)). FBOs are optimized for data to be read back to the CPU, while the default buffers are made to stay on the GPU and display pixels on-screen.[^20]
 
   <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl5.3.png" width=80%>
   
-* Learning about FBOs naturally led me to learn about [RBOs (renderbuffer objects)](https://www.khronos.org/opengl/wiki/Renderbuffer_Object) which are specifically used by FBOs as a render target. Textures can alternatively be used if you want to re-use the pixels on-screen (e.g. a naive "security camera" in a game)[^9] or sample the pixels for post-processing,[^18] however since we just want to read-back the pixels and render off-screen, RBOs are the logical choice.
-* I have decided to keep the code with the PBO as even though it doesn't make any performative difference and just adds more lines of code, I may need them in the future. I ended up using 2 PBOs, while one has pixel data from the FBO written into it, the other is being mapped for reading. This has no performative benefit to just reading and writing to system memory from the FBO directly on every cycle since on every cycle I am still invoking ``glReadPixels`` which stalls the pipeline "because it has to safely map the data from the read buffer to the PBO and to a block of memory in main RAM", and I am mapping the other PBO which also stalls the pipeline until the pixel data has been converted to a png and saved to system memory.[^9]
+* Learning about FBOs naturally led me to learn about [RBOs (renderbuffer objects)](https://www.khronos.org/opengl/wiki/Renderbuffer_Object) which are specifically used by FBOs as a render target. Textures can alternatively be used if you want to re-use the pixels on-screen (e.g. a naive "security camera" in a game)[^19] or sample the pixels for post-processing,[^23] however since we just want to read-back the pixels and render off-screen, RBOs are the logical choice.
+* I have decided to keep the code with the PBO as even though it doesn't make any performative difference and just adds more lines of code, I may need them in the future. I ended up using 2 PBOs, while one has pixel data from the FBO written into it, the other is being mapped for reading. This has no performative benefit to just reading and writing to system memory from the FBO directly on every cycle since on every cycle I am still invoking ``glReadPixels`` which stalls the pipeline "because it has to safely map the data from the read buffer to the PBO and to a block of memory in main RAM", and I am mapping the other PBO which also stalls the pipeline until the pixel data has been converted to a png and saved to system memory.[^19]
 * I have tried to implement multiple PBOs to delay the writing to system memory step till every n<sup>th</sup> cycle, however, it doesn't seem to work properly. For some reason after every every n<sup>th</sup> cycle the rendered frames jump ahead, seemingly skipping multiple frames, is mapping the data not stalling the pipeline?
 * Implemented [off-screen MSAA](https://learnopengl.com/Advanced-OpenGL/Anti-Aliasing) (multisample anti-aliasing) which is an advanced topic but I skipped ahead. Needed to use 2 FBOs now since MSAA requires one to be multisample storage and the other to be a normal FBO to downsample the result to a single-sample image using glBlitFramebuffer(), as we cannot directly use the result from MSAA FBO (see: https://www.songho.ca/opengl/gl_fbo.html#msaa). Also required creating a depthbuffer alongside the colorbuffer for the MSAA FBO.
 
@@ -210,16 +238,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 5. [Transitioning from OpenGL to Vulkan- NVIDIA](https://developer.nvidia.com/transitioning-opengl-vulkan)
 -->
 
-[^9]: KillianDS. "How to render offscreen on OpenGL?" _Stack Overflow_, 28 Aug. 2012, [stackoverflow.com/a/12159293](https://stackoverflow.com/a/12159293).
-[^10]: Ciro Santilli OurBigBook.com. "How to use GLUT/OpenGL to render to a file?" _Stack Overflow_, 14 Jan. 2013, [stackoverflow.com/a/14324292](https://stackoverflow.com/a/14324292).
-[^11]: Charlie Loyd. "On rainbows" _Env - basecase.org_, 25 Dec. 2011, [basecase.org/env/on-rainbows](https://basecase.org/env/on-rainbows).
-[^12]: Lencerf. "Save the OpenGL rendering to an image file" _Lencerf's Walk_, 20 Sep. 2019, [lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/).
-[^13]: "Transitioning from OpenGL to Vulkan" _NVIDIA Developer_, 12 Feb. 2016, [developer.nvidia.com/transitioning-opengl-vulkan](https://developer.nvidia.com/transitioning-opengl-vulkan).
-[^14]: Mark Kilgard. "Migrating from OpenGL to Vulkan" _NVIDIA_, 19 Jan. 2016, [my.eng.utah.edu/~cs5610/lectures/Migrating_from_OpenGL_to_Vulkan.pdf](https://my.eng.utah.edu/~cs5610/lectures/Migrating_from_OpenGL_to_Vulkan.pdf).
-[^15]: Tommy, Strings. "fixed function vs shader based" _Stack Overflow_, 23 Sep. 2013, [stackoverflow.com/questions/18950395/fixed-function-vs-shader-based](https://stackoverflow.com/questions/18950395/fixed-function-vs-shader-based).
-[^16]: Alfonse, et al. "Fixed Function Pipeline" _Khronos_, 9 Apr. 2015, [khronos.org/opengl/wiki/Fixed_Function_Pipeline](https://www.khronos.org/opengl/wiki/Fixed_Function_Pipeline).
-[^17]: Alfonse. "Portal:OpenGL Concepts" _Khronos_, 14 Sep. 2017, [khronos.org/opengl/wiki/Portal:OpenGL_Concepts](https://www.khronos.org/opengl/wiki/Portal:OpenGL_Concepts).
-[^18]: Song Ho Ahn (안성호). "OpenGL Pixel Buffer Object (PBO)" _songho.ca_, [songho.ca/opengl/gl_pbo.html#pack](https://www.songho.ca/opengl/gl_pbo.html#pack).
+[^19]: KillianDS. "How to render offscreen on OpenGL?" _Stack Overflow_, 28 Aug. 2012, [stackoverflow.com/a/12159293](https://stackoverflow.com/a/12159293).
+[^20]: Ciro Santilli OurBigBook.com. "How to use GLUT/OpenGL to render to a file?" _Stack Overflow_, 14 Jan. 2013, [stackoverflow.com/a/14324292](https://stackoverflow.com/a/14324292).
+[^21]: Charlie Loyd. "On rainbows" _Env - basecase.org_, 25 Dec. 2011, [basecase.org/env/on-rainbows](https://basecase.org/env/on-rainbows).
+[^22]: Lencerf. "Save the OpenGL rendering to an image file" _Lencerf's Walk_, 20 Sep. 2019, [lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/).
+[^23]: Song Ho Ahn (안성호). "OpenGL Pixel Buffer Object (PBO)" _songho.ca_, [songho.ca/opengl/gl_pbo.html#pack](https://www.songho.ca/opengl/gl_pbo.html#pack).
 
 ## Progress update 4 - Off-screen recording - 18/10/24
 
@@ -303,13 +326,13 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   
 * OpenGL reads pixels starting from the bottom-left of the window, but many image or video formats expect pixels to start from the top-left (i.e., row 0 is at the top). This was done for the PNG sequence using the ``stbi_flip_vertically_on_write(true);`` function call in the render loop, likewise with the function call ``flipFrameVertically(frame.data());`` for each frame of the real-time encoded video.
 
-* I have finished all the exercises for the **Textures** chapter, and I did my own small project to allow the user to move around the object and control the opacity. Now the real-time encoded video starts to show signs of deviating from the on-screen render, the object in the encoded video moves slower than in the on-screen render, which I assume is the result of the video frames not being encoded at ~60fps, due to the I/O bottleneck. This shows how fast FBOs render off-screen compared with the BACK buffer (which wasn't designed for that task),[^10] as the spinning RGB triangle rendered perfectly even though I assume it is more intensive than the crate/awesome-face texture. The solution would have to involve implementing the packet method mentioned above, it would be ideal to use FBOs to render off-screen but the user would also need to see the screen to interact with it in real-time, I'm not sure if there is a way to use FBOs and the BACK buffer at the same time though. The solution might involve PBOs, one rendering the current frame on-screen while the other stores the previous frame in an FBO to be sent to a buffer which will be periodically encoded using FFmpeg to build the video asynchronously.
+* I have finished all the exercises for the **Textures** chapter, and I did my own small project to allow the user to move around the object and control the opacity. Now the real-time encoded video starts to show signs of deviating from the on-screen render, the object in the encoded video moves slower than in the on-screen render, which I assume is the result of the video frames not being encoded at ~60fps, due to the I/O bottleneck. This shows how fast FBOs render off-screen compared with the BACK buffer (which wasn't designed for that task),[^20] as the spinning RGB triangle rendered perfectly even though I assume it is more intensive than the crate/awesome-face texture. The solution would have to involve implementing the packet method mentioned above, it would be ideal to use FBOs to render off-screen but the user would also need to see the screen to interact with it in real-time, I'm not sure if there is a way to use FBOs and the BACK buffer at the same time though. The solution might involve PBOs, one rendering the current frame on-screen while the other stores the previous frame in an FBO to be sent to a buffer which will be periodically encoded using FFmpeg to build the video asynchronously.
 
   https://github.com/user-attachments/assets/d86f9581-7abe-4446-9abc-8528bee0bff9
 
 ## Progress update 5 - Simultaneous on-screen and off-screen rendering - 16/11/24
 
-* I am now finally able to render on-screen and off-screen simultaneously. I was able to do this naively by just rendering to the BACK buffer and using glReadPixels to render off-screen, however, this isn't ideal as I have already explained, the BACK buffer isn't designed for data to be read back to the CPU. A better method would be to render to a FBO, read the pixel data and feed it to FFmpeg to encode a video off-screen, and somehow also render the FBO pixel data on-screen. An FBO stores pixel data not using the default window framebuffer so it won't be visible, it is designed to be read back to the CPU which is partly what we want. My first approach to get the pixel data to be visible on-screen was to use a fullscreen quad and the texture of the FBO, which others had suggested.[^19] I spent a lot of time down this path, which involved using another shader program to render the quad, but after spending many, many days on this it just didn't work, I got off-screen rendering to work but not on-screen rendering. At least I learned about using multiple shader programs. The next approach which did work was to blit (copy) the FBO pixel data to the default framebuffer, which I probably should have just done from the start, this solution also just seems to be better performance-wise than the fullscreen quad approach as it means less API calls, not needing to bind another shader program, and many GPUs have dedicated units for blitting data.[^20] While this does work, I would eventually like to go back to FBO textures and a fullscreen quad as this seems like you can do more stuff like rendering the scene onto objects (textures are easier to manipulate/attach to objects), as well as post-processing using PBOs to modify the texture efficiently.[^21]
+* I am now finally able to render on-screen and off-screen simultaneously. I was able to do this naively by just rendering to the BACK buffer and using glReadPixels to render off-screen, however, this isn't ideal as I have already explained, the BACK buffer isn't designed for data to be read back to the CPU. A better method would be to render to a FBO, read the pixel data and feed it to FFmpeg to encode a video off-screen, and somehow also render the FBO pixel data on-screen. An FBO stores pixel data not using the default window framebuffer so it won't be visible, it is designed to be read back to the CPU which is partly what we want. My first approach to get the pixel data to be visible on-screen was to use a fullscreen quad and the texture of the FBO, which others had suggested.[^24] I spent a lot of time down this path, which involved using another shader program to render the quad, but after spending many, many days on this it just didn't work, I got off-screen rendering to work but not on-screen rendering. At least I learned about using multiple shader programs. The next approach which did work was to blit (copy) the FBO pixel data to the default framebuffer, which I probably should have just done from the start, this solution also just seems to be better performance-wise than the fullscreen quad approach as it means less API calls, not needing to bind another shader program, and many GPUs have dedicated units for blitting data.[^25] While this does work, I would eventually like to go back to FBO textures and a fullscreen quad as this seems like you can do more stuff like rendering the scene onto objects (textures are easier to manipulate/attach to objects), as well as post-processing using PBOs to modify the texture efficiently.[^26]
 
 * I adjusted the FFmpeg command to encode the video at 60fps rather than 30fps, I should have done that from the beginning, as it matches the 60fps on-screen window. At 30fps, the encoded video seems sluggish. Unfortunately, you will have to manually adjust the frame resolution if needed, I wanted to make it automated but formatting strings in C++ is headache-inducing (side note: it seems like they made it easier to format strings in C++20 using ``std::format``, the person responsible for standardizing it and getting it through the C++20 committee wrote a blog post essentially explaining "what took so long?": https://vitaut.net/posts/2019/std-format-cpp20/, but as I am using C++17 I won't bother unless I choose to update my C++ version).
   ```cpp
@@ -334,9 +357,9 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 21. [OpenGL Frame Buffer Object (FBO) - Example: Render To Texture - Songho](http://www.songho.ca/opengl/gl_fbo.html#example)
 -->
 
-[^19]: genpfault. "OpenGL rendering from FBO to screen" _Stack Overflow_, 1 May 2012, [stackoverflow.com/a/10400048](https://stackoverflow.com/a/10400048).
-[^20]: Reto Koradi. "OpenGL - Is there an easier way to fill window with a texture, instead using VBO,etc?" _Stack Overflow_, 18 July 2015, [stackoverflow.com/a/31487085](https://stackoverflow.com/a/31487085).
-[^21]: Song Ho Ahn (안성호). "OpenGL Frame Buffer Object (FBO)" _songho.ca_, [songho.ca/opengl/gl_fbo.html#example](http://www.songho.ca/opengl/gl_fbo.html#example).
+[^24]: genpfault. "OpenGL rendering from FBO to screen" _Stack Overflow_, 1 May 2012, [stackoverflow.com/a/10400048](https://stackoverflow.com/a/10400048).
+[^25]: Reto Koradi. "OpenGL - Is there an easier way to fill window with a texture, instead using VBO,etc?" _Stack Overflow_, 18 July 2015, [stackoverflow.com/a/31487085](https://stackoverflow.com/a/31487085).
+[^26]: Song Ho Ahn (안성호). "OpenGL Frame Buffer Object (FBO)" _songho.ca_, [songho.ca/opengl/gl_fbo.html#example](http://www.songho.ca/opengl/gl_fbo.html#example).
 
 ## Progress update 6 - Text rendering - 29/11/24
 * I wanted to be able to render text on-screen, to display the FPS for example. Rendering text in OpenGL is surprisingly non-trivial, a quick and easy way to see the FPS is to display it on the title of the window.
@@ -721,6 +744,69 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       glDisable(GL_BLEND);
   }
   ```
+* Vertex shader for the text shader program.
+  ```cpp
+  #version 430 core
+  
+  layout (location = 0) in vec4 vertex; // x, y, z, w -> position and texture coords
+  out vec2 TexCoord; // Texture coordinates to pass to the fragment shader
+  
+  uniform mat4 projection; // Projection matrix to transform the text positions
+  
+  void main()
+  {
+      gl_Position = projection * vec4(vertex.x, vertex.y, 0.0, 1.0); // Apply projection
+      TexCoord = vertex.zw; // Set texture coordinates
+  }
+  ```
+* Fragment shader for the text shader program.
+  ```cpp
+  #version 430 core
+  
+  in vec2 TexCoord;   // Texture coordinates from the vertex shader
+  out vec4 FragColor; // Final color of the pixel
+  
+  uniform sampler2D textTextureAtlas; // The texture atlas containing all the glyphs
+  uniform vec3 textColor;             // The color of the text (usually white or any desired color)
+  
+  void main()
+  {
+      // Sample the texture atlas at the given coordinates
+      // Alpha is stored in the red channel of the texture
+      float alpha = texture(textTextureAtlas, TexCoord).r;
+      
+      // If the glyph has an alpha value (not transparent), render it
+      if (alpha < 0.1) {
+          discard; // Avoid rendering transparent parts of the glyph
+      }
+      // Apply the text color to the glyph
+      FragColor = vec4(textColor, alpha);           // Set the text color, using alpha for transparency
+  }
+  ```
+
+* I changed from using ``std::array`` to using ``malloc()`` to store the RGB pixel data. ``std::array`` stores data on the stack[^30] which is limited in size and caused a stack overflow[^27][^28] when I tried increasing the size of the frame. From what I understand, ``malloc()`` and ``std:vector`` create a pointer on the stack that manages a block of memory on the heap.[^31][^32][^33] The heap is not as fast and you have to manually deallocate memory, but you have much more memory on the heap.[^27][^29] The type casting ``(usigned char*)`` is frowned upon in C as it suppresses useful compiler diagnostics, however it seems to be necessary when using ``malloc()`` in C++. Although upon further reading people seem to say that you should not use ``malloc()`` and ``free()`` in C++ but instead ``new`` and ``delete``.
+  ```cpp
+  unsigned char* frame;
+  // Frame buffer to hold the raw frame data (RGB)
+  // std::vector<unsigned char> frame(SCR_WIDTH * SCR_HEIGHT * 3);
+  // std::array<unsigned char, SCR_WIDTH * SCR_HEIGHT * 3> frame;
+  // Why use unsigned char? https://stackoverflow.com/a/13642984
+  frame = (unsigned char*) malloc(SCR_WIDTH * SCR_HEIGHT * 3);
+  ```
+  
+https://stackoverflow.com/a/102061
+[^27]: "What’s the difference between a stack and a heap?" _ProgrammerInterview.com_, [programmerinterview.com/data-structures/difference-between-stack-and-heap/](https://www.programmerinterview.com/data-structures/difference-between-stack-and-heap/).
+[^28]: nullDev. "When is it best to use the stack instead of the heap and vice versa?" _Stack Overflow_, 19 Sep. 2008, [stackoverflow.com/a/102061](https://stackoverflow.com/a/102061).
+[^29]: Jeff Hill. "What and where are the stack and heap?" _Stack Overflow_, 17 Sep. 2008, [stackoverflow.com/a/80113](https://stackoverflow.com/a/80113).
+[^30]: Yakk - Adam Nevraumont. "Does std::array<> guarantee allocation on the stack only?" _Stack Overflow_, 17 Sep. 2016, [stackoverflow.com/a/39549597](https://stackoverflow.com/a/39549597).
+[^31]: collin. "Heap Memory in C Programming" _Stack Overflow_, 17 Apr. 2012, [stackoverflow.com/a/10200727](https://stackoverflow.com/a/10200727).
+[^32]: nysra. "Is std::vector allocated on Heap?" _Reddit_, 1 Oct. 2023, [reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x](https://www.reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x).
+[^33]: Doug T.. "OpenGL rendering from FBO to screen" _Stack Overflow_, 28 Apr. 2012, [stackoverflow.com/a/10366497](https://stackoverflow.com/a/10366497).
+[^33]: genpfault. "OpenGL rendering from FBO to screen" _Stack Overflow_, 1 May 2012, [stackoverflow.com/a/10400048](https://stackoverflow.com/a/10400048).
+[^33]: genpfault. "OpenGL rendering from FBO to screen" _Stack Overflow_, 1 May 2012, [stackoverflow.com/a/10400048](https://stackoverflow.com/a/10400048).
+[^33]: genpfault. "OpenGL rendering from FBO to screen" _Stack Overflow_, 1 May 2012, [stackoverflow.com/a/10400048](https://stackoverflow.com/a/10400048).
+
+
 
 
 <!-- FONT LOADER AND TEXTURE ATLAS -->
