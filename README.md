@@ -807,7 +807,68 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 [^34]: nysra. "Is std::vector allocated on Heap?" _Reddit_, 1 Oct. 2023, [reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x](https://www.reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x).
 [^35]: Doug T.. "OpenGL rendering from FBO to screen" _Stack Overflow_, 28 Apr. 2012, [stackoverflow.com/a/10366497](https://stackoverflow.com/a/10366497).
 
-
+* Along with rendering text, I also wanted to render the texture atlas on-screen, just so that I could see all the glyphs, which means creating another shader program and a function to activate the shader program, bind the VAO and VBO for a fullscreen quad, and render the texture of the texture atlas.
+* Vertex shader for the texture atlas shader program.
+  ```cpp
+  #version 430 core
+  layout(location = 0) in vec2 aPos;          // Vertex position (2D quad)
+  layout(location = 1) in vec2 aTexCoord;     // Texture coordinates
+  
+  out vec2 TexCoord;                          // Pass texture coordinates to fragment shader
+  
+  uniform mat4 projection;                    // Projection matrix to transform the text positions
+  
+  void main()
+  {
+      gl_Position = vec4(aPos.xy, 0.0, 1.0);  // Set the position of each vertex
+      TexCoord = aTexCoord;                   // Pass texture coordinates to fragment shader
+  }
+  ```
+* Fragment shader for the texture atlas shader program.
+  ```cpp
+  #version 430 core
+  in vec2 TexCoord;    // Texture coordinates from vertex shader
+  out vec4 FragColor;  // Final output color
+  
+  uniform sampler2D screenTexture;    // The texture to sample from
+  uniform vec3 textColor;             // The color of the text (usually white or any desired color)
+  
+  void main()
+  {
+      float alpha = texture(screenTexture, TexCoord).r;   // Sample the texture at given coordinates
+      // If the glyph has an alpha value (not transparent), render it
+      if (alpha < 0.1) {
+          discard; // Avoid rendering transparent parts of the glyph
+      }
+      // Apply the text color to the glyph
+      FragColor = vec4(textColor, alpha); // Set the text color, using alpha for transparency
+  }
+  ```
+* The ``RenderAtlas(...)`` function.
+  ```cpp
+  void RenderAtlas(Shader &atlasShader, GLuint &atlasTexture) {
+      atlasShader.use();
+      // Enable 2D rendering
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      // bind VAO
+      glBindVertexArray(quadVAO);
+      glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+  
+      // Bind the texture (the texture atlas in this case)
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, atlasTexture); // atlasTextureId is the texture containing the atlas
+      atlasShader.setInt("screenTexture", 0);
+      glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
+      atlasShader.setVec3("textColor", color);
+      // Draw the quad
+      glDrawArrays(GL_TRIANGLES, 0, 6);
+  
+      // Cleanup
+      glBindVertexArray(0);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+  }
+  ```
 
 
 <!-- FONT LOADER AND TEXTURE ATLAS -->
