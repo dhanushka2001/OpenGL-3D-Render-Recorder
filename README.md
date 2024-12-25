@@ -744,6 +744,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       glDisable(GL_BLEND);
   }
   ```
+* You'll notice I use ampersands (&) before the input variables for the functions (``void RenderText(Shader &textShader, const std::string &text, float x, float y, float scale, glm::vec3 color)``), this is known as "passing by reference", "it allows a function to modify a variable without having to create a copy of it." In C++ there are two main ways to pass variables to functions, "pass by reference" and "pass by value".[^27] With pass by reference you give the function the memory location where the variable is stored, allowing it to change the original variable, this can be done using referencing (``int &variable``) or pointers (``int *variable``), it is generally recommended to use referencing over pointers.[^28] With pass by value we give the function a copy of the variable which it can modify and leaves the original variable alone. This is good when you don't want to change the original variable, but as you can imagine will be slow if you pass large arrays as it will need to copy the entire array.[^27] You can "retain the performance advantages of pass by reference and still protect our variables from changes by passing a const reference"[^27] which is what I did inside the ``RenderText()`` function when looping through the characters in the text: ``for (const char &c : text) {``. "Passing small types like int or float by value is fine, as they are the same size as a reference"[^27] which is why I didn't use referencing for the float variables.
+
+  [^27]: Dr. Michael McLeod. "COMP0210: Research Computing with C++ - Week 2: Pass by Value and Pass by Reference" _UCL_, [github-pages.ucl.ac.uk/research-computing-with-cpp/02cpp1/sec02PassByValueOrReference.html](https://www.programmerinterview.com/data-structures/difference-between-stack-and-heap/).
+  [^28]: Rohit Kasle. "Passing By Pointer vs Passing By Reference in C++" _GeeksforGeeks.org_, 11 Oct. 2024, [geeksforgeeks.org/passing-by-pointer-vs-passing-by-reference-in-cpp/](https://www.geeksforgeeks.org/passing-by-pointer-vs-passing-by-reference-in-cpp/).
+  
 * Vertex shader for the text shader program.
   ```cpp
   #version 430 core
@@ -784,7 +789,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   }
   ```
 
-* I switched from using ``std::array`` to using ``malloc()`` to store the RGB pixel data. ``std::array`` stores data on the stack[^30] which is limited in size and caused a stack overflow[^27][^28] when I tried increasing the size of the frame. From what I understand, ``malloc()`` and ``std:vector`` create a pointer on the stack that manages a block of memory on the heap.[^31][^32][^33] The heap is not as fast and you have to manually deallocate memory, but you have much more memory on the heap.[^27][^29] The ``malloc()`` type-casting, ``(usigned char*) malloc(...)`` is frowned upon in C as it suppresses useful compiler diagnostics, however it seems to be necessary when using ``malloc()`` in C++. Although upon further reading people seem to say that you should not use ``malloc()`` and ``free()`` in C++ but instead ``new`` and ``delete``.
+* I switched from using ``std::array`` to using ``malloc()`` to store the RGB pixel data. ``std::array`` stores data on the stack[^32] which is limited in size and caused a stack overflow[^29][^30] when I tried increasing the size of the frame. From what I understand, ``malloc()`` and ``std:vector`` create a pointer on the stack that manages a block of memory on the heap.[^33][^34][^35] The heap is not as fast and you have to manually deallocate memory, but you have much more memory on the heap.[^29][^31] The ``malloc()`` type-casting, ``(usigned char*) malloc(...)`` is frowned upon in C as it suppresses useful compiler diagnostics, however it seems to be necessary when using ``malloc()`` in C++. Although upon further reading people seem to say that you should not use ``malloc()`` and ``free()`` in C++ but instead ``new`` and ``delete``.
   ```cpp
   unsigned char* frame;
   // Frame buffer to hold the raw frame data (RGB)
@@ -794,14 +799,13 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   frame = (unsigned char*) malloc(SCR_WIDTH * SCR_HEIGHT * 3);
   ```
   
-https://stackoverflow.com/a/102061
-[^27]: "What’s the difference between a stack and a heap?" _ProgrammerInterview.com_, [programmerinterview.com/data-structures/difference-between-stack-and-heap/](https://www.programmerinterview.com/data-structures/difference-between-stack-and-heap/).
-[^28]: nullDev. "When is it best to use the stack instead of the heap and vice versa?" _Stack Overflow_, 19 Sep. 2008, [stackoverflow.com/a/102061](https://stackoverflow.com/a/102061).
-[^29]: Jeff Hill. "What and where are the stack and heap?" _Stack Overflow_, 17 Sep. 2008, [stackoverflow.com/a/80113](https://stackoverflow.com/a/80113).
-[^30]: Yakk - Adam Nevraumont. "Does std::array<> guarantee allocation on the stack only?" _Stack Overflow_, 17 Sep. 2016, [stackoverflow.com/a/39549597](https://stackoverflow.com/a/39549597).
-[^31]: collin. "Heap Memory in C Programming" _Stack Overflow_, 17 Apr. 2012, [stackoverflow.com/a/10200727](https://stackoverflow.com/a/10200727).
-[^32]: nysra. "Is std::vector allocated on Heap?" _Reddit_, 1 Oct. 2023, [reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x](https://www.reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x).
-[^33]: Doug T.. "OpenGL rendering from FBO to screen" _Stack Overflow_, 28 Apr. 2012, [stackoverflow.com/a/10366497](https://stackoverflow.com/a/10366497).
+[^29]: "What’s the difference between a stack and a heap?" _ProgrammerInterview.com_, [programmerinterview.com/data-structures/difference-between-stack-and-heap/](https://www.programmerinterview.com/data-structures/difference-between-stack-and-heap/).
+[^20]: nullDev. "When is it best to use the stack instead of the heap and vice versa?" _Stack Overflow_, 19 Sep. 2008, [stackoverflow.com/a/102061](https://stackoverflow.com/a/102061).
+[^31]: Jeff Hill. "What and where are the stack and heap?" _Stack Overflow_, 17 Sep. 2008, [stackoverflow.com/a/80113](https://stackoverflow.com/a/80113).
+[^32]: Yakk - Adam Nevraumont. "Does std::array<> guarantee allocation on the stack only?" _Stack Overflow_, 17 Sep. 2016, [stackoverflow.com/a/39549597](https://stackoverflow.com/a/39549597).
+[^33]: collin. "Heap Memory in C Programming" _Stack Overflow_, 17 Apr. 2012, [stackoverflow.com/a/10200727](https://stackoverflow.com/a/10200727).
+[^34]: nysra. "Is std::vector allocated on Heap?" _Reddit_, 1 Oct. 2023, [reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x](https://www.reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x).
+[^35]: Doug T.. "OpenGL rendering from FBO to screen" _Stack Overflow_, 28 Apr. 2012, [stackoverflow.com/a/10366497](https://stackoverflow.com/a/10366497).
 
 
 
