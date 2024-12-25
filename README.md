@@ -29,10 +29,10 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 [^6]: Eric Buitrón López. "Exploring Computer Graphics: Weekly Chronicle #1" _DEV Community_, 16 Oct 2023, [dev.to/ericbl3/exploring-computer-graphics-weekly-chronicle-1-3nlj](https://dev.to/ericbl3/exploring-computer-graphics-weekly-chronicle-1-3nlj).
 [^7]: Criticize SE actions means ban. "Where to get GLEXT.h?" _Stack Overflow_, 21 Mar. 2024, [stackoverflow.com/a/78197031](https://stackoverflow.com/a/78197031).
 [^8]: cppBestLanguage. "Good Explanations of differences between GLFW, GLUT, GLAD, GLEW, etc?" _Reddit_, 8 Jan. 2022, [reddit.com/r/cpp_questions/comments/ryr3fk/comment/hrqyder/](https://www.reddit.com/r/cpp_questions/comments/ryr3fk/comment/hrqyder/).
-[^9] derhass. "Why use 'glad' library for opengl initialization?" _Stack Overflow_, 20 Mar. 2019, [stackoverflow.com/a/55268023](https://stackoverflow.com/a/55268023).
-[^10] Avtar Sohi. "Why use 'glad' library for opengl initialization?" _Stack Overflow_, 11 Oct. 2021, [stackoverflow.com/questions/55267854/why-use-glad-library-for-opengl-initialization#comment122890513_55268023](https://stackoverflow.com/questions/55267854/why-use-glad-library-for-opengl-initialization#comment122890513_55268023).
-[^11] datenwolf. "When do I need to use an OpenGL function loader?" _Stack Overflow_, 10 Jan. 2015, [stackoverflow.com/a/27876187](https://stackoverflow.com/a/27876187).
-[^12] amdreallyfast. _Reddit_, 7 Jan. 2017, [reddit.com/r/opengl/comments/5m8iyp/comment/dc4h5g9](https://www.reddit.com/r/opengl/comments/5m8iyp/comment/dc4h5g9).
+[^9]: derhass. "Why use 'glad' library for opengl initialization?" _Stack Overflow_, 20 Mar. 2019, [stackoverflow.com/a/55268023](https://stackoverflow.com/a/55268023).
+[^10]: Avtar Sohi. "Why use 'glad' library for opengl initialization?" _Stack Overflow_, 11 Oct. 2021, [stackoverflow.com/questions/55267854/why-use-glad-library-for-opengl-initialization#comment122890513_55268023](https://stackoverflow.com/questions/55267854/why-use-glad-library-for-opengl-initialization#comment122890513_55268023).
+[^11]: datenwolf. "When do I need to use an OpenGL function loader?" _Stack Overflow_, 10 Jan. 2015, [stackoverflow.com/a/27876187](https://stackoverflow.com/a/27876187).
+[^12]: amdreallyfast. _Reddit_, 7 Jan. 2017, [reddit.com/r/opengl/comments/5m8iyp/comment/dc4h5g9](https://www.reddit.com/r/opengl/comments/5m8iyp/comment/dc4h5g9).
 
   </details>
 
