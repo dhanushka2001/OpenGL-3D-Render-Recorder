@@ -802,9 +802,6 @@ https://stackoverflow.com/a/102061
 [^31]: collin. "Heap Memory in C Programming" _Stack Overflow_, 17 Apr. 2012, [stackoverflow.com/a/10200727](https://stackoverflow.com/a/10200727).
 [^32]: nysra. "Is std::vector allocated on Heap?" _Reddit_, 1 Oct. 2023, [reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x](https://www.reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x).
 [^33]: Doug T.. "OpenGL rendering from FBO to screen" _Stack Overflow_, 28 Apr. 2012, [stackoverflow.com/a/10366497](https://stackoverflow.com/a/10366497).
-[^33]: genpfault. "OpenGL rendering from FBO to screen" _Stack Overflow_, 1 May 2012, [stackoverflow.com/a/10400048](https://stackoverflow.com/a/10400048).
-[^33]: genpfault. "OpenGL rendering from FBO to screen" _Stack Overflow_, 1 May 2012, [stackoverflow.com/a/10400048](https://stackoverflow.com/a/10400048).
-[^33]: genpfault. "OpenGL rendering from FBO to screen" _Stack Overflow_, 1 May 2012, [stackoverflow.com/a/10400048](https://stackoverflow.com/a/10400048).
 
 
 
