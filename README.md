@@ -565,7 +565,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       }
   }
   ```
-* The next step is to create the texture atlas that will store all the rasterized glyphs (characters) in the font, we put this in its own function as well.
+* The next step is to create the texture atlas that will store all the rasterized glyphs (characters) in the font, we put this in its own function as well. You should create a Glyph ``struct`` and a glyphs ``map`` to the top of your ``main.cpp`` code that will store info about each glyph.
   ```cpp
   struct Glyph {
       float textureX, textureY;  // Texture coordinates in the atlas
@@ -573,9 +573,10 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       float offsetX, offsetY;    // Offsets (for positioning)
       unsigned int advanceX;     // Horizontal advance (for spacing)
   };
-  GLuint textureAtlasID
+  GLuint textureAtlasID;
   std::map<char, Glyph> glyphs;  // Store info about each glyph
-  
+  ```
+  ```cpp
   // Create texture atlas with all the glyphs
   void createTextureAtlas() {
       // Variables for positioning glyphs in the atlas
@@ -842,76 +843,173 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 [^35]: Doug T.. "OpenGL rendering from FBO to screen" _Stack Overflow_, 28 Apr. 2012, [stackoverflow.com/a/10366497](https://stackoverflow.com/a/10366497).
 
 * Along with rendering text, I also wanted to render the texture atlas on-screen, just so that I could see all the glyphs, which means creating another shader program and a function to activate the shader program, bind the VAO and VBO for a fullscreen quad, and render the texture of the texture atlas.
-* Vertex shader for the texture atlas shader program.
-  ```cpp
-  #version 430 core
-  layout(location = 0) in vec2 aPos;          // Vertex position (2D quad)
-  layout(location = 1) in vec2 aTexCoord;     // Texture coordinates
-  
-  out vec2 TexCoord;                          // Pass texture coordinates to fragment shader
-  
-  uniform mat4 projection;                    // Projection matrix to transform the text positions
-  
-  void main()
-  {
-      gl_Position = vec4(aPos.xy, 0.0, 1.0);  // Set the position of each vertex
-      TexCoord = aTexCoord;                   // Pass texture coordinates to fragment shader
-  }
-  ```
-* Fragment shader for the texture atlas shader program.
-  ```cpp
-  #version 430 core
-  in vec2 TexCoord;    // Texture coordinates from vertex shader
-  out vec4 FragColor;  // Final output color
-  
-  uniform sampler2D screenTexture;    // The texture to sample from
-  uniform vec3 textColor;             // The color of the text (usually white or any desired color)
-  
-  void main()
-  {
-      float alpha = texture(screenTexture, TexCoord).r;   // Sample the texture at given coordinates
-      // If the glyph has an alpha value (not transparent), render it
-      if (alpha < 0.1) {
-          discard; // Avoid rendering transparent parts of the glyph
-      }
-      // Apply the text color to the glyph
-      FragColor = vec4(textColor, alpha); // Set the text color, using alpha for transparency
-  }
-  ```
-* The ``RenderAtlas(...)`` function.
-  ```cpp
-  void RenderAtlas(Shader &atlasShader, GLuint &atlasTexture) {
-      atlasShader.use();
-      // Enable 2D rendering
-      glEnable(GL_BLEND);
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      // bind VAO
-      glBindVertexArray(quadVAO);
-      glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-  
-      // Bind the texture (the texture atlas in this case)
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, atlasTexture); // atlasTextureId is the texture containing the atlas
-      atlasShader.setInt("screenTexture", 0);
-      glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
-      atlasShader.setVec3("textColor", color);
-      // Draw the quad
-      glDrawArrays(GL_TRIANGLES, 0, 6);
-  
-      // Cleanup
-      glBindVertexArray(0);
-      glBindBuffer(GL_ARRAY_BUFFER, 0);
-  }
-  ```
-* Screen recording is slightly complicated when V-Sync is OFF as this means the FPS can change, so you have to choose carefully which frames to use. In order to get a smooth 60fps screen recording of a window with variable FPS you will need to take a frame every 60th of a second, which might mean discarding excess frames if the FPS>60, or reusing frames if the FPS<60. My current code just takes every next frame and feeds it to the FFmpeg pipe to encode a video and forces it to 60fps regardless of the FPS the frames were displayed at. This is why I was having the problem where high FPS led to a "slowed" screen recording, and low FPS led to a "sped-up" screen recording, as when there is high FPS my program is "slowing" the frames down to 60fps, and vice versa for low FPS. For now I am just going to keep V-Sync ON, so I don't have to deal with this problem, but maybe in the future I can tackle it. V-Sync being ON is just generally a good idea anyway as it eliminates screen-tearing.
+  * Vertex shader for the texture atlas shader program.
+    ```cpp
+    #version 430 core
+    layout(location = 0) in vec2 aPos;          // Vertex position (2D quad)
+    layout(location = 1) in vec2 aTexCoord;     // Texture coordinates
+    
+    out vec2 TexCoord;                          // Pass texture coordinates to fragment shader
+    
+    uniform mat4 projection;                    // Projection matrix to transform the text positions
+    
+    void main()
+    {
+        gl_Position = vec4(aPos.xy, 0.0, 1.0);  // Set the position of each vertex
+        TexCoord = aTexCoord;                   // Pass texture coordinates to fragment shader
+    }
+    ```
+  * Fragment shader for the texture atlas shader program.
+    ```cpp
+    #version 430 core
+    in vec2 TexCoord;    // Texture coordinates from vertex shader
+    out vec4 FragColor;  // Final output color
+    
+    uniform sampler2D screenTexture;    // The texture to sample from
+    uniform vec3 textColor;             // The color of the text (usually white or any desired color)
+    
+    void main()
+    {
+        float alpha = texture(screenTexture, TexCoord).r;   // Sample the texture at given coordinates
+        // If the glyph has an alpha value (not transparent), render it
+        if (alpha < 0.1) {
+            discard; // Avoid rendering transparent parts of the glyph
+        }
+        // Apply the text color to the glyph
+        FragColor = vec4(textColor, alpha); // Set the text color, using alpha for transparency
+    }
+    ```
+  * The ``RenderAtlas(...)`` function.
+    ```cpp
+    void RenderAtlas(Shader &atlasShader, GLuint &atlasTexture) {
+        atlasShader.use();
+        // Enable 2D rendering
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // bind VAO
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    
+        // Bind the texture (the texture atlas in this case)
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, atlasTexture); // atlasTextureId is the texture containing the atlas
+        atlasShader.setInt("screenTexture", 0);
+        glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
+        atlasShader.setVec3("textColor", color);
+        // Draw the quad
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    
+        // Cleanup
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+    ```
+* Screen recording is slightly complicated when V-Sync is OFF as this means the FPS can change, so you have to choose carefully which frames to use. In order to get a smooth 60fps screen recording of a window with variable FPS you will need to take a frame every 60th of a second, which might mean discarding excess frames if the FPS>60, or reusing frames if the FPS<60. My current code just takes every next frame and feeds it to the FFmpeg pipe to encode a video and forces it to 60fps regardless of the FPS the frames were displayed at. This is why I was having the problem where high FPS led to a "slowed" screen recording, and low FPS led to a "sped-up" screen recording, as when there is high FPS my program is "slowing" the frames down to 60fps, and vice versa for low FPS. For now I am just going to keep V-Sync ON, so I don't have to deal with this problem, but maybe in the future I can tackle it. V-Sync being ON is just generally a good idea anyway as it eliminates screen-tearing. Would be also nice to implement "last x minutes" screen recording, which would probably involve saving the last N frames (x minutes) into a buffer and continuously updating the buffer, removing the oldest frames and feeding new frames in, and encoding the video with FFmpeg once the program ends.
 
-* I was able to enable V-Sync with the help of this [Stack Overflow answer](https://stackoverflow.com/a/589232), using the ``WGL_EXT_swap_control`` extension function, ``wglSwapIntervalEXT()``. Unfortunately, you will need to import the ``Windows.h`` header file, thus making the program tied to Windows, and as an insightful comment on that answer mentions, "That is not an extension to OpenGL, but rather to WGL (the Microsoft Windows window system API for OpenGL). Buffer swapping is by its very nature a window system specific operation. As far as GL is concerned it just draws to a front/back left/right buffer or some arbitrary FBO. The window system is the only thing with enough knowledge of the underlying host system to synchronize the presentation of drawn buffers to some event (in this case the monitor's vertical retrace)".[^37] You can use ``wglGetSwapIntervalEXT()`` to get the current swap interval,[^36] and change it to V-Sync ON using ``wglSwapIntervalEXT(1)``, V-Sync OFF using ``wglSwapIntervalEXT(0)``, and Adaptive V-Sync using ``wglSwapIntervalEXT(-1)``, "adaptive vsync enables v-blank synchronisation when the frame rate is higher than the sync rate, but disables synchronisation when the frame rate drops below the sync rate".[^38]
+* I was able to enable V-Sync with the help of this [Stack Overflow answer](https://stackoverflow.com/a/589232), using the ``WGL_EXT_swap_control`` extension function ``wglSwapIntervalEXT()``. Unfortunately, you will need to include the ``wglext.h`` and ``Windows.h`` header files, thus making the program tied to Windows, and as an insightful comment on that answer mentions, "That is not an extension to OpenGL, but rather to WGL (the Microsoft Windows window system API for OpenGL). Buffer swapping is by its very nature a window system specific operation. As far as GL is concerned it just draws to a front/back left/right buffer or some arbitrary FBO. The window system is the only thing with enough knowledge of the underlying host system to synchronize the presentation of drawn buffers to some event (in this case the monitor's vertical retrace)".[^37] You can use ``wglGetSwapIntervalEXT()`` to get the current swap interval,[^36] and change it to V-Sync ON using ``wglSwapIntervalEXT(1)``, V-Sync OFF using ``wglSwapIntervalEXT(0)``, and Adaptive V-Sync using ``wglSwapIntervalEXT(-1)``, "adaptive vsync enables v-blank synchronisation when the frame rate is higher than the sync rate, but disables synchronisation when the frame rate drops below the sync rate".[^38]
+* You will need to copy the ``wglext.h`` header file, which should be located in the ``C:\msys64\mingw64\include`` folder, into your project's ``include`` folder.
+```bash
+  YourProject
+  └── include
+      ├── wglext.h
+      ├── ...
+```
+* You will also need to link to the library by adding ``"-lopengl32",`` to your compiler flags in your ``tasks.json`` file.
 
 [^36]: eugensk. "OpenGL rendering from FBO to screen" _Stack Overflow_, 26 Feb. 2009, [stackoverflow.com/a/589232](https://stackoverflow.com/a/589232).
 [^37]: Andon M. Coleman. "how to enable vertical sync in opengl?" _Stack Overflow_, 6 June 2014, [stackoverflow.com/questions/589064/how-to-enable-vertical-sync-in-opengl#comment37124053_589232](https://stackoverflow.com/questions/589064/how-to-enable-vertical-sync-in-opengl#comment37124053_589232).
 [^38]: Alfonse, et al. "Swap Interval" _Khronos_, 17 June 2017, [khronos.org/opengl/wiki/Swap_Interval](https://www.khronos.org/opengl/wiki/Swap_Interval).
 
-  
+* I moved the ``myprogram.exe`` file to the ``src`` folder so now it is runnable (I should have done this a long time ago...). To ensure the ``main.cpp`` file saves the ``.exe`` file in the correct location you have to change the compiler output file flag to: ``-o "${workspaceFolder}/src/myprogram.exe"`` in your ``tasks.json`` file. If I wanted to give the project to someone else, all I would have to do is copy the project folder to them and they would just need to click ``myprogram.exe`` to run the program without needing MinGW-w64 (GCC) to compile the ``main.cpp`` code.
+  ```bash
+  YourProject
+  └── src
+      ├── myprogram.exe
+      ├── ...
+  ```
+* I made the program rendering independent of the framerate by calculating the time between consecutive frames, ``timeDiff``, and multiplying this with every movement update calculation.
+  * Inside the render loop:
+    ```cpp
+    crntTime = glfwGetTime();
+		timeDiff = crntTime - prevTime;
+    prevTime = crntTime;
+    ```
+  * Function that processes all inputs:
+    ```cpp
+    // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+    // ---------------------------------------------------------------------------------------------------------
+    void processInput(GLFWwindow *window)
+    {
+        // crntTime = glfwGetTime();
+        // timeDiff = crntTime - prevTime;
+        // prevTime = crntTime;
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, true);
+    
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+        {
+            yOffset += 0.1f * timeDiff * 10;
+            if(yOffset >= 0.5f)
+                yOffset = 0.5f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+        {
+            yOffset -= 0.1f * timeDiff * 10;
+            if (yOffset <= -0.5f)
+                yOffset = -0.5f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+        {
+            xOffset -= 0.1f * timeDiff * 10;
+            if(xOffset <= -0.5f)
+                xOffset = -0.5f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+        {
+            xOffset += 0.1f * timeDiff * 10;
+            if(xOffset >= 0.5f)
+                xOffset = 0.5f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        {
+            mixValue -= 0.1f * timeDiff * 10;
+            if(mixValue <= 0.0f)
+                mixValue = 0.0f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        {
+            mixValue += 0.1f * timeDiff * 10;
+            if(mixValue >= 1.0f)
+                mixValue = 1.0f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_F11) == GLFW_PRESS)
+        {
+            if (fullscreen)
+            {
+                glfwSetWindowMonitor(window,
+                                    nullptr,
+                                    0, 0,
+                                    SCR_WIDTH, SCR_HEIGHT,
+                                    0
+                );
+                fullscreen = 0;
+            }
+            else
+            {
+                GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+                const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+                glfwSetWindowMonitor(window,
+                                     glfwGetPrimaryMonitor(),
+                                     0, 0,
+                                     mode->width, mode->height,
+                                     0
+                );
+                fullscreen = 1;
+            }
+        }
+    }
+    ```
+* From the function above you can see that I also implemented a fullscreen toggle with the ``F11`` key and exiting with the ``ESC`` key.
 
 
 <!-- FONT LOADER AND TEXTURE ATLAS -->
