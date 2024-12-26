@@ -931,7 +931,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   * Inside the render loop:
     ```cpp
     crntTime = glfwGetTime();
-		timeDiff = crntTime - prevTime;
+    timeDiff = crntTime - prevTime;
     prevTime = crntTime;
     ```
   * Function that processes all inputs:
@@ -987,10 +987,10 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
             if (fullscreen)
             {
                 glfwSetWindowMonitor(window,
-                                    nullptr,
-                                    0, 0,
-                                    SCR_WIDTH, SCR_HEIGHT,
-                                    0
+                                     nullptr,
+                                     0, 0,
+                                     SCR_WIDTH, SCR_HEIGHT,
+                                     0
                 );
                 fullscreen = 0;
             }
