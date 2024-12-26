@@ -334,6 +334,40 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
 * I am now finally able to render on-screen and off-screen simultaneously. I was able to do this naively by just rendering to the BACK buffer and using glReadPixels to render off-screen, however, this isn't ideal as I have already explained, the BACK buffer isn't designed for data to be read back to the CPU. A better method would be to render to a FBO, read the pixel data and feed it to FFmpeg to encode a video off-screen, and somehow also render the FBO pixel data on-screen. An FBO stores pixel data not using the default window framebuffer so it won't be visible, it is designed to be read back to the CPU which is partly what we want. My first approach to get the pixel data to be visible on-screen was to use a fullscreen quad and the texture of the FBO, which others had suggested.[^24] I spent a lot of time down this path, which involved using another shader program to render the quad, but after spending many, many days on this it just didn't work, I got off-screen rendering to work but not on-screen rendering. At least I learned about using multiple shader programs. The next approach which did work was to blit (copy) the FBO pixel data to the default framebuffer, which I probably should have just done from the start, this solution also just seems to be better performance-wise than the fullscreen quad approach as it means less API calls, not needing to bind another shader program, and many GPUs have dedicated units for blitting data.[^25] While this does work, I would eventually like to go back to FBO textures and a fullscreen quad as this seems like you can do more stuff like rendering the scene onto objects (textures are easier to manipulate/attach to objects), as well as post-processing using PBOs to modify the texture efficiently.[^26]
 
+  ```cpp
+  // Step 1: Render the scene to the MSAA FBO
+  // ----------------------------------------
+  glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+  glEnable(GL_DEPTH_TEST); // Needed for 3D rendering
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  RenderScene(ourShader);
+  
+  // Step 2: Resolve MSAA FBO to standard non-MSAA FBO
+  // -------------------------------------------------
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                    0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
+                            GL_COLOR_BUFFER_BIT,           // buffer mask
+                                     GL_LINEAR);           // scale filter
+  
+  RenderText(textShader, fpsText, x, y, scale, color);
+  RenderAtlas(atlasShader, textureAtlasID);
+
+  // Step 3: Render the scene for on-screen rendering using Blitting: https://stackoverflow.com/a/31487085
+  // ---------------------------------------------------------------
+  // Bind the target FBO to read
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
+
+  // Step 4: Read pixels from the resolved FBO for off-screen encoding (without PBOs)
+  // --------------------------------------------------------------------------------
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                    0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
+                            GL_COLOR_BUFFER_BIT,           // buffer mask
+                                    GL_NEAREST);           // scale filter
+  ```
+
 * I adjusted the FFmpeg command to encode the video at 60fps rather than 30fps, I should have done that from the beginning, as it matches the 60fps on-screen window. At 30fps, the encoded video seems sluggish. Unfortunately, you will have to manually adjust the frame resolution if needed, I wanted to make it automated but formatting strings in C++ is headache-inducing (side note: it seems like they made it easier to format strings in C++20 using ``std::format``, the person responsible for standardizing it and getting it through the C++20 committee wrote a blog post essentially explaining "what took so long?": https://vitaut.net/posts/2019/std-format-cpp20/, but as I am using C++17 I won't bother unless I choose to update my C++ version).
   ```cpp
   // Path to ffmpeg binary, if it's not in the system path, provide the full path. MAKE SURE THE FRAME RESOLUTION IS CORRECT!
@@ -342,7 +376,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
   https://github.com/user-attachments/assets/ec9950bc-0568-404e-a57b-5b08b84452d0
 
-  I am still blown away by how quickly the encoded video is rendered, basically instantly after the program terminates, the max runtime I've tried is 1 minute, maybe I should try rendering for longer, but I don't think it would be any less slow since FFmpeg is encoding the video frame by frame every cycle in the render loop. This could also just be due to the scene not being very intensive. The on-screen and off-screen renders match basically exactly, now I can do whatever I want, my first goal is to do some fractal rendering, continue the LearnOpenGL sections, and once I've learnt about instancing, try to implement the Saturn's rings code in OpenGL.
+  I am still blown away by how quickly the encoded video is rendered, basically instantly after the program terminates, the max runtime I've tried is 1 minute, maybe I should try rendering for longer, but I don't think it would be any less fast since FFmpeg is encoding the video frame by frame every cycle in the render loop. This could also just be due to the scene not being very intensive. The on-screen and off-screen renders match basically exactly, now I can do whatever I want, my first goal is to do some fractal rendering, continue the LearnOpenGL sections, and once I've learnt about instancing, try to implement the Saturn's rings code in OpenGL.
 
 * I also changed from using a C++ vector to using an array to store the frame (pixel) data, as this seems better suited to the job as the frame data is of a fixed size, and an array uses the heap rather than the stack making it faster.
   ```cpp
@@ -869,7 +903,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       glBindBuffer(GL_ARRAY_BUFFER, 0);
   }
   ```
-
+* Screen recording is slightly complicated when V-Sync is OFF as this means the FPS can change, so you have to choose carefully which frames to use. In order to get a smooth 60fps screen recording of a window with variable FPS you will need to take a frame every 60th of a second, which might mean discarding excess frames if the FPS>60, or reusing frames if the FPS<60. My current code just takes every next frame and feeds it to the FFmpeg pipe to encode a video and forces it to 60fps regardless of the FPS the frames were displayed at. This is why I was having the problem where high FPS led to a "slowed" screen recording, and low FPS led to a "sped-up" screen recording, as when there is high FPS my program is "slowing" the frames down to 60fps, and vice versa for low FPS. For now I am just going to keep V-Sync ON, so I don't have to deal with this problem, but maybe in the future I can tackle it. V-Sync being ON is just generally a good idea anyway as it eliminates screen-tearing.
 
 <!-- FONT LOADER AND TEXTURE ATLAS -->
 <!-- QUAD TEXT SHADERS (TALK ABOUT OPENGL OLD vs NEW (FIXED FUNCTION vs SHADER BASED) -->
