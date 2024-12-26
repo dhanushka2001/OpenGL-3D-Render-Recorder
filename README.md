@@ -905,6 +905,15 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   ```
 * Screen recording is slightly complicated when V-Sync is OFF as this means the FPS can change, so you have to choose carefully which frames to use. In order to get a smooth 60fps screen recording of a window with variable FPS you will need to take a frame every 60th of a second, which might mean discarding excess frames if the FPS>60, or reusing frames if the FPS<60. My current code just takes every next frame and feeds it to the FFmpeg pipe to encode a video and forces it to 60fps regardless of the FPS the frames were displayed at. This is why I was having the problem where high FPS led to a "slowed" screen recording, and low FPS led to a "sped-up" screen recording, as when there is high FPS my program is "slowing" the frames down to 60fps, and vice versa for low FPS. For now I am just going to keep V-Sync ON, so I don't have to deal with this problem, but maybe in the future I can tackle it. V-Sync being ON is just generally a good idea anyway as it eliminates screen-tearing.
 
+* I was able to enable V-Sync with the help of this [Stack Overflow answer](https://stackoverflow.com/a/589232), using the ``WGL_EXT_swap_control`` extension function, ``wglSwapIntervalEXT()``. Unfortunately, you will need to import the ``Windows.h`` header file, thus making the program tied to Windows, and as an insightful comment on that answer mentions, "That is not an extension to OpenGL, but rather to WGL (the Microsoft Windows window system API for OpenGL). Buffer swapping is by its very nature a window system specific operation. As far as GL is concerned it just draws to a front/back left/right buffer or some arbitrary FBO. The window system is the only thing with enough knowledge of the underlying host system to synchronize the presentation of drawn buffers to some event (in this case the monitor's vertical retrace)".[^37] You can use ``wglGetSwapIntervalEXT()`` to get the current swap interval,[^36] and change it to V-Sync ON using ``wglSwapIntervalEXT(1)``, V-Sync OFF using ``wglSwapIntervalEXT(0)``, and Adaptive V-Sync using ``wglSwapIntervalEXT(-1)``, "adaptive vsync enables v-blank synchronisation when the frame rate is higher than the sync rate, but disables synchronisation when the frame rate drops below the sync rate".[^38]
+
+[^36]: eugensk. "OpenGL rendering from FBO to screen" _Stack Overflow_, 26 Feb. 2009, [stackoverflow.com/a/589232](https://stackoverflow.com/a/589232).
+[^37]: Andon M. Coleman. "how to enable vertical sync in opengl?" _Stack Overflow_, 6 June 2014, [stackoverflow.com/questions/589064/how-to-enable-vertical-sync-in-opengl#comment37124053_589232](https://stackoverflow.com/questions/589064/how-to-enable-vertical-sync-in-opengl#comment37124053_589232).
+[^38]: Alfonse, et al. "Swap Interval" _Khronos_, 17 June 2017, [khronos.org/opengl/wiki/Swap_Interval](https://www.khronos.org/opengl/wiki/Swap_Interval).
+
+  
+
+
 <!-- FONT LOADER AND TEXTURE ATLAS -->
 <!-- QUAD TEXT SHADERS (TALK ABOUT OPENGL OLD vs NEW (FIXED FUNCTION vs SHADER BASED) -->
 <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
