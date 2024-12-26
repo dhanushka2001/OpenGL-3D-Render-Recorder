@@ -835,7 +835,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   ```
   
 [^29]: "What’s the difference between a stack and a heap?" _ProgrammerInterview.com_, [programmerinterview.com/data-structures/difference-between-stack-and-heap/](https://www.programmerinterview.com/data-structures/difference-between-stack-and-heap/).
-[^20]: nullDev. "When is it best to use the stack instead of the heap and vice versa?" _Stack Overflow_, 19 Sep. 2008, [stackoverflow.com/a/102061](https://stackoverflow.com/a/102061).
+[^30]: nullDev. "When is it best to use the stack instead of the heap and vice versa?" _Stack Overflow_, 19 Sep. 2008, [stackoverflow.com/a/102061](https://stackoverflow.com/a/102061).
 [^31]: Jeff Hill. "What and where are the stack and heap?" _Stack Overflow_, 17 Sep. 2008, [stackoverflow.com/a/80113](https://stackoverflow.com/a/80113).
 [^32]: Yakk - Adam Nevraumont. "Does std::array<> guarantee allocation on the stack only?" _Stack Overflow_, 17 Sep. 2016, [stackoverflow.com/a/39549597](https://stackoverflow.com/a/39549597).
 [^33]: collin. "Heap Memory in C Programming" _Stack Overflow_, 17 Apr. 2012, [stackoverflow.com/a/10200727](https://stackoverflow.com/a/10200727).
