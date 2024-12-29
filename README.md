@@ -1170,7 +1170,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   #include <glm/gtc/matrix_transform.hpp>
   #include <glm/gtc/type_ptr.hpp>
   ```
-* At initialization do the same steps, initializing the vector array (to be created once), and the VAO, VBO, and EBO.
+* At initialization do the same steps, building and compiling the shader program, initializing the vertices (to be created once), vertex attributes, and the VAO, VBO, and EBO.
   ```cpp
   // build and compile our shader program
   // ------------------------------------
