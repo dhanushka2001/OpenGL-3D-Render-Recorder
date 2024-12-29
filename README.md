@@ -474,7 +474,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     └── include
         ├── freetype2
         │   ├── ft2build.h
-        │   └── freetype/
+        │   └── freetype
         │       ├── freetype.h
         │       ├── ftglyph.h
         │       └── ...
@@ -952,6 +952,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   sendFrameBufferToFFmpeg(frame, 1);
   ```
 * Rendering text using a TrueType font (loaded with FreeType) rasterized onto a bitmap font texture atlas (V-Sync ON, explained further down).
+
   https://github.com/user-attachments/assets/2159f8b1-9488-44c0-9c7a-274c98ef78f3
 
 * Along with rendering text, I also wanted to render the texture atlas on-screen, just so that I could see all the glyphs, which means creating another shader program and a function to activate the shader program, bind the VAO and VBO for a fullscreen quad, and render the texture of the texture atlas.
@@ -1024,7 +1025,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 * Screen recording is slightly complicated when V-Sync is OFF as this means the FPS can change, so you have to choose carefully which frames to use. In order to get a smooth 60fps screen recording of a window with variable FPS you will need to take a frame every 60th of a second, which might mean discarding excess frames if the FPS>60, or reusing frames if the FPS<60. My current code just takes every next frame and feeds it to the FFmpeg pipe to encode a video and forces it to 60fps regardless of the FPS the frames were displayed at. This is why I was having the problem where high FPS led to a "slowed" screen recording, and low FPS led to a "sped-up" screen recording, as when there is high FPS my program is "slowing" the frames down to 60fps, and vice versa for low FPS. For now I am just going to keep V-Sync ON, so I don't have to deal with this problem, but maybe in the future I can tackle it. V-Sync being ON is just generally a good idea anyway as it eliminates screen-tearing. Would be also nice to implement "last x minutes" screen recording, which would probably involve saving the last N frames (x minutes) into a buffer and continuously updating the buffer, removing the oldest frames and feeding new frames in, and encoding the video with FFmpeg once the program ends.
 
 * I was able to enable V-Sync with the help of this [Stack Overflow answer](https://stackoverflow.com/a/589232), using the ``WGL_EXT_swap_control`` extension function ``wglSwapIntervalEXT()``. Unfortunately, you will need to include the ``wglext.h`` and ``Windows.h`` header files, thus making the program tied to Windows, and as an insightful comment on that answer mentions, "That is not an extension to OpenGL, but rather to WGL (the Microsoft Windows window system API for OpenGL). Buffer swapping is by its very nature a window system specific operation. As far as GL is concerned it just draws to a front/back left/right buffer or some arbitrary FBO. The window system is the only thing with enough knowledge of the underlying host system to synchronize the presentation of drawn buffers to some event (in this case the monitor's vertical retrace)".[^37] You can use ``wglGetSwapIntervalEXT()`` to get the current swap interval,[^36] and change it to V-Sync ON using ``wglSwapIntervalEXT(1)``, V-Sync OFF using ``wglSwapIntervalEXT(0)``, and Adaptive V-Sync using ``wglSwapIntervalEXT(-1)``, "adaptive vsync enables v-blank synchronisation when the frame rate is higher than the sync rate, but disables synchronisation when the frame rate drops below the sync rate".[^38]
-* You will need to copy the ``wglext.h`` header file, which should be located in the ``C:\msys64\mingw64\include`` folder, into your project's ``include`` folder.
+* You will need to copy the ``wglext.h`` header file, which should be located in the ``C:\msys64\mingw64\include\GL`` folder, into your project's ``include`` folder.
 ```bash
   YourProject
   └── include
@@ -1044,7 +1045,8 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       ├── myprogram.exe
       ├── ...
   ```
-* I made the program rendering independent of the framerate by calculating the time between consecutive frames, ``timeDiff``, and multiplying this with every movement update calculation.
+* I made the program rendering independent of the framerate by calculating the time between consecutive frames, ``timeDiff``, and multiplying this with every movement update calculation.[^39]
+  [^39]: TravisG. "Framerate independence" _Game Development Stack Exchange_, 11 June 2011, [gamedev.stackexchange.com/a/13486](https://gamedev.stackexchange.com/a/13486).
   * Inside the render loop:
     ```cpp
     crntTime = glfwGetTime();
@@ -1124,23 +1126,189 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     }
     ```
 * From the function above you can see that I also implemented a fullscreen toggle with the ``F11`` key and exiting with the ``ESC`` key.
-* You'll notice above I did ``if`` statements without curly brackets/braces, this isn't recommended,[^39] but for simple one-line code it makes it look cleaner, just be careful.
+* You'll notice above I did ``if`` statements without curly brackets/braces, this isn't recommended,[^40] but for simple one-line code it makes it look cleaner, just be careful.
 
-  [^39]: clee, doynax, et al. "Is it a bad practice to use an if-statement without curly braces?" _FFmpeg_, 23 Jan. 2010, [stackoverflow.com/questions/2125066/is-it-a-bad-practice-to-use-an-if-statement-without-curly-braces](https://stackoverflow.com/questions/2125066/is-it-a-bad-practice-to-use-an-if-statement-without-curly-braces).
+  [^40]: clee, doynax. "Is it a bad practice to use an if-statement without curly braces?" _Stack Overflow_, 23 Jan. 2010, [stackoverflow.com/questions/2125066/is-it-a-bad-practice-to-use-an-if-statement-without-curly-braces](https://stackoverflow.com/questions/2125066/is-it-a-bad-practice-to-use-an-if-statement-without-curly-braces).
 
-* I added another flag to the FFmpegCommand to control the encoded video quality, lowering the CRF and using a slower encoding preset will give better video quality but may make the program laggy.[^40]
+* I added another flag to the FFmpegCommand to control the encoded video quality, lowering the CRF and using a slower encoding preset will give better video quality but may make the program laggy.[^41]
   ```cpp
   "-crf 17 -preset slow "     // Constant rate factor (18=visually lossless, 23=default)
   ```
-[^40]: llogan, et al. "H.264 Video Encoding Guide" _FFmpeg_, 12 Dec. 2024, [trac.ffmpeg.org/wiki/Encode/H.264](https://trac.ffmpeg.org/wiki/Encode/H.264).
+[^41]: llogan, et al. "H.264 Video Encoding Guide" _FFmpeg_, 12 Dec. 2024, [trac.ffmpeg.org/wiki/Encode/H.264](https://trac.ffmpeg.org/wiki/Encode/H.264).
 
 
 <!-- FONT LOADER AND TEXTURE ATLAS -->
 <!-- QUAD TEXT SHADERS (TALK ABOUT OPENGL OLD vs NEW (FIXED FUNCTION vs SHADER BASED) -->
 <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
 
+## Progress update 7 - Transformations - 29/12/24
+* Switched from regenerating the vectors array to using a ``mat4`` uniform variable to store the resultant translation (and rotation) matrix transformations.
+* It's better to just follow from the LearnOpenGL [tutorial](https://learnopengl.com/Getting-started/Transformations), but I will outline the steps here.
+* You will need the GLM (Open**GL M**athematics) headers, which will allow you to do vector and matrix math. You can download them from their [website](https://glm.g-truc.net/0.9.8/index.html).
+* Once downloaded, move the ``glm`` folder into your project's ``include`` folder like so:
+  ```bash
+  YourProject
+  └── include
+      └── glm
+          ├── detail
+          │   └── ...
+          ├── ext
+          │   └── ...
+          ├── gtc
+          │   └── ...
+          ├── gtx
+          │   └── ...
+          ├── simd
+          │   └── ...
+          ├── common.hpp
+          ├── exponential.hpp
+          ├── ...
+  ```
+* And include the headers at the top of ``main.cpp`` like so:
+  ```cpp
+  #include <glm/glm.hpp>
+  #include <glm/gtc/matrix_transform.hpp>
+  #include <glm/gtc/type_ptr.hpp>
+  ```
+* At initialization do the same steps, initializing the vector array (to be created once), and the VAO, VBO, and EBO.
+  ```cpp
+  // build and compile our shader program
+  // ------------------------------------
+  Shader ourShader("4.1.shader.vert", "4.1.shader.frag"); // you can name your shader files however you like
 
+  // set up vertex data (and buffer(s)) and configure vertex attributes
+  // ------------------------------------------------------------------
+  float vertices[] = {
+  // positions          // colors           // texture coords
+   0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+   0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+  -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+  -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
+  };
+  unsigned int indices[] = {  
+      0, 1, 3, // first triangle
+      1, 2, 3  // second triangle
+  };
 
+  // unsigned int VBO, VAO, EBO;
+  glGenVertexArrays(1, &VAO);
+  glGenBuffers(1, &VBO);
+  glGenBuffers(1, &EBO);
+  // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+  // once a VAO is bound, any subsequent vertex attribute calls will be stored inside that VAO. (only have to make the calls once)
+  glBindVertexArray(VAO);
+
+  // copy our vertices array in a buffer for OpenGL to use
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+  // The last element buffer object (EBO) that gets bound while a VAO is bound is stored as that VAO's EBO.
+  // Binding to a VAO then also automatically binds that EBO.
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+  // position attribute
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(0);
+  // color attribute
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+  // texture coord attribute
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+  glEnableVertexAttribArray(2);
+
+  // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+  // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+  glBindVertexArray(0);
+  ```
+
+* Inside the ``RenderScene()`` function.
+  ```cpp
+  void RenderScene(Shader &ourShader) {
+      // set the texture mix value in the shader (this needs to be in the render loop)
+      ourShader.use();
+      ourShader.setFloat("mixValue", mixValue);
+  
+      // bind Texture
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, crateTexture);
+      ourShader.setInt("texture1", 0);
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, awesomeTexture);
+      ourShader.setInt("texture2", 1);
+  
+      glm::mat4 trans = glm::mat4(1.0f);
+      trans = glm::translate(trans, glm::vec3(xOffset, yOffset, 0.0f));
+      // trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+      ourShader.setMat4("transform", trans);
+  
+      glBindVertexArray(VAO);
+      glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  
+      // render the crate
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  
+      // Cleanup
+      glBindVertexArray(0);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+  }
+  ```
+* Updated scene vertex shader.
+  ```cpp
+  #version 430 core
+  layout (location = 0) in vec3 aPos;
+  layout (location = 1) in vec3 aColor;
+  layout (location = 2) in vec2 aTexCoord;
+  
+  out vec3 ourColor;
+  out vec2 TexCoord;
+  
+  uniform mat4 transform;
+  
+  void main()
+  {
+  	gl_Position = transform * vec4(aPos, 1.0);
+  	ourColor = aColor;
+  	TexCoord = vec2(aTexCoord.x, aTexCoord.y);
+  }
+  ```
+* Updated scene fragment shader.
+  ```cpp
+  #version 430 core
+  out vec4 FragColor;
+  
+  in vec3 ourColor;
+  in vec2 TexCoord;
+  uniform float mixValue;
+  
+  // texture sampler
+  uniform sampler2D texture1;	// crate
+  uniform sampler2D texture2;	// awesome face
+  
+  void main()
+  {
+  	FragColor = mix(texture(texture1, vec2(TexCoord.x, TexCoord.y)), texture(texture2, vec2(TexCoord.x, TexCoord.y)), mixValue) * vec4(ourColor, 1.0); 
+  	// FragColor = vec4(1.0, 0.0, 0.0, 1.0);  // Output solid red to test shader
+  }
+  ```
+* I also switched from using ``malloc()`` and ``free()`` to using ``new`` and ``delete``. 
+  ```cpp
+  unsigned char* frame = NULL;
+  ```
+  ```cpp
+  // Frame buffer to hold the raw frame data (RGB)
+  // std::vector<unsigned char> frame(SCR_WIDTH * SCR_HEIGHT * 3);
+  // std::array<unsigned char, SCR_WIDTH * SCR_HEIGHT * 3> frame;
+  // Why use unsigned char? https://stackoverflow.com/a/13642984
+  // frame = (unsigned char*) malloc(SCR_WIDTH * SCR_HEIGHT * 3 * sizeof(unsigned char));
+  frame = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 3];// - 2415];
+  ```
+  ```cpp
+  // This deletes all items in the array
+  delete[] frame;
+  ```
+* For some reason ``new`` seems to allocate more memory than expected, I need to store 800x600 RGB (0-255) pixel data, but I can get away with subtracting 2415 before getting a stack overflow error. When initializing a pointer, people recommended to set it to ``NULL``.[^42]
+  [^42]: Dmitry. "Proper Way To Initialize Unsigned Char*" _Stack Overflow_, 2 Feb. 2011, [stackoverflow.com/a/4876907](https://stackoverflow.com/a/4876907).
 
 <!-- ADD BIBLIOGRAPHY -->
 <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
