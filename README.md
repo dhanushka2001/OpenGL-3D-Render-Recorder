@@ -333,7 +333,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 ## Progress update 5 - Simultaneous on-screen and off-screen rendering - 16/11/24
 
 * I am now finally able to render on-screen and off-screen simultaneously. I was able to do this naively by just rendering to the BACK buffer and using glReadPixels to render off-screen, however, this isn't ideal as I have already explained, the BACK buffer isn't designed for data to be read back to the CPU. A better method would be to render to a FBO, read the pixel data and feed it to FFmpeg to encode a video off-screen, and somehow also render the FBO pixel data on-screen. An FBO stores pixel data not using the default window framebuffer so it won't be visible, it is designed to be read back to the CPU which is partly what we want. My first approach to get the pixel data to be visible on-screen was to use a fullscreen quad and the texture of the FBO, which others had suggested.[^24] I spent a lot of time down this path, which involved using another shader program to render the quad, but after spending many, many days on this it just didn't work, I got off-screen rendering to work but not on-screen rendering. At least I learned about using multiple shader programs. The next approach which did work was to blit (copy) the FBO pixel data to the default framebuffer, which I probably should have just done from the start, this solution also just seems to be better performance-wise than the fullscreen quad approach as it means less API calls, not needing to bind another shader program, and many GPUs have dedicated units for blitting data.[^25] While this does work, I would eventually like to go back to FBO textures and a fullscreen quad as this seems like you can do more stuff like rendering the scene onto objects (textures are easier to manipulate/attach to objects), as well as post-processing using PBOs to modify the texture efficiently.[^26]
-
+  
   ```cpp
   // Step 1: Render the scene to the MSAA FBO
   // ----------------------------------------
@@ -350,17 +350,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
                     0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
                             GL_COLOR_BUFFER_BIT,           // buffer mask
                                      GL_LINEAR);           // scale filter
-  
-  RenderText(textShader, fpsText, x, y, scale, color);
-  RenderAtlas(atlasShader, textureAtlasID);
 
   // Step 3: Render the scene for on-screen rendering using Blitting: https://stackoverflow.com/a/31487085
-  // ---------------------------------------------------------------
+  // -----------------------------------------------------------------------------------------------------
   // Bind the target FBO to read
   glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
-
-  // Step 4: Read pixels from the resolved FBO for off-screen encoding (without PBOs)
-  // --------------------------------------------------------------------------------
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
   glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
                     0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
@@ -717,7 +711,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       textShader.setInt("textTextureAtlas", 0);
   
       // Enable 2D rendering
-      glEnable(GL_BLEND);
+      glEnable(GL_BLEND); // enable transparency
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   
       // Set up the transformation matrix for the text position
@@ -776,7 +770,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       glBindTexture(GL_TEXTURE_2D, 0);
   
       // Disable blend mode after rendering the text
-      glDisable(GL_BLEND);
+      // glDisable(GL_BLEND); // disable transparency
   }
   ```
 * You'll notice I use ampersands (&) before the input variables for the functions (``void RenderText(Shader &textShader, const std::string &text, float x, float y, float scale, glm::vec3 color)``), this is known as "passing by reference", "it allows a function to modify a variable without having to create a copy of it."[^28] In C++ there are two main ways to pass variables to functions, "pass by reference" and "pass by value".[^27] With pass by reference you give the function the memory location where the variable is stored, allowing it to change the original variable, this can be done using referencing (``int &variable``) or pointers (``int *variable``), it is generally recommended to use referencing over pointers.[^28] With pass by value we give the function a copy of the variable which it can modify and leaves the original variable alone. This is good when you don't want to change the original variable, but as you can imagine will be slow if you pass large arrays as it will need to copy the entire array.[^27] You can "retain the performance advantages of pass by reference and still protect our variables from changes by passing a const reference"[^27] which is what I did inside the ``RenderText()`` function when looping through the characters in the text: ``for (const char &c : text) {``. "Passing small types like int or float by value is fine, as they are the same size as a reference"[^27] which is why I didn't use referencing for the float variables.
@@ -842,6 +836,124 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 [^34]: nysra. "Is std::vector allocated on Heap?" _Reddit_, 1 Oct. 2023, [reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x](https://www.reddit.com/r/cpp_questions/comments/16wzd94/comment/k2zm68x).
 [^35]: Doug T.. "OpenGL rendering from FBO to screen" _Stack Overflow_, 28 Apr. 2012, [stackoverflow.com/a/10366497](https://stackoverflow.com/a/10366497).
 
+* The function to update the FPS
+  ```cpp
+  void UpdateFPS() {
+      float currentTime = glfwGetTime();
+      frameCount++;
+  
+      // Calculate FPS every 10th of a second
+      if (currentTime - lastTime >= 1.0f / 10.0f) {
+          fps = frameCount / (currentTime - lastTime);
+          msPerFrame = 1000.0f / fps; // Convert to milliseconds
+          frameCount = 0;
+          lastTime = currentTime;
+      }
+  }
+  ```
+* The function to get the text to display
+  ```cpp
+  std::string GetFPSText(float fps, float ms) {
+      char buffer[100];
+      // "FPS: %.1f | %.1f ms"
+      // "AaBbCcDdEeFfGg1!2£4$"
+      // "In the dream, they took me to the light. A beautiful lie."
+      snprintf(buffer, sizeof(buffer), "FPS: %.3f | %.3f ms | Press ESC to exit, F11 for fullscreen", fps, ms);
+      return std::string(buffer);
+  }
+  ```
+* Outside render loop:
+  ```cpp
+  // load font and create texture atlas
+  // ----------------------------------
+  std::ifstream file(fontFilepath);
+  if (!file.good()) {
+      std::cerr << "ERROR: Font file not found at " << fontFilepath << std::endl;
+      return 1;
+  }
+  FT_UInt fontsize = 48;
+  loadFont(fontsize);
+  createTextureAtlas();
+
+  // build and compile our text shader program
+  // -----------------------------------------
+  Shader textShader("text_shader.vert", "text_shader.frag");
+
+  // set up vertex data (and buffer(s)) and configure vertex attributes
+  // ------------------------------------------------------------------
+  glGenVertexArrays(1, &textVAO);
+  glGenBuffers(1, &textVBO);
+
+  glBindVertexArray(textVAO);
+  
+  glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+  
+  // Position and texture attribute
+  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+  glEnableVertexAttribArray(0);
+
+  // Set up text shader and projection matrix
+  // ----------------------------------------
+  textShader.use();
+  glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
+  textShader.setMat4("projection", projection);
+  ```
+  
+* Inside the render loop:
+  ```cpp
+  // Update timing info
+  UpdateFPS();
+  std::string fpsText = GetFPSText(fps, msPerFrame);
+
+  // Render FPS text at the top-left corner
+  float scale = 0.5f;
+  float x = 0.0f; // Position on the screen
+  float y = SCR_HEIGHT - 35.0f * scale * fontsize/48; // Invert Y-axis since OpenGL origin is bottom-left. 
+  glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
+
+  // Step 1: Render the scene to the MSAA FBO
+  // ----------------------------------------
+  glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+  glEnable(GL_DEPTH_TEST); // Needed for 3D rendering
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  RenderScene(ourShader);
+  
+  // Step 2: Resolve MSAA FBO to standard non-MSAA FBO
+  // -------------------------------------------------
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                    0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
+                            GL_COLOR_BUFFER_BIT,           // buffer mask
+                                     GL_LINEAR);           // scale filter
+  
+  RenderText(textShader, fpsText, x, y, scale, color);
+  RenderAtlas(atlasShader, textureAtlasID);
+
+  // Step 3: Render the scene for on-screen rendering using Blitting: https://stackoverflow.com/a/31487085
+  // -----------------------------------------------------------------------------------------------------
+  // Bind the target FBO to read
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
+  
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                    0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
+                            GL_COLOR_BUFFER_BIT,           // buffer mask
+                                    GL_NEAREST);           // scale filter
+  
+  // Step 4: Read pixels from the resolved FBO for off-screen encoding (without PBOs)
+  // --------------------------------------------------------------------------------
+  glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
+
+  // Flip the frame vertically
+  flipFrameVertically(frame);
+  
+  sendFrameBufferToFFmpeg(frame, 1);
+  ```
+* Rendering text using a TrueType font (loaded with FreeType) rasterized onto a bitmap font texture atlas (V-Sync ON, explained further down).
+  https://github.com/user-attachments/assets/2159f8b1-9488-44c0-9c7a-274c98ef78f3
+
 * Along with rendering text, I also wanted to render the texture atlas on-screen, just so that I could see all the glyphs, which means creating another shader program and a function to activate the shader program, bind the VAO and VBO for a fullscreen quad, and render the texture of the texture atlas.
   * Vertex shader for the texture atlas shader program.
     ```cpp
@@ -904,6 +1016,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
     ```
+* Rendering text and the font texture atlas, I assume the pixelated quality is due to the fact the resolution is 800x600. Unfortunately, screen recording at a resolution any higher on my laptop with Intel HD Graphics 520 is not as smooth. Maybe there are some optimizations I can do to the code to improve performance.
+  
+  https://github.com/user-attachments/assets/9727acd9-bd7e-475d-ae30-800a8bf87f17
+
+
 * Screen recording is slightly complicated when V-Sync is OFF as this means the FPS can change, so you have to choose carefully which frames to use. In order to get a smooth 60fps screen recording of a window with variable FPS you will need to take a frame every 60th of a second, which might mean discarding excess frames if the FPS>60, or reusing frames if the FPS<60. My current code just takes every next frame and feeds it to the FFmpeg pipe to encode a video and forces it to 60fps regardless of the FPS the frames were displayed at. This is why I was having the problem where high FPS led to a "slowed" screen recording, and low FPS led to a "sped-up" screen recording, as when there is high FPS my program is "slowing" the frames down to 60fps, and vice versa for low FPS. For now I am just going to keep V-Sync ON, so I don't have to deal with this problem, but maybe in the future I can tackle it. V-Sync being ON is just generally a good idea anyway as it eliminates screen-tearing. Would be also nice to implement "last x minutes" screen recording, which would probably involve saving the last N frames (x minutes) into a buffer and continuously updating the buffer, removing the oldest frames and feeding new frames in, and encoding the video with FFmpeg once the program ends.
 
 * I was able to enable V-Sync with the help of this [Stack Overflow answer](https://stackoverflow.com/a/589232), using the ``WGL_EXT_swap_control`` extension function ``wglSwapIntervalEXT()``. Unfortunately, you will need to include the ``wglext.h`` and ``Windows.h`` header files, thus making the program tied to Windows, and as an insightful comment on that answer mentions, "That is not an extension to OpenGL, but rather to WGL (the Microsoft Windows window system API for OpenGL). Buffer swapping is by its very nature a window system specific operation. As far as GL is concerned it just draws to a front/back left/right buffer or some arbitrary FBO. The window system is the only thing with enough knowledge of the underlying host system to synchronize the presentation of drawn buffers to some event (in this case the monitor's vertical retrace)".[^37] You can use ``wglGetSwapIntervalEXT()`` to get the current swap interval,[^36] and change it to V-Sync ON using ``wglSwapIntervalEXT(1)``, V-Sync OFF using ``wglSwapIntervalEXT(0)``, and Adaptive V-Sync using ``wglSwapIntervalEXT(-1)``, "adaptive vsync enables v-blank synchronisation when the frame rate is higher than the sync rate, but disables synchronisation when the frame rate drops below the sync rate".[^38]
@@ -940,9 +1057,6 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     // ---------------------------------------------------------------------------------------------------------
     void processInput(GLFWwindow *window)
     {
-        // crntTime = glfwGetTime();
-        // timeDiff = crntTime - prevTime;
-        // prevTime = crntTime;
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
     
@@ -1010,6 +1124,15 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     }
     ```
 * From the function above you can see that I also implemented a fullscreen toggle with the ``F11`` key and exiting with the ``ESC`` key.
+* You'll notice above I did ``if`` statements without curly brackets/braces, this isn't recommended,[^39] but for simple one-line code it makes it look cleaner, just be careful.
+
+  [^39]: clee, doynax, et al. "Is it a bad practice to use an if-statement without curly braces?" _FFmpeg_, 23 Jan. 2010, [stackoverflow.com/questions/2125066/is-it-a-bad-practice-to-use-an-if-statement-without-curly-braces](https://stackoverflow.com/questions/2125066/is-it-a-bad-practice-to-use-an-if-statement-without-curly-braces).
+
+* I added another flag to the FFmpegCommand to control the encoded video quality, lowering the CRF and using a slower encoding preset will give better video quality but may make the program laggy.[^40]
+  ```cpp
+  "-crf 17 -preset slow "     // Constant rate factor (18=visually lossless, 23=default)
+  ```
+[^40]: llogan, et al. "H.264 Video Encoding Guide" _FFmpeg_, 12 Dec. 2024, [trac.ffmpeg.org/wiki/Encode/H.264](https://trac.ffmpeg.org/wiki/Encode/H.264).
 
 
 <!-- FONT LOADER AND TEXTURE ATLAS -->
