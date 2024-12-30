@@ -1316,6 +1316,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   ```
+* I was a little stuck until I realized I needed to change the z-value of the texture's position to make it appear in front or behind.
 * What seemed to be the most important thing was rendering the stuff that's furthest away from the "camera" first, and the closest stuff last. I'm not entirely sure where the "camera" is on the z-axis, but rendering the textures in order of increasing z-values produces the desired result, as if an increasing z-value implies it is further away from the "camera". I thought the "camera" would be on the z=0 plane so negative z-value textures wouldn't appear but that isn't the case. I don't actually have a "camera" set up so most likely it is just casting all textures onto the screen in order of increasing z-value.
   * Rendering the controllable crate last and giving it a lower z-value (``0.0f``) than the static crate (``0.5f``) makes it appear in front of the static crate and transparency/blending is successful.
     ```cpp
@@ -1364,7 +1365,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     RenderCrate(ourShader, translatenew);
     ```
     https://github.com/user-attachments/assets/00f4b6f8-61fb-4a1c-a1ff-72e4adf5cd7d
-
+* [This website](http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/) has a nice tutorial on Transparency in OpenGL and how to render multiple transparent objects. The steps are essentially to draw everything that is opaque first so the depth buffer can discard hidden transparent objects, sort the transparent objects from furthest to closest, and render them in that order. They mention that needing to switch textures, or even worse, switching shader programs from object to object is very bad for performance, that's why games like _Minecraft_ use a texture atlas. 
 
 
     
