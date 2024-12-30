@@ -341,7 +341,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   glEnable(GL_DEPTH_TEST); // Needed for 3D rendering
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  RenderScene(ourShader);
+  RenderCrate(ourShader);
   
   // Step 2: Resolve MSAA FBO to standard non-MSAA FBO
   // -------------------------------------------------
@@ -918,7 +918,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   glEnable(GL_DEPTH_TEST); // Needed for 3D rendering
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  RenderScene(ourShader);
+  RenderCrate(ourShader);
   
   // Step 2: Resolve MSAA FBO to standard non-MSAA FBO
   // -------------------------------------------------
@@ -1222,9 +1222,9 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   glBindVertexArray(0);
   ```
 
-* Inside the ``RenderScene()`` function.
+* Inside the ``RenderCrate()`` function.
   ```cpp
-  void RenderScene(Shader &ourShader) {
+  void RenderCrate(Shader &ourShader) {
       // set the texture mix value in the shader (this needs to be in the render loop)
       ourShader.use();
       ourShader.setFloat("mixValue", mixValue);
@@ -1309,6 +1309,66 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   ```
 * For some reason ``new`` seems to allocate more memory than expected, I need to store 800x600 RGB (0-255) pixel data, but I can get away with subtracting 2415 before getting a stack overflow error. When initializing a pointer, people recommended to set it to ``NULL``.[^42]
   [^42]: Dmitry. "Proper Way To Initialize Unsigned Char*" _Stack Overflow_, 2 Feb. 2011, [stackoverflow.com/a/4876907](https://stackoverflow.com/a/4876907).
+* The final exercise for Transformations asks to render two crates using only transformations and two draw calls (``glDrawElements``). This was quite simple to do as I already created the function ``RenderCrate`` which did all the tedious stuff and all I'd need to do is just call this function again. I added another input for the function so it could receive a ``vec3`` translation.
+* People have said you should use these two functions before rendering transparent textures, however, at least for me commenting them out doesn't make a difference. Maybe it makes a difference when dealing with multiple textures.
+  ```cpp
+  // Enable blending
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  ```
+* What seemed to be the most important thing was rendering the stuff that's furthest away from the "camera" first, and the closest stuff last. I'm not entirely sure where the "camera" is on the z-axis, but rendering the textures in order of increasing z-values produces the desired result, as if an increasing z-value implies it is further away from the "camera". I thought the "camera" would be on the z=0 plane so negative z-value textures wouldn't appear but that isn't the case. I don't actually have a "camera" set up so most likely it is just casting all textures onto the screen in order of increasing z-value.
+  * Rendering the controllable crate last and giving it a lower z-value (``0.0f``) than the static crate (``0.5f``) makes it appear in front of the static crate and transparency/blending is successful.
+    ```cpp
+    // static crate
+    glm::vec3 translatenew = glm::vec3(-0.5f, 0.5f, 0.5f);
+    RenderCrate(ourShader, translatenew);
+  
+    // controllable crate
+    glm::vec3 translate = glm::vec3(xOffset, yOffset, 0.0f);
+    RenderCrate(ourShader, translate);
+    ```
+    https://github.com/user-attachments/assets/5ab8c9c1-95c2-4017-a4bb-831ae98bfe29
+    
+  * Rendering the controllable crate last but giving it a higher z-value (``0.5f``) than the static crate (``0.0f``) makes it appear behind the static crate but transparency/blending fails.
+    ```cpp
+    // static crate
+    glm::vec3 translatenew = glm::vec3(-0.5f, 0.5f, 0.0f);
+    RenderCrate(ourShader, translatenew);
+
+    // controllable crate
+    glm::vec3 translate = glm::vec3(xOffset, yOffset, 0.5f);
+    RenderCrate(ourShader, translate);
+    ```
+    https://github.com/user-attachments/assets/0210f5d8-7e40-4dc8-b2a6-10c13d1ba93e
+    
+  * Rendering the controllable crate first and giving it a higher z-value (``0.5f``) than the static crate (``0.0f``) makes it appear behind the static crate and transparency/blending is successful.
+    ```cpp
+    // controllable crate
+    glm::vec3 translate = glm::vec3(xOffset, yOffset, 0.5f);
+    RenderCrate(ourShader, translate);
+
+    // static crate
+    glm::vec3 translatenew = glm::vec3(-0.5f, 0.5f, 0.0f);
+    RenderCrate(ourShader, translatenew);
+    ```
+    https://github.com/user-attachments/assets/71cff1c4-886d-415f-a5cc-43936775df04
+    
+  * Rendering the controllable crate first but giving it a lower z-value (``0.0f``) than the static crate (``0.5f``) makes it appear in front of the static crate but transparency/blending fails.
+    ```cpp
+    // controllable crate
+    glm::vec3 translate = glm::vec3(xOffset, yOffset, 0.0f);
+    RenderCrate(ourShader, translate);
+
+    // static crate
+    glm::vec3 translatenew = glm::vec3(-0.5f, 0.5f, 0.5f);
+    RenderCrate(ourShader, translatenew);
+    ```
+    https://github.com/user-attachments/assets/00f4b6f8-61fb-4a1c-a1ff-72e4adf5cd7d
+
+
+
+    
+
 
 <!-- ADD BIBLIOGRAPHY -->
 <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
