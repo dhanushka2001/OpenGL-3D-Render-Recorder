@@ -1381,10 +1381,15 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 * [This website](http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/) has a nice tutorial on Transparency in OpenGL and how to render multiple transparent triangles. The steps are essentially to draw everything that is opaque first so the depth buffer can discard hidden transparent triangles, sort the transparent triangles from furthest to closest, and render them in that order. They mention that needing to switch textures, or even worse, switching shader programs from triangle to triangle is very bad for performance,[^49] that's why games like _Minecraft_ use a texture atlas.
 * Here is a nice video that covers Transparency/Blending in their OpenGL _Minecraft_ clone:[^50]
   [![Watch the video](https://img.youtube.com/vi/_rPRVk75Y6Q/maxresdefault.jpg)](https://www.youtube.com/watch?v=_rPRVk75Y6Q&t=34s)
+* Here's another good video on Transparency & Blending:[^51]
+  [![Watch the video](https://img.youtube.com/vi/crOfyWiWxmc/maxresdefault.jpg)](https://www.youtube.com/watch?v=crOfyWiWxmc&t=190s)
+  
 
   [^49]: GraphicsTut. "Tutorial 10 : Transparency" _opengl-tutorial.org_, [opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/](http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/).
-  [^50]: Low Level Game Dev. "How the rendering pipeline of a Minecraft-like game looks like? OpenGL C++" _YouTube_, 4 Sep. 2024, [youtube.com/watch?v=_rPRVk75Y6Q&t=34s](https://www.youtube.com/watch?v=_rPRVk75Y6Q&t=34s).
+  [^50]: Low Level Game Dev. "How the rendering pipeline of a Minecraft-like game looks like? OpenGL C++" _YouTube_, 4 Sep. 2024, [youtube.com/watch?v=_rPRVk75Y6Q](https://www.youtube.com/watch?v=_rPRVk75Y6Q).
+  [^51]: Victor Gordan. "OpenGL Tutorial 17 - Transparency & Blending" _YouTube_, 28 May 2021, [youtube.com/watch?v=crOfyWiWxmc](https://www.youtube.com/watch?v=crOfyWiWxmc).
 
+<!-- ## Progress update 8 - Coordinate Systems - 29/12/24 -->
 
     
 
