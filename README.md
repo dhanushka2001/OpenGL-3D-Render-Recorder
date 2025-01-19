@@ -1401,7 +1401,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 
 [^53]: Andy. "Camera" _LearnOpenGL.com_, 8 June 2017, [disq.us/p/1jdygzu](http://disq.us/p/1jdygzu).
 
-* I also clamped ``YAW`` to between ``0.0f`` and ``360.0f`` using the ``fmodf`` function, ``Yaw = fmodf(Yaw, 360.0f);``.
+* I also clamped ``YAW`` to between ``0.0f`` and ``360.0f`` using the ``fmodf`` function, ``Yaw = fmodf(Yaw + 360.0f, 360.0f);``.
 
 * Another comment suggests using quaternions instead of matrices to control the camera in 3D. They linked to their [article](https://chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html)[^54] which includes the code and a nice [article](https://graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf) from Stanford on 'Quaternions and Rotations'. The main benefits of using quaternions over matrices are that they are more compact (4 numbers instead of 9 with 3x3 rotation matrices), efficient (16 multiplications and 12 additions instead of 27 multiplications and 18 additions), numerically stable (avoids the gimbal lock problem[^55]), and the geometric meaning is apparently clearer too.[^56] Although some mention that quaternions are better when chaining multiple rotations but not better when actually computing the rotating vectors,[^57] requiring ~30 operations rather than 15 operations like with 3D rotation matrix-vector multiplication.[^58] So "multiplication of matrices is ~2 times slower than quaternions. [But] matrix-vector multiplication is ~2 times faster [than quaternions]."[^59]
 
