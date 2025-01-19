@@ -1389,9 +1389,16 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   [^50]: Low Level Game Dev. "How the rendering pipeline of a Minecraft-like game looks like? OpenGL C++" _YouTube_, 4 Sep. 2024, [youtube.com/watch?v=_rPRVk75Y6Q](https://www.youtube.com/watch?v=_rPRVk75Y6Q).
   [^51]: Victor Gordan. "OpenGL Tutorial 17 - Transparency & Blending" _YouTube_, 28 May 2021, [youtube.com/watch?v=crOfyWiWxmc](https://www.youtube.com/watch?v=crOfyWiWxmc).
 
-<!-- ## Progress update 8 - Coordinate Systems - 29/12/24 -->
+## Progress update 8 - Coordinate Systems and Camera - 19/01/25
 
-    
+* For some reason the program would display a white window for a brief second and immediately close with no error message, this happened when I increased the dimensions of the window. It turned out the issue was due to a segmentation fault,[^52] I didn't allocate enough memory for the FFmpeg frame buffer, I was experimenting with it earlier as mentioned above noticing that I could allocate less than the number of pixels and it would work just fine, however just to be safe I put it back to normal and it works fine again.
+
+[^52]: swalog. "OpenGL GLFW window closes as soon as it opens" _Stack Overflow_, 26 Aug. 2014, [stackoverflow.com/a/25499922](https://stackoverflow.com/a/25499922).
+
+* The _LearnOpenGL.com_ Camera chapter uses a weird if statement in the mouse callback function to check if this is the first use of the callback function and sets the ``xpos`` and ``ypos`` of the cursor to the centre of the screen, the reason being to avoid the whiplash cursor jump effect you would otherwise get, as the cursor is not initialized to the centre of the screen. A much cleaner alternative as mentioned by someone in the comments is to just use the GLFW function ``glfwSetCursorPos(window, lastX,lastY);`` before the while/render loop,[^53] where ``lastX`` and ``lastY`` are set to ``SCR_WIDTH / 2.0f`` and ``SCR_HEIGHT / 2.0f`` respectively, and remove the if statement in the mouse callback function. Another important point is to make sure ``YAW`` is initialized to ``-90.0f``.
+
+[^53]: Andy. "Camera" _LearnOpenGL.com_, 8 June 2017, [disq.us/p/1jdygzu](http://disq.us/p/1jdygzu).
+
 
 
 <!-- ADD BIBLIOGRAPHY -->
