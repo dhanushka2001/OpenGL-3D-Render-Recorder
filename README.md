@@ -1319,7 +1319,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   // This deletes all items in the array
   delete[] frame;
   ```
-* For some reason ``new`` seems to allocate more memory than expected, I need to store 800x600 RGB (0-255) pixel data, but I can get away with subtracting 2415 before getting a stack overflow error. When initializing a pointer, people recommended to set it to ``NULL``.[^48]
+* For some reason ``new`` seems to allocate more memory than expected, I need to store 800x600 RGB (0-255) pixel data, but I can get away with subtracting 2415 before getting a heap buffer overflow causing a segfault. When initializing a pointer, people recommended to set it to ``NULL``.[^48]
   [^48]: Dmitry. "Proper Way To Initialize Unsigned Char*" _Stack Overflow_, 2 Feb. 2011, [stackoverflow.com/a/4876907](https://stackoverflow.com/a/4876907).
 * The final exercise for Transformations asks to render two crates using only transformations and two draw calls (``glDrawElements``). This was quite simple to do as I already created the function ``RenderCrate`` which did all the tedious stuff and all I'd need to do is just call this function again. I added another input for the function so it could receive a ``vec3`` translation.
 * Because one of the textures of the object has transparency I thought it would be cool to see the other object behind the front object. Transparency/Blending is an "Advanced OpenGL" topic, but again it doesn't hurt to explore it early.
@@ -1391,9 +1391,11 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 
 ## Progress update 8 - Coordinate Systems and Camera - 19/01/25
 
-* For some reason the program would display a white window for a brief second and immediately close with no error message, this happened when I increased the dimensions of the window. It turned out the issue was due to a segmentation fault,[^52] I didn't allocate enough memory for the FFmpeg frame buffer, I was experimenting with it earlier as mentioned above noticing that I could allocate less than the number of pixels and it would work just fine, however just to be safe I put it back to normal and it works fine again.
+* For some reason the program would display a white window for a brief second and immediately close with no error message, this happened when I increased the dimensions of the window. It turned out the issue was due to a segfault,[^52] I didn't allocate enough memory for the FFmpeg frame buffer, I was experimenting with it earlier as mentioned above noticing that I could allocate less than the number of pixels and it would work just fine, however just to be safe I put it back to normal and it works fine again.
 
 [^52]: swalog. "OpenGL GLFW window closes as soon as it opens" _Stack Overflow_, 26 Aug. 2014, [stackoverflow.com/a/25499922](https://stackoverflow.com/a/25499922).
+
+* For some reason, I can't use my laptop's touchpad and the keyboard at the same time to move the camera in OpenGL, however, when using a separate mouse, I can use the keyboard simultaneously. 
 
 * The _LearnOpenGL.com_ Camera chapter uses a weird if statement in the mouse callback function to check if this is the first use of the callback function and sets the ``xpos`` and ``ypos`` of the cursor to the centre of the screen, the reason being to avoid the whiplash cursor jump effect you would otherwise get, as the cursor is not initialized to the centre of the screen. A much cleaner alternative as mentioned by someone in the comments is to just use the GLFW function ``glfwSetCursorPos(window, lastX,lastY);`` before the while/render loop,[^53] where ``lastX`` and ``lastY`` are set to ``SCR_WIDTH / 2.0f`` and ``SCR_HEIGHT / 2.0f`` respectively, and remove the if statement in the mouse callback function. Another important point is to make sure ``YAW`` is initialized to ``-90.0f``.
 
