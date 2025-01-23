@@ -704,6 +704,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       // }
   }
   ```
+  The way the texture atlas shifts each glyph into place is a little confusing, so I made this diagram below. Each glyph is contiguously placed in a row, and when a new glyph goes outside the bounds of the width of the texture atlas, it starts a new row.
+
+  ![textureAtlas](https://github.com/user-attachments/assets/7c9cd38e-89d1-4f1f-9407-2002abad67d3)
+
+  
 * These two functions above won't be inside the render loop so they don't need to be very efficient. The final function will be, so every step should be scrutinized. The final function will be responsible for rendering the text to the framebuffer given some inputs like the text, position, and color, as well as the shader to handle text rendering, which we also need to create.
   ```cpp
   // Render text (this function is in the render loop)
@@ -1400,7 +1405,120 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 
 [^60]: swalog. "OpenGL GLFW window closes as soon as it opens" _Stack Overflow_, 26 Aug. 2014, [stackoverflow.com/a/25499922](https://stackoverflow.com/a/25499922).
 
-* For some reason, I can't use my laptop's touchpad and the keyboard at the same time to move the camera in OpenGL, however, when using a separate mouse, I can use the keyboard simultaneously. 
+* I can now render in 3D using transform, model, view, and projection matrices. The diagram below shows the pipeline. The reason we break it into these steps is that making changes can be easier in different parts of the process. I switch from orthographic to perspective projection for 3D rendering.
+
+  ![coordinate_systems](https://github.com/user-attachments/assets/8200e64e-22af-42fd-be4e-5fe1247f3698)
+
+
+* For the crate which is now a 3D cuboid, we will need 36 vertices (6 faces * 2 triangles * 3 vertices per triangle). At first I thought this was inefficient as a cuboid only has 8 vertices, however, in order for each face to have its own unique texture, each of the 3 vertices for the two triangles for every face will need to be stored, along with their texture coords. We could use EBOs to bring the number of vertices down to 8, but then different faces will be sharing vertices and so also sharing texture coords, so the faces can't all be assigned unique textures.
+
+  ![ebo2](https://github.com/user-attachments/assets/ba763f3f-19d6-43ee-a823-d5d74ef54673)
+  For context, there was very little performance difference with and without using an EBO. Others have explained that the main benefit of EBOs comes when dealing with meshes of models that contain hundreds of vertices, and in those situations faces sharing vertices (and thus texture coords) with neighboring faces is fine as they are so close to each other that their texture coords will be approximately the same.
+
+
+  ```cpp
+  #if RENDER_3D==1
+  // 3D cube without EBO (6 faces * 2 triangles * 3 vertices each = 36 vertices) (each face has its own unique texture coords)
+  #if RENDER_EBO==0
+  float vertices[] = {
+      // positions          // texture coords
+      // -Z face
+      -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,   // (-,-,-) 0
+       0.5f, -0.5f, -0.5f,  1.0f, 0.0f,   // (+,-,-) 1
+       0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (+,+,-) 2
+       0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (+,+,-) 2
+      -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,   // (-,+,-) 3
+      -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,   // (-,-,-) 0
+
+      // +Z face
+      -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (-,-,+) 4
+       0.5f, -0.5f,  0.5f,  1.0f, 0.0f,   // (+,-,+) 5
+       0.5f,  0.5f,  0.5f,  1.0f, 1.0f,   // (+,+,+) 6
+       0.5f,  0.5f,  0.5f,  1.0f, 1.0f,   // (+,+,+) 6
+      -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,   // (-,+,+) 7
+      -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (-,-,+) 4
+
+      // -X face
+      -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (-,+,+) 7
+      -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (-,+,-) 3
+      -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (-,-,-) 0
+      -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (-,-,-) 0
+      -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (-,-,+) 4
+      -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (-,+,+) 7
+
+      // +X face
+       0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (+,+,+) 6
+       0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (+,+,-) 2
+       0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (+,-,-) 1
+       0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (+,-,-) 1
+       0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (+,-,+) 5
+       0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (+,+,+) 6
+
+      // -Y face
+      -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (-,-,-) 0
+       0.5f, -0.5f, -0.5f,  1.0f, 1.0f,   // (+,-,-) 1
+       0.5f, -0.5f,  0.5f,  1.0f, 0.0f,   // (+,-,+) 5
+       0.5f, -0.5f,  0.5f,  1.0f, 0.0f,   // (+,-,+) 5
+      -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (-,-,+) 4
+      -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (-,-,-) 0
+
+      // +Y face
+      -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,   // (-,+,-) 3
+       0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (+,+,-) 2
+       0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (+,+,+) 6
+       0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (+,+,+) 6
+      -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,   // (-,+,+) 7
+      -0.5f,  0.5f, -0.5f,  0.0f, 1.0f    // (-,+,-) 3
+  };
+  #endif  /* RENDER_EBO==0 */
+  // 3D cube with EBO (8 vertices. Each vertex is shared by 3 faces. One vertex's texture coords for one face are being shared for the two other neighboring faces, rather than them having their own unique texture)
+  #if RENDER_EBO==1
+  float vertices[] = {
+      // positions          // texture coords
+      // -Z face
+      -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,   // (-,-,-) 0
+       0.5f, -0.5f, -0.5f,  1.0f, 0.0f,   // (+,-,-) 1
+       0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (+,+,-) 2
+      -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,   // (-,+,-) 3
+
+      // +Z face
+      -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (-,-,+) 4
+       0.5f, -0.5f,  0.5f,  1.0f, 0.0f,   // (+,-,+) 5
+       0.5f,  0.5f,  0.5f,  1.0f, 1.0f,   // (+,+,+) 6
+      -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,   // (-,+,+) 7
+  };
+  unsigned int indices[] = {  
+      // -Z face
+      0, 1, 2,
+      2, 3, 0,
+      
+      // +Z face
+      4, 5, 6,
+      6, 7, 4,
+
+      // -X face
+      7, 3, 0,
+      0, 4, 7,
+
+      // +X face
+      6, 2, 1,
+      1, 5, 6,
+
+      // -Y face
+      0, 1, 5,
+      5, 4, 0,
+
+      // +Y face
+      3, 2, 6,
+      6, 7, 3
+  };
+  #endif  /* RENDER_EBO==1 */
+  #endif  /* RENDER_3D==1 */
+  ```
+  
+
+  
+* I also implemented a Camera header which _LearnOpenGL.com_ provides, containing a camera class that allows us to control the camera's position, yaw, and pitch. For some reason, I can't use my laptop's touchpad and the keyboard at the same time to move the camera in OpenGL, however, when using a separate mouse, I can use the keyboard simultaneously. 
 
 * The _LearnOpenGL.com_ Camera chapter uses a weird if statement in the mouse callback function to check if this is the first use of the callback function and sets the ``xpos`` and ``ypos`` of the cursor to the centre of the screen, the reason being to avoid the whiplash cursor jump effect you would otherwise get, as the cursor is not initialized to the centre of the screen. A much cleaner alternative as mentioned by someone in the comments is to just use the GLFW function ``glfwSetCursorPos(window, lastX,lastY);`` before the while/render loop,[^61] where ``lastX`` and ``lastY`` are set to ``SCR_WIDTH / 2.0f`` and ``SCR_HEIGHT / 2.0f`` respectively, and remove the if statement in the mouse callback function. Another important point is to make sure ``YAW`` is initialized to ``-90.0f``.
 
@@ -1484,9 +1602,10 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   
 [^68]: T.J. Crowder. ""if " and " #if "; which one is better to use" _Stack Overflow_, 8 May 2013, [stackoverflow.com/a/16438775/7875204](https://stackoverflow.com/a/16438775/7875204).
 
-* I made it so that in windowed mode, the Viewport always stays in the centre of the window no matter how it is resized. However, this seems to only work nicely when screen recording is OFF. :(
+* I made it so that in windowed mode, the Viewport always stays in the centre of the window no matter how it is resized. However, this only work nicely when screen recording is OFF as it changes the size of the viewport.
 
-  ![opengl2](https://github.com/user-attachments/assets/610131cc-719b-4f72-b2fc-75d06191483b)
+  ![opengl4](https://github.com/user-attachments/assets/85b4b0eb-ceff-4824-b40d-cffad1a3937e)
+
 
   ```cpp
   // scale viewport to always be inside window with correct aspect ratio
@@ -1497,7 +1616,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
       glViewport(0.5*((float)width - (float)SCR_WIDTH*(float)height/(float)SCR_HEIGHT), 0, height*(float)SCR_WIDTH/(float)SCR_HEIGHT, height);
   ```
 
-  The alternative options are setting the viewport to be fixed at the initial size of ``SCR_WIDTH`` and ``SCR_HEIGHT`` which doesn't mess up screen recording, but will lead to the viewport being cropped or off-centre if the window is resized (which isn't a huge issue).
+  The alternative options are setting the viewport size to be fixed at the initial size of ``SCR_WIDTH`` and ``SCR_HEIGHT`` which doesn't mess up screen recording but will lead to the viewport being cropped or off-centre if the window is resized.
 
   ```cpp
   // keep viewport size fixed (recording doesn't get messed up)
