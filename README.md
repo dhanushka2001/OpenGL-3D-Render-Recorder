@@ -1793,7 +1793,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 
   Notice that the ``mouse_callback()`` function only updates the position of the cursor when the window is unpaused.
 
-  Also notice that when unpausing, I call ``glfwSetCursorPos(window, lastX, lastY);`` to set the cursor to be in ``(lastX, lastY)``, the last position the cursor was in just before pausing, this prevents the camera from jumping to where the cursor is while paused. This solution was given in the comments of the **Camera** chapter of _LearnOpenGL.com_ which I have mentioned already above.[^56]
+  Also notice that when unpausing, I call ``glfwSetCursorPos(window, lastX, lastY);`` to set the cursor to be in ``(lastX, lastY)``, the last position the cursor was in just before pausing, this prevents the camera from jumping to where the cursor is while paused. This solution was given in the comments of the **Camera** chapter of _LearnOpenGL.com_ which I have mentioned already above.[^56] More info on ``glfwSetCursorPos()`` and ``glfwSetInputMode()`` can be found in the [GLFW Input guide](https://www.glfw.org/docs/latest/input_guide.html#input_mouse).
   
 * Every time I switched from fullscreen mode back to windowed mode, the window seemed to lose its title bar. It turns out this was just due to me setting the window position to be ``(0, 0)``.[^71]
 
