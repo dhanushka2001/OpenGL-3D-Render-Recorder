@@ -1875,7 +1875,54 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 
 [^71]: Shane McPhillips, immuv. "glfw window with no title bar" _Stack Overflow_, 23 Mar. 2022, 11 Jan 2022, [stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar](https://stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar).
 
+* I wanted to add a GUI as it would make the program more functional and interactive. I ended up going with Dear ImGui as it seems to be bloat-free, minimal, and easy to use. People have also recommended it as a good GUI to use with OpenGL. [Here](https://www.youtube.com/watch?v=VRwhNKoxUtk)'s a nice tutorial, but I will explain in detail the steps. First, you need to download the ZIP file containing the DearImGui code, [here](https://github.com/ocornut/imgui)'s the link to the repository. Next, you need to extract these files:
 
+  ```bash
+  imgui-master/
+  ├── imconfig.h
+  ├── imgui.cpp
+  ├── imgui.h
+  ├── imgui_draw.cpp
+  ├── imgui_internal.h
+  ├── imgui_tables.cpp
+  ├── imgui_widgets.cpp
+  ├── imstb_rectpack.h
+  ├── imstb_textedit.h
+  ├── imstb_truetype.h
+  ├── imgui_demo.cpp
+  └── backends/
+      ├── imgui_impl_opengl3.cpp
+      ├── imgui_impl_opengl3.h
+      ├── imgui_impl_opengl3_loader.h
+      ├── imgui_impl_glfw.cpp
+      └── imgui_impl_glfw.h 
+  ```
+
+  and put them into a folder, ``imgui``, inside your local project's ``include`` folder:
+
+  ```bash
+  YourProject/
+  └── include/
+      └── imgui/
+          ├── imconfig.h
+          ├── imgui.cpp
+          ├── imgui.h
+          ├── imgui_draw.cpp
+          ├── imgui_internal.h
+          ├── imgui_tables.cpp
+          ├── imgui_widgets.cpp
+          ├── imstb_rectpack.h
+          ├── imstb_textedit.h
+          ├── imstb_truetype.h
+          ├── imgui_demo.cpp
+          ├── imgui_impl_opengl3.cpp
+          ├── imgui_impl_opengl3.h
+          ├── imgui_impl_opengl3_loader.h
+          ├── imgui_impl_glfw.cpp
+          └── imgui_impl_glfw.h
+  ```
+
+  
 <!-- ADD BIBLIOGRAPHY -->
 <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
 <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
