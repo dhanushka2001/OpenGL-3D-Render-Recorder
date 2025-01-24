@@ -1524,7 +1524,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 
 [^61]: Andy. "Camera" _LearnOpenGL.com_, 8 June 2017, [disq.us/p/1jdygzu](http://disq.us/p/1jdygzu).
 
-* I also clamped ``YAW`` to between ``0.0f`` and ``360.0f`` using the ``fmodf`` function.
+* I also clamped ``YAW`` to between ``0.0f`` and ``360.0f`` using the ``fmodf`` function and using ``Yaw + 360.0f`` rather than just ``Yaw``.
  
    ```cpp
    Yaw = fmodf(Yaw + 360.0f, 360.0f);
@@ -1602,7 +1602,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   
 [^68]: T.J. Crowder. ""if " and " #if "; which one is better to use" _Stack Overflow_, 8 May 2013, [stackoverflow.com/a/16438775/7875204](https://stackoverflow.com/a/16438775/7875204).
 
-* I made it so that in windowed mode, the Viewport always stays in the centre of the window no matter how it is resized. However, this only work nicely when screen recording is OFF as it changes the size of the viewport.
+* I made it so that in windowed mode, the Viewport always stays in the centre of the window with the original aspect ratio no matter how the window is resized. However, this only works nicely when screen recording is OFF as it changes the size of the viewport.
 
   ![opengl4](https://github.com/user-attachments/assets/85b4b0eb-ceff-4824-b40d-cffad1a3937e)
 
@@ -1616,23 +1616,99 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
       glViewport(0.5*((float)width - (float)SCR_WIDTH*(float)height/(float)SCR_HEIGHT), 0, height*(float)SCR_WIDTH/(float)SCR_HEIGHT, height);
   ```
 
-  The alternative options are setting the viewport size to be fixed at the initial size of ``SCR_WIDTH`` and ``SCR_HEIGHT`` which doesn't mess up screen recording but will lead to the viewport being cropped or off-centre if the window is resized.
+* The alternative option is setting the viewport size to be fixed at the initial size of ``SCR_WIDTH`` and ``SCR_HEIGHT`` which doesn't mess up screen recording. I spent a lot of time trying to get the viewport to be in the centre of the window, and I finally got it to work. It turns out you need to adjust the position you want the viewport to be displayed in the window via ``glBlitFramebuffer()``, not ``glViewport()``. 
 
+  Global variables:
+  ```cpp
+  const unsigned int  SCR_WIDTH       = 800; //2560;  // 800;
+  const unsigned int  SCR_HEIGHT      = 600;
+  int lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY;
+  ```
+  
+  Inside the framebuffer size callback function:
   ```cpp
   // keep viewport size fixed (recording doesn't get messed up)
   // ----------------------------------------------------------
+  lowerLeftCornerOfViewportX = 0.5*(width-static_cast<int>(SCR_WIDTH));    // need to convert SCR_WIDTH/HEIGHT from unsigned int->int!
+  lowerLeftCornerOfViewportY = 0.5*(height-static_cast<int>(SCR_HEIGHT));
+  lowerLeftCornerOfViewportX = std::max(lowerLeftCornerOfViewportX, 0);
+  lowerLeftCornerOfViewportY = std::max(lowerLeftCornerOfViewportY, 0);
+
+  // for debugging
+  // std::cout << "viewportX: " << lowerLeftCornerOfViewportX << " "
+  //           << "viewportY: " << lowerLeftCornerOfViewportY << std::endl;
+  
   glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
   ```
+  
+  Inside the render loop:
+  ```cpp
+  // Step 1: Render the scene to the MSAA FBO
+  // ----------------------------------------
+  glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+  // Render scene
+  
+  // Step 2: Resolve MSAA FBO to standard non-MSAA FBO
+  // -------------------------------------------------
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                    0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
+                            GL_COLOR_BUFFER_BIT,           // buffer mask
+                                     GL_LINEAR);           // scale filter
 
-  Or setting the viewport to be equal to the size of the window, which leads to the viewport being stretched and scaled if the window is resized.
+  // Render text, texture atlas, etc.
+
+  // Step 3: Render the scene for on-screen rendering using Blitting: https://stackoverflow.com/a/31487085
+  // -----------------------------------------------------------------------------------------------------
+  // Bind the target FBO to read
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                    lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, lowerLeftCornerOfViewportX+SCR_WIDTH, lowerLeftCornerOfViewportY+SCR_HEIGHT, // dst rect
+                            GL_COLOR_BUFFER_BIT,           // buffer mask
+                                    GL_NEAREST);           // scale filter
+
+  // Step 4: Read pixels from the resolved FBO for off-screen encoding (without PBOs)
+  // --------------------------------------------------------------------------------
+  glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
+  // ...
+  ```
+  
+  You'll notice in the render loop that when blitting from the MSAA FBO (source) to the standard non-MSAA (resolved) FBO (destination) we keep the rectangle bounds (X0, Y0, X1, Y1) set to ``(0, 0, SCR_WIDTH, SCR_HEIGHT)``. But when blitting from the resolved FBO to the default framebuffer (on-screen), we change the destination rectangle's bounds to ``(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, lowerLeftCornerOfViewportX+SCR_WIDTH, lowerLeftCornerOfViewportY+SCR_HEIGHT)``.
+
+  Also notice how in the framebuffer size callback function, we don't change glViewport's inputs (X0, Y0,	width, height), ``glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);``, the viewport will mess up if you set it to ``glViewport(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, SCR_WIDTH, SCR_HEIGHT);``, this took me so long to figure out.
+  
+  It is very important we set ``lowerLeftCornerOfViewportX = std::max(lowerLeftCornerOfViewportX, 0);`` and ``lowerLeftCornerOfViewportY = std::max(lowerLeftCornerOfViewportY, 0);``, otherwise if the window ``(width, height)`` is smaller than our fixed framebuffer size ``(SCR_WIDTH, SCR_HEIGHT)``, ``lowerLeftCornerOfViewportX = 0.5*(width-static_cast<int>(SCR_WIDTH));`` and ``lowerLeftCornerOfViewportY = 0.5*(height-static_cast<int>(SCR_HEIGHT));`` will be negative which will cause the viewport to glitch out.
+
+  <!-- SHOW VIDEO/PIC OG GLITCH -->
+
+  It is also important to typecast ``SCR_WIDTH`` and ``SCR_HEIGHT`` from ``unsigned int`` to ``int`` when calculating ``lowerLeftCornerOfViewportX`` and ``lowerLeftCornerOfViewportY``. This gave me a lot of headaches trying to debug until I added some print statements to check the values and realized they weren't correct.
+
+  ViewportX (``lowerLeftCornerOfViewportX``) not producing the correct value:
+  
+  ![cmd4](https://github.com/user-attachments/assets/b8d156e9-e49b-4a14-b369-470a0b7d0595)
+
+  ViewportX (``lowerLeftCornerOfViewportX``) producing the correct negative value after correctly typecasting ``SCR_WIDTH``. Now when resizing the window to be smaller than the framebuffer size, ``lowerLeftCornerOfViewportX`` and ``lowerLeftCornerOfViewportX`` will be negative, and will be correctly set to ``0`` when passed into the ``std::max()`` function.
+
+  ![cmd3](https://github.com/user-attachments/assets/bca04e83-57b2-40ce-80fb-89b7918bb184)
+
+  Here's the output with the black background outside the rendered viewport, but not centred:
+  
+  ![opengl-black-bars](https://github.com/user-attachments/assets/39201d7e-2063-427b-a645-51f7ab0701f0)
+  
+  And here's the final result with the viewport centred and a black background. The viewport crops when the window is smaller than the framebuffer size as intended. This ensures the framebuffer is a fixed size so screen recording is unaffected while allowing the window to be resized however the user wants without the viewport changing size:
+
+  ![opengl9](https://github.com/user-attachments/assets/c7ed0b8a-4db5-4cbd-9662-fc64e18ab55a)
+
+* Another option is setting the viewport to be equal to the size of the window, which leads to the viewport being stretched and scaled to fit the resized window.
 
   ```cpp
   // viewport stretches (recording gets messed up)
   // ---------------------------------------------
-  // glViewport(0, 0, width, height);
+  glViewport(0, 0, width, height);
   ```
 
-  [This blog post](https://diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html) by Diego Macario (who has a really cool [2D physics simulator](https://diegomacario.github.io/about/) project) explains a way to make the viewport centred which seems to be similar to how I tried to do it, however, even when implementing their method, it still didn't centre the viewport. However, their method of getting the background outside the viewport to be black did work which is what I wanted, to help distinguish between the viewport and the window. The code to do so uses ``GL_SCISSOR_TEST`` and goes like this:
+* [This blog post](https://diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html) by Diego Macario (who has a really cool [2D physics simulator](https://diegomacario.github.io/about/) project) explains a way to make the viewport centred which seems similar to how I did it, however, when implementing their method, it didn't centre the viewport. Their method of getting the background outside the viewport to be black did work, which helps distinguish between the viewport and the window. The code to do so uses ``GL_SCISSOR_TEST`` and goes like this:
 
   ```cpp
   // Set the clear color to black
@@ -1648,11 +1724,9 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   glDisable(GL_SCISSOR_TEST);
   ```
 
-  [^69]: Diego Macario. "How to keep the aspect ratio of an OpenGL window constant when it's resized" _diegomacario.github.io_, 23 Apr. 2021, [diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html](https://diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html).
+  However, upon further testing, it seems you don't even need to add this code and it will give a black background anyway.
 
-  Here's the output with the black background outside of the rendered viewport, however still not centred.
-  
-  ![opengl-black-bars](https://github.com/user-attachments/assets/39201d7e-2063-427b-a645-51f7ab0701f0)
+  [^69]: Diego Macario. "How to keep the aspect ratio of an OpenGL window constant when it's resized" _diegomacario.github.io_, 23 Apr. 2021, [diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html](https://diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html).
 
 * Every time I switched from fullscreen mode back to windowed mode, the window seemed to lose its title bar. It turns out this was just due to me setting the window position to be ``(0, 0)``.[^70]
 
