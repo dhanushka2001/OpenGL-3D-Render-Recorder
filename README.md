@@ -1033,20 +1033,20 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   
   https://github.com/user-attachments/assets/9727acd9-bd7e-475d-ae30-800a8bf87f17
 
-* [Here](https://youtu.be/qcMuyHzhvpI?si=WnrzZSOz15sXxyao&t=343) is a nice video[^61] which talks about all the different methods of text rendering, from bitmap fonts to vector/TrueType fonts rasterized onto a bitmap font texture atlas (which I am currently doing), and also talks about the disadvantages of the latter method as the "glyph textures are stored with a fixed font size, so a significant amount of scaling may introduce jagged edges"[^60] when rendering text in a 3D playable world where the text needs to scale and deform every frame to match the user's camera angle, referring to newer more advanced methods like SDF (signed distance field) fonts, best known from a paper released by _Valve_ in 2007,[^61] and MSDF (multi-channel distance field) fonts, developed by Viktor Chlumský in his Master's thesis.[^60] However, in the comments, SebastianLague mentions that rendering directly from curves may not be impractically slow with some optimizations, that he says is referenced in his video on text rendering.[^61]
+* [Here](https://youtu.be/qcMuyHzhvpI?si=WnrzZSOz15sXxyao&t=343) is a nice video[^39] which talks about all the different methods of text rendering, from bitmap fonts to vector/TrueType fonts rasterized onto a bitmap font texture atlas (which I am currently doing), and also talks about the disadvantages of the latter method as the "glyph textures are stored with a fixed font size, so a significant amount of scaling may introduce jagged edges"[^40] when rendering text in a 3D playable world where the text needs to scale and deform every frame to match the user's camera angle, referring to newer more advanced methods like SDF (signed distance field) fonts, best known from a paper released by _Valve_ in 2007,[^41] and MSDF (multi-channel distance field) fonts, developed by Viktor Chlumský in his Master's thesis.[^42] However, in the comments, SebastianLague mentions that rendering directly from curves may not be impractically slow with some optimizations, that he says is referenced in his video on text rendering.[^43]
 
   [![Watch the video](https://img.youtube.com/vi/qcMuyHzhvpI/maxresdefault.jpg)](https://youtu.be/qcMuyHzhvpI?si=WnrzZSOz15sXxyao&t=343)
 
-  [^61]: VoxelRifts. "A Brief look at Text Rendering" _YouTube_, 27 Dec. 2024, [youtube.com/watch?v=qcMuyHzhvpI&t=343s](https://www.youtube.com/watch?v=qcMuyHzhvpI&t=343s).
-  [^60]: Joey de Vries. "Text Rendering" _LearnOpenGL.com_, [learnopengl.com/In-Practice/Text-Rendering](https://learnopengl.com/In-Practice/Text-Rendering).
-  [^61]: Chris Green. "Improved Alpha-Tested Magnification for Vector Textures and Special Effects" _Valve_, 5 Aug. 2007, [steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf](https://steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf).
-  [^60]: Viktor Chlumský. "Shape Decomposition for Multi-channel
+  [^39]: VoxelRifts. "A Brief look at Text Rendering" _YouTube_, 27 Dec. 2024, [youtube.com/watch?v=qcMuyHzhvpI&t=343s](https://www.youtube.com/watch?v=qcMuyHzhvpI&t=343s).
+  [^40]: Joey de Vries. "Text Rendering" _LearnOpenGL.com_, [learnopengl.com/In-Practice/Text-Rendering](https://learnopengl.com/In-Practice/Text-Rendering).
+  [^41]: Chris Green. "Improved Alpha-Tested Magnification for Vector Textures and Special Effects" _Valve_, 5 Aug. 2007, [steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf](https://steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf).
+  [^42]: Viktor Chlumský. "Shape Decomposition for Multi-channel
 Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com/Chlumsky/msdfgen?tab=readme-ov-file](https://github.com/Chlumsky/msdfgen?tab=readme-ov-file).
-  [^61]: SebastianLague. "Coding Adventure: Rendering Text" _YouTube_, 13 Apr. 2024, [youtube.com/watch?v=SO83KQuuZvg](https://www.youtube.com/watch?v=SO83KQuuZvg).
+  [^43]: SebastianLague. "Coding Adventure: Rendering Text" _YouTube_, 13 Apr. 2024, [youtube.com/watch?v=SO83KQuuZvg](https://www.youtube.com/watch?v=SO83KQuuZvg).
 
 * Screen recording is slightly complicated when V-Sync is OFF as this means the FPS can change, so you have to choose carefully which frames to use. In order to get a smooth 60fps screen recording of a window with variable FPS you will need to take a frame every 60th of a second, which might mean discarding excess frames if the FPS>60, or reusing frames if the FPS<60. My current code just takes every next frame and feeds it to the FFmpeg pipe to encode a video and forces it to 60fps regardless of the FPS the frames were displayed at. This is why I was having the problem where high FPS led to a "slowed" screen recording, and low FPS led to a "sped-up" screen recording, as when there is high FPS my program is "slowing" the frames down to 60fps, and vice versa for low FPS. For now I am just going to keep V-Sync ON, so I don't have to deal with this problem, but maybe in the future I can tackle it. V-Sync being ON is just generally a good idea anyway as it eliminates screen-tearing. Would be also nice to implement "last x minutes" screen recording, which would probably involve saving the last N frames (x minutes) into a buffer and continuously updating the buffer, removing the oldest frames and feeding new frames in, and encoding the video with FFmpeg once the program ends.
 
-* I was able to enable V-Sync with the help of this [Stack Overflow answer](https://stackoverflow.com/a/589232), using the ``WGL_EXT_swap_control`` extension function ``wglSwapIntervalEXT()``. Unfortunately, you will need to include the ``wglext.h`` and ``Windows.h`` header files, thus making the program tied to Windows, and as an insightful comment on that answer mentions, "That is not an extension to OpenGL, but rather to WGL (the Microsoft Windows window system API for OpenGL). Buffer swapping is by its very nature a window system specific operation. As far as GL is concerned it just draws to a front/back left/right buffer or some arbitrary FBO. The window system is the only thing with enough knowledge of the underlying host system to synchronize the presentation of drawn buffers to some event (in this case the monitor's vertical retrace)".[^61] You can use ``wglGetSwapIntervalEXT()`` to get the current swap interval,[^60] and change it to V-Sync ON using ``wglSwapIntervalEXT(1)``, V-Sync OFF using ``wglSwapIntervalEXT(0)``, and Adaptive V-Sync using ``wglSwapIntervalEXT(-1)``, "adaptive vsync enables v-blank synchronisation when the frame rate is higher than the sync rate, but disables synchronisation when the frame rate drops below the sync rate".[^60]
+* I was able to enable V-Sync with the help of this [Stack Overflow answer](https://stackoverflow.com/a/589232), using the ``WGL_EXT_swap_control`` extension function ``wglSwapIntervalEXT()``. Unfortunately, you will need to include the ``wglext.h`` and ``Windows.h`` header files, thus making the program tied to Windows, and as an insightful comment on that answer mentions, "That is not an extension to OpenGL, but rather to WGL (the Microsoft Windows window system API for OpenGL). Buffer swapping is by its very nature a window system specific operation. As far as GL is concerned it just draws to a front/back left/right buffer or some arbitrary FBO. The window system is the only thing with enough knowledge of the underlying host system to synchronize the presentation of drawn buffers to some event (in this case the monitor's vertical retrace)".[^44] You can use ``wglGetSwapIntervalEXT()`` to get the current swap interval,[^45] and change it to V-Sync ON using ``wglSwapIntervalEXT(1)``, V-Sync OFF using ``wglSwapIntervalEXT(0)``, and Adaptive V-Sync using ``wglSwapIntervalEXT(-1)``, "adaptive vsync enables v-blank synchronisation when the frame rate is higher than the sync rate, but disables synchronisation when the frame rate drops below the sync rate".[^46]
 * You will need to copy the ``wglext.h`` header file, which should be located in the ``C:\msys64\mingw64\include\GL`` folder, into your project's ``include`` folder.
 ```bash
   YourProject
@@ -1056,9 +1056,9 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 ```
 * You will also need to link to the library by adding ``"-lopengl32",`` to your compiler flags in your ``tasks.json`` file.
 
-[^60]: eugensk. "OpenGL rendering from FBO to screen" _Stack Overflow_, 26 Feb. 2009, [stackoverflow.com/a/589232](https://stackoverflow.com/a/589232).
-[^61]: Andon M. Coleman. "how to enable vertical sync in opengl?" _Stack Overflow_, 6 June 2014, [stackoverflow.com/questions/589064/how-to-enable-vertical-sync-in-opengl#comment37124053_589232](https://stackoverflow.com/questions/589064/how-to-enable-vertical-sync-in-opengl#comment37124053_589232).
-[^60]: Alfonse, et al. "Swap Interval" _Khronos_, 17 June 2017, [khronos.org/opengl/wiki/Swap_Interval](https://www.khronos.org/opengl/wiki/Swap_Interval).
+[^44]: eugensk. "OpenGL rendering from FBO to screen" _Stack Overflow_, 26 Feb. 2009, [stackoverflow.com/a/589232](https://stackoverflow.com/a/589232).
+[^45]: Andon M. Coleman. "how to enable vertical sync in opengl?" _Stack Overflow_, 6 June 2014, [stackoverflow.com/questions/589064/how-to-enable-vertical-sync-in-opengl#comment37124053_589232](https://stackoverflow.com/questions/589064/how-to-enable-vertical-sync-in-opengl#comment37124053_589232).
+[^46]: Alfonse, et al. "Swap Interval" _Khronos_, 17 June 2017, [khronos.org/opengl/wiki/Swap_Interval](https://www.khronos.org/opengl/wiki/Swap_Interval).
 
 * I moved the ``myprogram.exe`` file to the ``src`` folder so now it is runnable (I should have done this a long time ago...). To ensure the ``main.cpp`` file saves the ``.exe`` file in the correct location you have to change the compiler output file flag to: ``-o "${workspaceFolder}/src/myprogram.exe"`` in your ``tasks.json`` file. If I wanted to give the project to someone else, all I would have to do is copy the project folder to them and they would just need to click ``myprogram.exe`` to run the program without needing MinGW-w64 (GCC) to compile the ``main.cpp`` code.
   ```bash
@@ -1067,8 +1067,10 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
       ├── myprogram.exe
       ├── ...
   ```
-* I made the program rendering independent of the framerate by calculating the time between consecutive frames, ``timeDiff``, and multiplying this with every movement update calculation.[^61]
-  [^61]: TravisG. "Framerate independence" _Game Development Stack Exchange_, 11 June 2011, [gamedev.stackexchange.com/a/13486](https://gamedev.stackexchange.com/a/13486).
+* I made the program rendering independent of the framerate by calculating the time between consecutive frames, ``timeDiff``, and multiplying this with every movement update calculation.[^47]
+  
+  [^47]: TravisG. "Framerate independence" _Game Development Stack Exchange_, 11 June 2011, [gamedev.stackexchange.com/a/13486](https://gamedev.stackexchange.com/a/13486).
+
   * Inside the render loop:
     ```cpp
     crntTime = glfwGetTime();
@@ -1148,15 +1150,16 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
     }
     ```
 * From the function above you can see that I also implemented a fullscreen toggle with the ``F11`` key and exiting with the ``ESC`` key.
-* You'll notice above I did ``if`` statements without curly brackets/braces, this isn't recommended,[^60] but for simple one-line code it makes it look cleaner, just be careful.
+* You'll notice above I did ``if`` statements without curly brackets/braces, this isn't recommended,[^48] but for simple one-line code it makes it look cleaner, just be careful.
 
-  [^60]: clee, doynax. "Is it a bad practice to use an if-statement without curly braces?" _Stack Overflow_, 23 Jan. 2010, [stackoverflow.com/questions/2125066/is-it-a-bad-practice-to-use-an-if-statement-without-curly-braces](https://stackoverflow.com/questions/2125066/is-it-a-bad-practice-to-use-an-if-statement-without-curly-braces).
+  [^48]: clee, doynax. "Is it a bad practice to use an if-statement without curly braces?" _Stack Overflow_, 23 Jan. 2010, [stackoverflow.com/questions/2125066/is-it-a-bad-practice-to-use-an-if-statement-without-curly-braces](https://stackoverflow.com/questions/2125066/is-it-a-bad-practice-to-use-an-if-statement-without-curly-braces).
 
-* I added another flag to the FFmpegCommand to control the encoded video quality, lowering the CRF and using a slower encoding preset will give better video quality but may make the program laggy.[^61]
+* I added another flag to the FFmpegCommand to control the encoded video quality, lowering the CRF and using a slower encoding preset will give better video quality but may make the program laggy.[^49]
   ```cpp
   "-crf 17 -preset slow "     // Constant rate factor (18=visually lossless, 23=default)
   ```
-[^61]: llogan, et al. "H.264 Video Encoding Guide" _FFmpeg_, 12 Dec. 2024, [trac.ffmpeg.org/wiki/Encode/H.264](https://trac.ffmpeg.org/wiki/Encode/H.264).
+  
+[^49]: llogan, et al. "H.264 Video Encoding Guide" _FFmpeg_, 12 Dec. 2024, [trac.ffmpeg.org/wiki/Encode/H.264](https://trac.ffmpeg.org/wiki/Encode/H.264).
 
 
 <!-- FONT LOADER AND TEXTURE ATLAS -->
@@ -1329,8 +1332,10 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   // This deletes all items in the array
   delete[] frame;
   ```
-* For some reason ``new`` seems to allocate more memory than expected, I need to store 800x600 RGB (0-255) pixel data, but I can get away with subtracting 2415 before getting a heap buffer overflow causing a segfault. When initializing a pointer, people recommended to set it to ``NULL``.[^60]
-  [^60]: Dmitry. "Proper Way To Initialize Unsigned Char*" _Stack Overflow_, 2 Feb. 2011, [stackoverflow.com/a/4876907](https://stackoverflow.com/a/4876907).
+* For some reason ``new`` seems to allocate more memory than expected, I need to store 800x600 RGB (0-255) pixel data, but I can get away with subtracting 2415 before getting a heap buffer overflow causing a segfault. When initializing a pointer, people recommended to set it to ``NULL``.[^50]
+  
+  [^50]: Dmitry. "Proper Way To Initialize Unsigned Char*" _Stack Overflow_, 2 Feb. 2011, [stackoverflow.com/a/4876907](https://stackoverflow.com/a/4876907).
+
 * The final exercise for Transformations asks to render two crates using only transformations and two draw calls (``glDrawElements``). This was quite simple to do as I already created the function ``RenderCrate`` which did all the tedious stuff and all I'd need to do is just call this function again. I added another input for the function so it could receive a ``vec3`` translation.
 * Because one of the textures of the object has transparency I thought it would be cool to see the other object behind the front object. Transparency/Blending is an "Advanced OpenGL" topic, but again it doesn't hurt to explore it early.
 * People have said you should use these two functions before rendering transparent textures, however, at least for me commenting them out doesn't make a difference. Maybe it makes a difference when dealing with multiple textures.
@@ -1388,22 +1393,22 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
     RenderCrate(ourShader, translatenew);
     ```
     https://github.com/user-attachments/assets/00f4b6f8-61fb-4a1c-a1ff-72e4adf5cd7d
-* [This website](http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/) has a nice tutorial on Transparency in OpenGL and how to render multiple transparent triangles. The steps are essentially to draw everything that is opaque first so the depth buffer can discard hidden transparent triangles, sort the transparent triangles from furthest to closest, and render them in that order. They mention that needing to switch textures, or even worse, switching shader programs from triangle to triangle is very bad for performance,[^61] that's why games like _Minecraft_ use a texture atlas.
-* Here is a nice video that covers Transparency/Blending in their OpenGL _Minecraft_ clone:[^60]
+* [This website](http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/) has a nice tutorial on Transparency in OpenGL and how to render multiple transparent triangles. The steps are essentially to draw everything that is opaque first so the depth buffer can discard hidden transparent triangles, sort the transparent triangles from furthest to closest, and render them in that order. They mention that needing to switch textures, or even worse, switching shader programs from triangle to triangle is very bad for performance,[^51] that's why games like _Minecraft_ use a texture atlas.
+* Here is a nice video that covers Transparency/Blending in their OpenGL _Minecraft_ clone:[^52]
   [![Watch the video](https://img.youtube.com/vi/_rPRVk75Y6Q/maxresdefault.jpg)](https://www.youtube.com/watch?v=_rPRVk75Y6Q&t=34s)
-* Here's another good video on Transparency & Blending:[^61]
+* Here's another good video on Transparency & Blending:[^53]
   [![Watch the video](https://img.youtube.com/vi/crOfyWiWxmc/maxresdefault.jpg)](https://www.youtube.com/watch?v=crOfyWiWxmc&t=190s)
   
 
-  [^61]: GraphicsTut. "Tutorial 10 : Transparency" _opengl-tutorial.org_, [opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/](http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/).
-  [^60]: Low Level Game Dev. "How the rendering pipeline of a Minecraft-like game looks like? OpenGL C++" _YouTube_, 4 Sep. 2024, [youtube.com/watch?v=_rPRVk75Y6Q](https://www.youtube.com/watch?v=_rPRVk75Y6Q).
-  [^61]: Victor Gordan. "OpenGL Tutorial 17 - Transparency & Blending" _YouTube_, 28 May 2021, [youtube.com/watch?v=crOfyWiWxmc](https://www.youtube.com/watch?v=crOfyWiWxmc).
+  [^51]: GraphicsTut. "Tutorial 10 : Transparency" _opengl-tutorial.org_, [opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/](http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/).
+  [^52]: Low Level Game Dev. "How the rendering pipeline of a Minecraft-like game looks like? OpenGL C++" _YouTube_, 4 Sep. 2024, [youtube.com/watch?v=_rPRVk75Y6Q](https://www.youtube.com/watch?v=_rPRVk75Y6Q).
+  [^53]: Victor Gordan. "OpenGL Tutorial 17 - Transparency & Blending" _YouTube_, 28 May 2021, [youtube.com/watch?v=crOfyWiWxmc](https://www.youtube.com/watch?v=crOfyWiWxmc).
 
 ## Progress update 8 - Coordinate Systems and Camera - 19/01/25
 
-* For some reason the program would display a white window for a brief second and immediately close with no error message, this happened when I increased the dimensions of the window. It turned out the issue was due to a segfault,[^60] I didn't allocate enough memory for the FFmpeg frame buffer, I was experimenting with it earlier as mentioned above noticing that I could allocate less than the number of pixels and it would work just fine, however just to be safe I put it back to normal and it works fine again.
+* For some reason the program would display a white window for a brief second and immediately close with no error message, this happened when I increased the dimensions of the window. It turned out the issue was due to a segfault,[^54] I didn't allocate enough memory for the FFmpeg frame buffer, I was experimenting with it earlier as mentioned above noticing that I could allocate less than the number of pixels and it would work just fine, however just to be safe I put it back to normal and it works fine again.
 
-[^60]: swalog. "OpenGL GLFW window closes as soon as it opens" _Stack Overflow_, 26 Aug. 2014, [stackoverflow.com/a/25499922](https://stackoverflow.com/a/25499922).
+[^54]: swalog. "OpenGL GLFW window closes as soon as it opens" _Stack Overflow_, 26 Aug. 2014, [stackoverflow.com/a/25499922](https://stackoverflow.com/a/25499922).
 
 * I can now render in 3D using transform, model, view, and projection matrices. The diagram below shows the pipeline. The reason we break it into these steps is that making changes can be easier in different parts of the process. I switch from orthographic to perspective projection for 3D rendering.
 
@@ -1413,8 +1418,9 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 * For the crate which is now a 3D cuboid, we will need 36 vertices (6 faces * 2 triangles * 3 vertices per triangle). At first I thought this was inefficient as a cuboid only has 8 vertices, however, in order for each face to have its own unique texture, each of the 3 vertices for the two triangles for every face will need to be stored, along with their texture coords. We could use EBOs to bring the number of vertices down to 8, but then different faces will be sharing vertices and so also sharing texture coords, so the faces can't all be assigned unique textures.
 
   ![ebo2](https://github.com/user-attachments/assets/ba763f3f-19d6-43ee-a823-d5d74ef54673)
-  For context, there was very little performance difference with and without using an EBO. Others have explained that the main benefit of EBOs comes when dealing with meshes of models that contain hundreds of vertices, and in those situations faces sharing vertices (and thus texture coords) with neighboring faces is fine as they are so close to each other that their texture coords will be approximately the same.
+  For context, there was very little performance difference with and without using an EBO. Others have explained that the main benefit of EBOs comes when dealing with meshes of models that contain hundreds of vertices, and in those situations faces sharing vertices (and thus texture coords) with neighboring faces is fine as they are so close to each other that their texture coords will be approximately the same.[^55]
 
+  [^55]: AngusMcBurger. "Beginner questions on EBOs and when to use them" _Reddit_, 6 Sep. 2017, [reddit.com/r/opengl/comments/6yfav6/comment/dmnqog2/](https://www.reddit.com/r/opengl/comments/6yfav6/comment/dmnqog2/).
 
   ```cpp
   #if RENDER_3D==1
@@ -1520,9 +1526,9 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   
 * I also implemented a Camera header which _LearnOpenGL.com_ provides, containing a camera class that allows us to control the camera's position, yaw, and pitch. For some reason, I can't use my laptop's touchpad and the keyboard at the same time to move the camera in OpenGL, however, when using a separate mouse, I can use the keyboard simultaneously. 
 
-* The _LearnOpenGL.com_ Camera chapter uses a weird if statement in the mouse callback function to check if this is the first use of the callback function and sets the ``xpos`` and ``ypos`` of the cursor to the centre of the screen, the reason being to avoid the whiplash cursor jump effect you would otherwise get, as the cursor is not initialized to the centre of the screen. A much cleaner alternative as mentioned by someone in the comments is to just use the GLFW function ``glfwSetCursorPos(window, lastX,lastY);`` before the while/render loop,[^61] where ``lastX`` and ``lastY`` are set to ``SCR_WIDTH / 2.0f`` and ``SCR_HEIGHT / 2.0f`` respectively, and remove the if statement in the mouse callback function. Another important point is to make sure ``YAW`` is initialized to ``-90.0f``.
+* The _LearnOpenGL.com_ Camera chapter uses a weird if statement in the mouse callback function to check if this is the first use of the callback function and sets the ``xpos`` and ``ypos`` of the cursor to the centre of the screen, the reason being to avoid the whiplash cursor jump effect you would otherwise get, as the cursor is not initialized to the centre of the screen. A much cleaner alternative as mentioned by someone in the comments is to just use the GLFW function ``glfwSetCursorPos(window, lastX,lastY);`` before the while/render loop,[^56] where ``lastX`` and ``lastY`` are set to ``SCR_WIDTH / 2.0f`` and ``SCR_HEIGHT / 2.0f`` respectively, and remove the if statement in the mouse callback function. Another important point is to make sure ``YAW`` is initialized to ``-90.0f``.
 
-[^61]: Andy. "Camera" _LearnOpenGL.com_, 8 June 2017, [disq.us/p/1jdygzu](http://disq.us/p/1jdygzu).
+[^56]: Andy. "Camera" _LearnOpenGL.com_, 8 June 2017, [disq.us/p/1jdygzu](http://disq.us/p/1jdygzu).
 
 * I also clamped ``YAW`` to between ``0.0f`` and ``360.0f`` using the ``fmodf`` function and using ``Yaw + 360.0f`` rather than just ``Yaw``.
  
@@ -1530,24 +1536,24 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
    Yaw = fmodf(Yaw + 360.0f, 360.0f);
    ```
 
-* Another comment suggests using quaternions instead of matrices to control the camera in 3D. They linked to their [article](https://chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html)[^60] which includes the code and a nice [article](https://graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf) from Stanford on 'Quaternions and Rotations'. The main benefits of using quaternions over matrices are that they are more compact (4 numbers instead of 9 with 3x3 rotation matrices), efficient (16 multiplications and 12 additions instead of 27 multiplications and 18 additions), numerically stable (avoids the gimbal lock problem[^61]), and the geometric meaning is apparently clearer too.[^60] Although some mention that quaternions are better when chaining multiple rotations but not better when actually computing the rotating vectors,[^61] requiring ~30 operations rather than 15 operations like with 3D rotation matrix-vector multiplication.[^60] So "multiplication of matrices is ~2 times slower than quaternions. [But] matrix-vector multiplication is ~2 times faster [than quaternions]."[^61]
+* Another comment suggests using quaternions instead of matrices to control the camera in 3D. They linked to their [article](https://chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html)[^57] which includes the code and a nice [article](https://graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf) from Stanford on 'Quaternions and Rotations'. The main benefits of using quaternions over matrices are that they are more compact (4 numbers instead of 9 with 3x3 rotation matrices), efficient (16 multiplications and 12 additions instead of 27 multiplications and 18 additions), numerically stable (avoids the gimbal lock problem[^58]), and the geometric meaning is apparently clearer too.[^59] Although some mention that quaternions are better when chaining multiple rotations but not better when actually computing the rotating vectors,[^60] requiring ~30 operations rather than 15 operations like with 3D rotation matrix-vector multiplication.[^61] So "multiplication of matrices is ~2 times slower than quaternions. [But] matrix-vector multiplication is ~2 times faster [than quaternions]."[^62]
 
-[^60]: Chan Haeng Lee. "FPS Quaternion Camera Implementation (쿼터니언 카메라 구현)" _chanhaeng.blogspot.com_, 24 Sep. 2018, [chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html](https://chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html).
-[^61]: Henry Cohn. "The gimbal lock shows up in my quaternions" _Math Overflow_, 3 May 2012, [mathoverflow.net/a/95908](https://mathoverflow.net/a/95908).
-[^60]: Yan-Bin Jia. "Quaternions and Rotations Com S 477/577 Notes" _Stanford_, 10 Sep. 2013, [graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf](https://graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf).
-[^61]: Muphrid. "why is representing rotations through quaternions more compact and quicker than using matrices??" _Math Stack Exchange_, 9 July 2015, [math.stackexchange.com/a/1355206](https://math.stackexchange.com/a/1355206).
-[^60]: "Quaternions and spatial rotation - Performance comparisons" _Wikipedia_, 10 Jan. 2025, [en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Performance_comparisons](https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Performance_comparisons).
-[^61]: Kevin Kostlan. "Why are quaternions used for rotations?" _Stack Overflow_, 26 Apr. 2013, [stackoverflow.com/a/16246782](https://stackoverflow.com/a/16246782).
+[^57]: Chan Haeng Lee. "FPS Quaternion Camera Implementation (쿼터니언 카메라 구현)" _chanhaeng.blogspot.com_, 24 Sep. 2018, [chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html](https://chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html).
+[^58]: Henry Cohn. "The gimbal lock shows up in my quaternions" _Math Overflow_, 3 May 2012, [mathoverflow.net/a/95908](https://mathoverflow.net/a/95908).
+[^59]: Yan-Bin Jia. "Quaternions and Rotations Com S 477/577 Notes" _Stanford_, 10 Sep. 2013, [graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf](https://graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf).
+[^60]: Muphrid. "why is representing rotations through quaternions more compact and quicker than using matrices??" _Math Stack Exchange_, 9 July 2015, [math.stackexchange.com/a/1355206](https://math.stackexchange.com/a/1355206).
+[^61]: "Quaternions and spatial rotation - Performance comparisons" _Wikipedia_, 10 Jan. 2025, [en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Performance_comparisons](https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Performance_comparisons).
+[^62]: Kevin Kostlan. "Why are quaternions used for rotations?" _Stack Overflow_, 26 Apr. 2013, [stackoverflow.com/a/16246782](https://stackoverflow.com/a/16246782).
 
-* [This](https://lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update) (nicely coded) article explains a way to stop OpenGL from pausing when resizing/moving the window, involving multithreading.[^62]
+* [This](https://lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update) (nicely coded) article explains a way to stop OpenGL from pausing when resizing/moving the window, involving multithreading.[^63]
 
-[^62]: Luke Arcamo. "GLFW: Prevent freezing on window update" _lukearcamo.github.io_, 22 July 2021, [lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update](https://lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update).
+[^63]: Luke Arcamo. "GLFW: Prevent freezing on window update" _lukearcamo.github.io_, 22 July 2021, [lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update](https://lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update).
 
-* I only just now learned about #include/header guards, which are used in headers to prevent creating duplicate copies of the header when unintentionally including the header more than once (this can happen sneakily when you include headers that include other headers you may already have included in your main.cpp file). This can be done two ways, using ``#ifndef``; ``#define``; and ``#endif``, or ``#pragma once``.[^63][^64] You will notice most header files use one or the other, all C++ standard library files have them, making it safe to include libraries in multiple files without the worry of duplicate code being generated.[^65]
+* I only just now learned about #include/header guards, which are used in headers to prevent creating duplicate copies of the header when unintentionally including the header more than once (this can happen sneakily when you include headers that include other headers you may already have included in your main.cpp file). This can be done two ways, using ``#ifndef``; ``#define``; and ``#endif``, or ``#pragma once``.[^64][^65] You will notice most header files use one or the other, all C++ standard library files have them, making it safe to include libraries in multiple files without the worry of duplicate code being generated.[^66]
 
-  [^63]: Brian R. Bondy. "#pragma once vs include guards?" _Stack Overflow_, 17 July 2009, [stackoverflow.com/a/1143958/7875204](https://stackoverflow.com/a/1143958/7875204).
-  [^64]: Alex Kremer. "What does #pragma once mean in C?" _Stack Overflow_, 25 Apr. 2011, [stackoverflow.com/a/5777009](https://stackoverflow.com/a/5777009).
-  [^65]: eerorika, Kon. "Including a library in both the header file and the cpp file" _Stack Overflow_, 23 Feb. 2019, [stackoverflow.com/questions/54837486/including-a-library-in-both-the-header-file-and-the-cpp-file](https://stackoverflow.com/questions/54837486/including-a-library-in-both-the-header-file-and-the-cpp-file).
+  [^64]: Brian R. Bondy. "#pragma once vs include guards?" _Stack Overflow_, 17 July 2009, [stackoverflow.com/a/1143958/7875204](https://stackoverflow.com/a/1143958/7875204).
+  [^65]: Alex Kremer. "What does #pragma once mean in C?" _Stack Overflow_, 25 Apr. 2011, [stackoverflow.com/a/5777009](https://stackoverflow.com/a/5777009).
+  [^66]: eerorika, Kon. "Including a library in both the header file and the cpp file" _Stack Overflow_, 23 Feb. 2019, [stackoverflow.com/questions/54837486/including-a-library-in-both-the-header-file-and-the-cpp-file](https://stackoverflow.com/questions/54837486/including-a-library-in-both-the-header-file-and-the-cpp-file).
 
   ```cpp
   // top of my_header.h file
@@ -1569,12 +1575,12 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   // end of file
   ```
 
-* You can use headers to separate code into multiple files, the header file allows you to access functions and variables from other cpp files.[^66] The main benefit of separating code into multiple files is it makes the project cleaner and more readable, along with other benefits.[^67]
+* You can use headers to separate code into multiple files, the header file allows you to access functions and variables from other cpp files.[^67] The main benefit of separating code into multiple files is it makes the project cleaner and more readable, along with other benefits.[^68]
 
-    [^66]: Puppy. "Using multiple .cpp files in c++ program?" _Stack Overflow_, 9 Aug. 2011, [stackoverflow.com/a/6995599](https://stackoverflow.com/a/6995599).
-    [^67]: Dietrich Epp. "Why is it recommended to use multiple files when making a C++ project?" _Stack Overflow_, 20 Feb. 2023, [stackoverflow.com/a/75505133](https://stackoverflow.com/a/75505133).
+    [^67]: Puppy. "Using multiple .cpp files in c++ program?" _Stack Overflow_, 9 Aug. 2011, [stackoverflow.com/a/6995599](https://stackoverflow.com/a/6995599).
+    [^68]: Dietrich Epp. "Why is it recommended to use multiple files when making a C++ project?" _Stack Overflow_, 20 Feb. 2023, [stackoverflow.com/a/75505133](https://stackoverflow.com/a/75505133).
 
-* I added ``#define`` and ``#if``, ``#endif`` blocks to my code to allow for different blocks of code to be built at compile-time. This differs from using ``if`` statements as the code will still be built but evaluated at runtime.[^68] For example:
+* I added ``#define`` and ``#if``, ``#endif`` blocks to my code to allow for different blocks of code to be built at compile-time. This differs from using ``if`` statements as the code will still be built but evaluated at runtime.[^69] For example:
 
   ```cpp
   #define  RENDER_3D     1
@@ -1600,7 +1606,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   }
   ```
   
-[^68]: T.J. Crowder. ""if " and " #if "; which one is better to use" _Stack Overflow_, 8 May 2013, [stackoverflow.com/a/16438775/7875204](https://stackoverflow.com/a/16438775/7875204).
+[^69]: T.J. Crowder. ""if " and " #if "; which one is better to use" _Stack Overflow_, 8 May 2013, [stackoverflow.com/a/16438775/7875204](https://stackoverflow.com/a/16438775/7875204).
 
 * I made it so that in windowed mode, the Viewport always stays in the centre of the window with the original aspect ratio no matter how the window is resized. However, this only works nicely when screen recording is OFF as it changes the size of the viewport.
 
@@ -1708,7 +1714,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   glViewport(0, 0, width, height);
   ```
 
-* [This blog post](https://diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html) by Diego Macario (who has a really cool [2D physics simulator](https://diegomacario.github.io/about/) project) explains a way to make the viewport centred which seems similar to how I did it, however, when implementing their method, it didn't centre the viewport. Their method of getting the background outside the viewport to be black did work, which helps distinguish between the viewport and the window. The code to do so uses ``GL_SCISSOR_TEST`` and goes like this:
+* [This blog post](https://diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html)[^70] by Diego Macario (who has a really cool [2D physics simulator](https://diegomacario.github.io/about/) project) explains a way to make the viewport centred which seems similar to how I did it, however, when implementing their method, it didn't centre the viewport. Their method of getting the background outside the viewport to be black did work, which helps distinguish between the viewport and the window. The code to do so uses ``GL_SCISSOR_TEST`` and goes like this:
 
   ```cpp
   // Set the clear color to black
@@ -1726,20 +1732,79 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 
   However, upon further testing, it seems you don't even need to add this code and it will give a black background anyway.
 
-  [^69]: Diego Macario. "How to keep the aspect ratio of an OpenGL window constant when it's resized" _diegomacario.github.io_, 23 Apr. 2021, [diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html](https://diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html).
+  [^70]: Diego Macario. "How to keep the aspect ratio of an OpenGL window constant when it's resized" _diegomacario.github.io_, 23 Apr. 2021, [diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html](https://diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html).
 
-* Every time I switched from fullscreen mode back to windowed mode, the window seemed to lose its title bar. It turns out this was just due to me setting the window position to be ``(0, 0)``.[^70]
+* I implemented a PAUSE button that allows the user to gain access to the mouse, which I felt would be needed in the future as I would like to also add a GUI.
+
+  Global variables:
+  ```cpp
+  bool    paused      = 0;
+  float   lastX       = SCR_WIDTH / 2.0f;
+  float   lastY       = SCR_HEIGHT / 2.0f;
+  ```
+
+  The ``mouse_callback(GLFWwindow* window, double xposIn, double yposIn)`` function:
+  ```cpp
+  // glfw: whenever the mouse moves, this callback is called
+  // -------------------------------------------------------
+  void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
+  {
+      // only update when unpaused
+      if (!paused)
+      {
+          float xpos = static_cast<float>(xposIn);
+          float ypos = static_cast<float>(yposIn);
+  
+          float xoffset = xpos - lastX;
+          float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+  
+          lastX = xpos;
+          lastY = ypos;
+  
+          camera.ProcessMouseMovement(xoffset, yoffset);
+      }
+  }
+  ```
+  
+  Inside the ``processInput()`` callback function:
+  ```cpp
+  // Pause
+  // -----
+  if (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
+  {
+      // unpausing
+      if (paused)
+      {
+          glfwSetCursorPos(window, lastX, lastY);  // set cursor in last position before pausing to remove whiplash cursor jump
+          // tell GLFW to capture our mouse
+          glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+          paused = 0;
+      }
+      // pausing
+      else
+      {
+          glfwSetCursorPos(window, lowerLeftCornerOfViewportX + SCR_WIDTH/2.0f, lowerLeftCornerOfViewportY + SCR_HEIGHT/2.0f);  // set cursor in centre of viewport
+            // tell GLFW to uncapture our mouse
+          glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+          paused = 1;
+      }
+  }
+  ```
+
+  Notice that the ``mouse_callback()`` function only updates the position of the cursor when the window is unpaused.
+
+  Also notice that when unpausing, I call ``glfwSetCursorPos(window, lastX, lastY);`` to set the cursor to be in ``(lastX, lastY)``, the last position the cursor was in just before pausing, this prevents the camera from jumping to where the cursor is while paused. This solution was given in the comments of the **Camera** chapter of _LearnOpenGL.com_ which I have mentioned already above.[^56]
+  
+* Every time I switched from fullscreen mode back to windowed mode, the window seemed to lose its title bar. It turns out this was just due to me setting the window position to be ``(0, 0)``.[^71]
 
   ![opengl-no-title-bar](https://github.com/user-attachments/assets/331e459b-76d2-4c3b-890d-9cc3928b45f1)
   The solution is as simple as saving the last position and size of the window before switching to fullscreen,
-
   ```cpp
   glfwGetWindowPos(window, &window_xPos, &window_yPos);
   glfwGetWindowSize(window, &window_width, &window_height);
   ```
 
   then when the user switches back to windowed mode, setting the window back to the last saved position and size again.[^70]
-  
   ```cpp
   glfwSetWindowMonitor(window,
                        nullptr,
@@ -1748,8 +1813,12 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
                        0);
   ```
 
-  The full solution:
+  Global variable:
+  ```cpp
+  bool fullscreen = 0;
+  ```
   
+  The full solution inside the ``processInput()`` callback function:
   ```cpp
   // Fullscreen
   // ----------
@@ -1804,7 +1873,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   }
   ```
 
-[^70]: Shane McPhillips, immuv. "glfw window with no title bar" _Stack Overflow_, 23 Mar. 2022, 11 Jan 2022, [stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar](https://stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar).
+[^71]: Shane McPhillips, immuv. "glfw window with no title bar" _Stack Overflow_, 23 Mar. 2022, 11 Jan 2022, [stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar](https://stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar).
 
 
 <!-- ADD BIBLIOGRAPHY -->
