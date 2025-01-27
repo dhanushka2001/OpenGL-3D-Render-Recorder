@@ -1875,7 +1875,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 
 [^71]: Shane McPhillips, immuv. "glfw window with no title bar" _Stack Overflow_, 23 Mar. 2022, 11 Jan 2022, [stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar](https://stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar).
 
-* I wanted to add a GUI as it would make the program more functional and interactive. I ended up going with Dear ImGui as it seems to be bloat-free, minimal, and easy to use. People have also recommended it as a good GUI to use with OpenGL. [Here](https://www.youtube.com/watch?v=VRwhNKoxUtk)'s a nice tutorial, but I will explain in detail the steps. First, you need to download the ZIP file containing the DearImGui code, [here](https://github.com/ocornut/imgui)'s the link to the repository. Next, you need to extract these files:
+* I wanted to add a GUI as it would make the program more functional and interactive. I ended up going with Dear ImGui as it seems to be bloat-free, minimal, and easy to use. People have also recommended it as a good GUI to use with OpenGL that works right out of the box. [Here](https://www.youtube.com/watch?v=VRwhNKoxUtk)'s a nice tutorial, but I will explain in detail the steps. First, you need to download the ZIP file containing the DearImGui code, [here](https://github.com/ocornut/imgui)'s the link to the repository. Next, you need to extract these files:
 
   ```bash
   imgui-master/
@@ -1898,7 +1898,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
       └── imgui_impl_glfw.h 
   ```
 
-  and put them into a folder, ``imgui``, inside your local project's ``include`` folder:
+  and put them into a new folder, ``imgui``, inside your local project's ``include`` folder:
 
   ```bash
   YourProject/
@@ -1922,6 +1922,253 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
           └── imgui_impl_glfw.h
   ```
 
+  Now what I initially did was compile all of these files at compile-time, which looked like this in ``tasks.json``'s "args":
+
+  ```json
+  // IMGUI
+  "${workspaceFolder}/include/imgui/imgui.h",
+  "${workspaceFolder}/include/imgui/imconfig.h",
+  "${workspaceFolder}/include/imgui/imgui_impl_glfw.h",
+  "${workspaceFolder}/include/imgui/imgui_impl_opengl3.h",
+  "${workspaceFolder}/include/imgui/imgui_impl_opengl3_loader.h",
+  "${workspaceFolder}/include/imgui/imgui_internal.h",
+  "${workspaceFolder}/include/imgui/imstb_rectpack.h",
+  "${workspaceFolder}/include/imgui/imstb_textedit.h",
+  "${workspaceFolder}/include/imgui/imstb_truetype.h",
+  "${workspaceFolder}/include/imgui/imgui.cpp",
+  "${workspaceFolder}/include/imgui/imgui_draw.cpp",
+  "${workspaceFolder}/include/imgui/imgui_impl_glfw.cpp",
+  "${workspaceFolder}/include/imgui/imgui_impl_opengl3.cpp",
+  "${workspaceFolder}/include/imgui/imgui_tables.cpp",
+  "${workspaceFolder}/include/imgui/imgui_widgets.cpp",
+  ```
+
+  Not only does this look unwieldly, compiling all of these files made the compile-time go from 23s to 1m25s. What you should do instead is pre-compile the files into a static library, and link to that library at compile-time. The steps to do that are as follows:
+
+  Step 1: Open MSYS2 (using the MINGW64 environment), and navigate to the ``imgui`` folder in your local project's ``include`` folder (replace ``YourProject`` in the following command with the name of your repository!)
+  
+  ```bash
+  cd C:/YourProject/include/imgui
+  ```
+
+  Step 2: Compile the Source Files into Object Files (``-c``: compiles the .cpp files into .o object files) (replace ``YourProject`` in the following command with the name of your repository!)
+  
+  ```bash
+  g++ -c -std=c++17 -O2 -I/c/YourProject/include imgui.cpp imgui_draw.cpp imgui_widgets.cpp imgui_tables.cpp imgui_impl_opengl3.cpp imgui_impl_glfw.cpp
+  ```
+  
+  Step 3: Archive Object Files into a Static Library (``ar``: archives the object files into a library. ``rcs``: ``r`` inserts files into the archive; ``c`` creates the archive if it doesn't exist; ``s`` writes an index to the archive for faster linking. ``libimgui.a``: the name of the resulting static library)
+  
+  ```bash
+  ar rcs libimgui.a imgui.o imgui_draw.o imgui_widgets.o imgui_tables.o imgui_impl_opengl3.o imgui_impl_glfw.o
+  ```
+
+  Step 4: Move the newly created static library ``libimgui.a`` into your local project's ``lib`` folder with the rest of the static libraries
+
+  Step 5: Link to the library in ``tasks.json``'s "args"
+
+  ```json
+  "-limgui",                                  // ImGui library
+  ```
+
+  All you need to do now is include the imgui headers in main.cpp as well as the initialization code and the code to render a simple window and you're done!
+
+  At the top of main.cpp:
+  ```cpp
+  #include <imgui\imgui.h>
+  #include <imgui\imgui_impl_glfw.h>
+  #include <imgui\imgui_impl_opengl3.h>
+  #define  IMGUI  1
+  ```
+
+  At initialization, before the render loop:
+  ```cpp
+  #if IMGUI==1
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO& io = ImGui::GetIO(); (void)io;
+  ImGui::StyleColorsDark();
+  ImGui_ImplGlfw_InitForOpenGL(window, true);
+  ImGui_ImplOpenGL3_Init("#version 430");
+  #endif
+  ```
+
+  Inside the render loop, before you render your scene:
+  ```cpp
+  #if IMGUI==1
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
+  ImGui::NewFrame();
+  #endif
+  ```
+
+  Inside the render loop. Putting this while drawing to the non-MSAA FBO will mean the GUI will be visible in the screen recording too. Putting this at the very end when drawing to the default framebuffer will allow you to move the GUI outside of the viewport and still be visible, but the GUI won't be visible in the screen recording.
+  ```cpp
+  #if IMGUI==1
+  ImGui::Begin("My name is window, ImGUI window");
+  ImGui::Text("Hello there adventurer!");
+  ImGui::End();
+  ImGui::Render();
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+  #endif
+  ```
+
+  Just after the render loop, when de-allocating resources:
+  ```cpp
+  #if IMGUI==1
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
+  #endif
+  ```
+
+  In order to keep the ImGui window in the same position relative to the viewport when the OpenGL is resized by the user I add this code to the ``framebuffer_size_callback()`` function:
+
+  ```cpp
+  #if IMGUI==1
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
+  ImGui::NewFrame();
+  ImGui::SetNextWindowPos(ImVec2(100, 100+lowerLeftCornerOfViewportY*2));
+  ImGui::Begin("My name is window, ImGUI window");
+  ImGui::Text("Hello there adventurer!");
+  ImGui::End();
+  ImGui::Render();
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+  #endif
+  ```
+  
+  I added ``#define IMGUI 1``, ``#if IMGUI==1``, ``#endif`` statements so that I can choose to build the program with or without a GUI.
+
+  I spent a lot of time trying to get the GUI to work nicely when the OpenGL window was resized, for some reason when resizing the OpenGL window, the GUI's "clickable" region was where it originally was, and not where the viewport and the GUI moved to be in the centre of the resized window. And no matter what I did: changing the source/destination rectangle bounds in ``glBlitFramebuffer()`` when blitting from the MSAA FBO to the non-MSAA FBO, and from the non-MSAA FBO to the default on-screen framebuffer; or adjusting ``glViewport()``, nothing made it work nicely, either the GUI would mess up, or the viewport would mess up and cut off.
+
+  So after days of failing to get it to work I've decided to just not centre the viewport, this is so far the only thing that ensures the viewport and GUI don't mess up. Maybe later I can come back and get the viewport to be centred when the window is resized while also not messing up the GUI or the viewport itself, but for now this compromise will have to do.
+
+  Doing this will centre the viewport and doesn't mess up the viewport or the screen recording, but the ImGui window messes up when the OpenGL window is resized (the clickable region is not in the same place as where the ImGui window appears):
+  
+  ```cpp
+  glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+  glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+  
+  // render scene
+  
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                    0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
+                            GL_COLOR_BUFFER_BIT,           // buffer mask
+                                     GL_LINEAR);           // scale filter
+  
+  // render text and atlas
+  // render ImGui window
+  
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,                                 // src rect
+                     lowerLeftCornerOfViewportX,                                 // dst rect
+                     lowerLeftCornerOfViewportY,      
+                     lowerLeftCornerOfViewportX + static_cast<int>(SCR_WIDTH),
+                     lowerLeftCornerOfViewportY + static_cast<int>(SCR_HEIGHT),
+                            GL_COLOR_BUFFER_BIT,                                 // buffer mask
+                                    GL_NEAREST);                                 // scale filter
+
+  glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
+  ```
+
+  Doing this doesn't mess up the ImGui window, but the viewport gets cut off and the screen recording messes up:
+
+  ```cpp
+  glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+  glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+  
+  // render scene
+  
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,                                 // src rect
+                     lowerLeftCornerOfViewportX,                                 // dst rect
+                     lowerLeftCornerOfViewportY,      
+                     lowerLeftCornerOfViewportX + static_cast<int>(SCR_WIDTH),
+                     lowerLeftCornerOfViewportY + static_cast<int>(SCR_HEIGHT),
+                            GL_COLOR_BUFFER_BIT,                                 // buffer mask
+                                     GL_LINEAR);                                 // scale filter
+  
+  // viewport gets cut off with or without adding this
+  glViewport(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, SCR_WIDTH, SCR_HEIGHT);
+  // render text and atlas
+  // render ImGui window
+  
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(lowerLeftCornerOfViewportX,                                  // src rect
+                    lowerLeftCornerOfViewportY,      
+                    lowerLeftCornerOfViewportX + static_cast<int>(SCR_WIDTH),
+                    lowerLeftCornerOfViewportY + static_cast<int>(SCR_HEIGHT),
+                    lowerLeftCornerOfViewportX,                                  // dst rect
+                    lowerLeftCornerOfViewportY,      
+                    lowerLeftCornerOfViewportX + static_cast<int>(SCR_WIDTH),
+                    lowerLeftCornerOfViewportY + static_cast<int>(SCR_HEIGHT),
+                            GL_COLOR_BUFFER_BIT,                                 // buffer mask
+                                    GL_NEAREST);                                 // scale filter
+
+  // screen recording gets messed up with either option
+  // glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
+  glReadPixels(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
+  ```
+
+  One fix is to just render the viewport in the bottom left of the screen and not centre it when the OpenGL window gets resized. This doesn't mess up the ImGui window, the viewport, or the screen recording:
+
+  ```cpp
+  glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+  glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+  
+  // render scene
+  
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,                                 // src rect
+                    0, 0, SCR_WIDTH, SCR_HEIGHT,                                 // dst rect
+                            GL_COLOR_BUFFER_BIT,                                 // buffer mask
+                                     GL_LINEAR);                                 // scale filter
+  
+  // render text and atlas
+  // render ImGui window
+  
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,                                 // src rect
+                    0, 0, SCR_WIDTH, SCR_HEIGHT,                                 // dst rect
+                            GL_COLOR_BUFFER_BIT,                                 // buffer mask
+                                    GL_NEAREST);                                 // scale filter
+
+  glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
+  ```
+
+  Another fix is to render the ImGui window to the default framebuffer rather than the non-MSAA FBO. This also doesn't mess up the ImGui window, the viewport, or the screen recording, and the viewport is centred, however, the ImGui window doesn't show up in the screen recording. One other benefit is that the ImGui window can be dragged outside of the viewport and doesn't disappear unlike the previous fix, as it is not rendered onto the FBO:
+
+  ```cpp
+  glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+  glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+  
+  // render scene
+  
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,                                 // src rect
+                    0, 0, SCR_WIDTH, SCR_HEIGHT,                                 // dst rect
+                            GL_COLOR_BUFFER_BIT,                                 // buffer mask
+                                     GL_LINEAR);                                 // scale filter
+  
+  // render text and atlas
+  
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,                                 // src rect
+                     lowerLeftCornerOfViewportX,                                 // dst rect
+                     lowerLeftCornerOfViewportY,      
+                     lowerLeftCornerOfViewportX + static_cast<int>(SCR_WIDTH),
+                     lowerLeftCornerOfViewportY + static_cast<int>(SCR_HEIGHT),
+                            GL_COLOR_BUFFER_BIT,                                 // buffer mask
+                                    GL_NEAREST);                                 // scale filter
+
+  glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
+  
+  // render ImGui window
+  ```
+
+  
   
 <!-- ADD BIBLIOGRAPHY -->
 <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
