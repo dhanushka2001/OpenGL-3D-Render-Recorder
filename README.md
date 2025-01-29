@@ -1404,7 +1404,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   [^52]: Low Level Game Dev. "How the rendering pipeline of a Minecraft-like game looks like? OpenGL C++" _YouTube_, 4 Sep. 2024, [youtube.com/watch?v=_rPRVk75Y6Q](https://www.youtube.com/watch?v=_rPRVk75Y6Q).
   [^53]: Victor Gordan. "OpenGL Tutorial 17 - Transparency & Blending" _YouTube_, 28 May 2021, [youtube.com/watch?v=crOfyWiWxmc](https://www.youtube.com/watch?v=crOfyWiWxmc).
 
-## Progress update 8 - Coordinate Systems and Camera - 19/01/25
+## Progress update 8 - 3D, Coordinate Systems, and Camera - 19/01/25
 
 * For some reason the program would display a white window for a brief second and immediately close with no error message, this happened when I increased the dimensions of the window. It turned out the issue was due to a segfault,[^54] I didn't allocate enough memory for the FFmpeg frame buffer, I was experimenting with it earlier as mentioned above noticing that I could allocate less than the number of pixels and it would work just fine, however just to be safe I put it back to normal and it works fine again.
 
@@ -2040,11 +2040,11 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   
   I added ``#define IMGUI 1``, ``#if IMGUI==1``, ``#endif`` statements so that I can choose to build the program with or without a GUI.
 
-  I spent a lot of time trying to get the GUI to work nicely when the OpenGL window was resized, for some reason when resizing the OpenGL window, the GUI's "clickable" region was where it originally was, and not where the viewport and the GUI moved to be in the centre of the resized window. And no matter what I did: changing the source/destination rectangle bounds in ``glBlitFramebuffer()`` when blitting from the MSAA FBO to the non-MSAA FBO, and from the non-MSAA FBO to the default on-screen framebuffer; or adjusting ``glViewport()``, nothing made it work nicely, either the GUI would mess up, or the viewport would mess up and cut off.
+* I spent a lot of time trying to get the GUI to work nicely when the OpenGL window was resized, for some reason when resizing the OpenGL window, the GUI's "clickable" region was where it originally was, and not where the viewport and the GUI moved to be in the centre of the resized window. And no matter what I did: changing the source/destination rectangle bounds in ``glBlitFramebuffer()`` when blitting from the MSAA FBO to the non-MSAA FBO, and from the non-MSAA FBO to the default on-screen framebuffer; or adjusting ``glViewport()``, nothing made it work nicely, either the GUI would mess up, or the viewport would mess up and cut off.
 
   So after days of failing to get it to work I've decided to just not centre the viewport, this is so far the only thing that ensures the viewport and GUI don't mess up. Maybe later I can come back and get the viewport to be centred when the window is resized while also not messing up the GUI or the viewport itself, but for now this compromise will have to do.
 
-  Doing this will centre the viewport and doesn't mess up the viewport or the screen recording, but the ImGui window messes up when the OpenGL window is resized (the clickable region is not in the same place as where the ImGui window appears):
+* Doing this will centre the viewport and doesn't mess up the viewport or the screen recording, but the ImGui window messes up when the OpenGL window is resized (the clickable region is not in the same place as where the ImGui window appears):
   
   ```cpp
   glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -2073,7 +2073,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
   ```
 
-  Doing this doesn't mess up the ImGui window, but the viewport gets cut off and the screen recording messes up:
+* Doing this doesn't mess up the ImGui window, but the viewport gets cut off and the screen recording messes up:
 
   ```cpp
   glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -2112,7 +2112,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   glReadPixels(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
   ```
 
-  One fix is to just render the viewport in the bottom left of the screen and not centre it when the OpenGL window gets resized. This doesn't mess up the ImGui window, the viewport, or the screen recording:
+* One fix is to just render the viewport in the bottom left of the screen and not centre it when the OpenGL window gets resized. This doesn't mess up the ImGui window, the viewport, or the screen recording:
 
   ```cpp
   glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -2138,7 +2138,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
   ```
 
-  Another fix is to render the ImGui window to the default framebuffer rather than the non-MSAA FBO. This also doesn't mess up the ImGui window, the viewport, or the screen recording, and the viewport is centred, however, the ImGui window doesn't show up in the screen recording. One other benefit is that the ImGui window can be dragged outside of the viewport and doesn't disappear unlike the previous fix, as it is not rendered onto the FBO:
+* Another fix is to render the ImGui window to the default framebuffer rather than the non-MSAA FBO. This also doesn't mess up the ImGui window, the viewport, or the screen recording, and the viewport is centred, however, the ImGui window doesn't show up in the screen recording. One other benefit is that the ImGui window can be dragged outside of the viewport and doesn't disappear unlike the previous fix, as it is not rendered onto the FBO:
 
   ```cpp
   glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -2168,7 +2168,14 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   // render ImGui window
   ```
 
-  
+https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
+
+## Progress update 9 - Lighting - 30/01/25
+
+
+
+
+
   
 <!-- ADD BIBLIOGRAPHY -->
 <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
