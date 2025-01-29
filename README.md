@@ -2172,8 +2172,27 @@ https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
 
 ## Progress update 9 - Lighting - 30/01/25
 
+* Before getting into the **Lighting** chapter, I finally fixed a major bug in my screen recording implementation. When encoding a video using FFmpeg, you have to decide on a framerate, I went with 60fps, what this meant though was all the encoded frames would be separated by 1/60th of a second, when in reality the framerate is variable and can drop when the program lags. When the FPS was lower than 60, the recording would speed up, as frames that should be further apart were being brought closer together in time, and vice versa when the FPS was higher than 60. My fix as of now was to just use V-Sync to cap the FPS at 60 and hope the FPS didn't drop too low.
 
+  Here is an example of the recording "speeding up" as the FPS dropped lower than 60:
+  
+  https://github.com/user-attachments/assets/dd3861fe-e2b1-432b-bfbe-28bceb96fde9
 
+  I was working on fixing this by encoding the frame but duplicated whenever the FPS dropped lower than 60. This worked, but as you can imagine that would involve using another buffer to store the old frame, and another much larger buffer to store all the duplicate frames (which just seems so redundant). Ironically, trying to get the lag to display correctly in the recording just made the program more laggy, basically unusable.
+
+  So all hope seemed lost, until I had the idea to search for FFmpeg dynamic framerate video encoding, surely FFmpeg would have some functionality in place for that? And that's when I found [this](https://video.stackexchange.com/a/2595) godsend of a post which explained how to do it. And the funny thing is the solution is just one line of code, it involves telling FFmpeg to use the "system time at time of receipt as the timestamp"[^72] for each frame. "Without embedded timestamps, ffmpeg will assign timestamps in serial order, thus losing the temporal relation between the incoming frames."[^72]
+
+  [^72]: Gyan. "FFmpeg encode variable input framerate" _Video Production Stack Exchange_, 11 Feb. 2019, [video.stackexchange.com/a/25953](https://video.stackexchange.com/a/25953).
+
+  Here is the one line of code you need to add to the ``FFmpegCommand``:
+
+  ```cpp
+  "-use_wallclock_as_timestamps 1 "
+  ```
+
+  And here is the result when adding that one line of code, the recording matches the on-screen program exactly and no drop in performance:
+
+  https://github.com/user-attachments/assets/4f44bb9a-8c7f-45c6-80d5-dbf90b83d570
 
 
   
