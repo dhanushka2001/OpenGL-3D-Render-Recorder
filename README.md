@@ -1404,7 +1404,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   [^52]: Low Level Game Dev. "How the rendering pipeline of a Minecraft-like game looks like? OpenGL C++" _YouTube_, 4 Sep. 2024, [youtube.com/watch?v=_rPRVk75Y6Q](https://www.youtube.com/watch?v=_rPRVk75Y6Q).
   [^53]: Victor Gordan. "OpenGL Tutorial 17 - Transparency & Blending" _YouTube_, 28 May 2021, [youtube.com/watch?v=crOfyWiWxmc](https://www.youtube.com/watch?v=crOfyWiWxmc).
 
-## Progress update 8 - 3D, Coordinate Systems, and Camera - 19/01/25
+## Progress update 8 - 3D, Coordinate Systems, Camera, and Dear ImGUI - 19/01/25
 
 * For some reason the program would display a white window for a brief second and immediately close with no error message, this happened when I increased the dimensions of the window. It turned out the issue was due to a segfault,[^54] I didn't allocate enough memory for the FFmpeg frame buffer, I was experimenting with it earlier as mentioned above noticing that I could allocate less than the number of pixels and it would work just fine, however just to be safe I put it back to normal and it works fine again.
 
@@ -1875,7 +1875,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 
 [^71]: Shane McPhillips, immuv. "glfw window with no title bar" _Stack Overflow_, 23 Mar. 2022, 11 Jan 2022, [stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar](https://stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar).
 
-* I wanted to add a GUI as it would make the program more functional and interactive. I ended up going with Dear ImGui as it seems to be bloat-free, minimal, and easy to use. People have also recommended it as a good GUI to use with OpenGL that works right out of the box. [Here](https://www.youtube.com/watch?v=VRwhNKoxUtk)'s a nice tutorial, but I will explain in detail the steps. First, you need to download the ZIP file containing the DearImGui code, [here](https://github.com/ocornut/imgui)'s the link to the repository. Next, you need to extract these files:
+* I wanted to add a GUI to make the program more functional and interactive. I ended up going with Dear ImGui as it seems to be bloat-free, minimal, and easy to use. People have also recommended it as a good GUI to use with OpenGL that works right out of the box. I was wondering why it's called "Dear ImGui", at first I thought "ImGui" stood for "I'm GUI", but it actually stands for "Immediate Mode GUI", as for "Dear", [here](https://github.com/ocornut/imgui/discussions/4041#discussioncomment-5409937)'s a slightly underwhelming explanation from the creator, [here](https://news.ycombinator.com/item?id=24986908#24987826)'s a more amusing guess involving Santa. [Here](https://www.youtube.com/watch?v=VRwhNKoxUtk)'s a nice tutorial, but I will explain in detail the steps. First, you need to download the ZIP file containing the Dear ImGui code, [here](https://github.com/ocornut/imgui)'s the link to the repository. Next, you need to extract these files:
 
   ```bash
   imgui-master/
@@ -2022,7 +2022,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   #endif
   ```
 
-  In order to keep the ImGui window in the same position relative to the viewport when the OpenGL is resized by the user I add this code to the ``framebuffer_size_callback()`` function:
+  In order to keep the Dear ImGui window in the same position relative to the viewport when the user resizes the OpenGL window I add this code to the ``framebuffer_size_callback()`` function:
 
   ```cpp
   #if IMGUI==1
@@ -2112,7 +2112,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   glReadPixels(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
   ```
 
-* One fix is to just render the viewport in the bottom left of the screen and not centre it when the OpenGL window gets resized. This doesn't mess up the ImGui window, the viewport, or the screen recording:
+* One fix is to just render the viewport in the bottom left of the screen and not centre it when the OpenGL window gets resized. This doesn't mess up the Dear ImGui window, the viewport, or the screen recording:
 
   ```cpp
   glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -2138,7 +2138,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
   glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
   ```
 
-* Another fix is to render the ImGui window to the default framebuffer rather than the non-MSAA FBO. This also doesn't mess up the ImGui window, the viewport, or the screen recording, and the viewport is centred, however, the ImGui window doesn't show up in the screen recording. One other benefit is that the ImGui window can be dragged outside of the viewport and doesn't disappear unlike the previous fix, as it is not rendered onto the FBO:
+* Another fix is to render the Dear ImGui window to the default framebuffer rather than the non-MSAA FBO. This also doesn't mess up the Dear ImGui window, the viewport, or the screen recording, and the viewport is centred, however, the Dear ImGui window doesn't show up in the screen recording. One other benefit is that the Dear ImGui window can be dragged outside of the viewport and doesn't disappear unlike the previous fix, as it is not rendered onto the FBO:
 
   ```cpp
   glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -2170,7 +2170,7 @@ Distance Fields" _Czech Technical University in Prague_, 5 May 2015, [github.com
 
 https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
 
-## Progress update 9 - Lighting - 30/01/25
+## Progress update 9 - Improving screen recording using FFmpeg API - 30/01/25
 
 * Before getting into the **Lighting** chapter, I finally fixed a major bug in my screen recording implementation. When encoding a video using FFmpeg, you have to decide on a framerate, I went with 60fps, what this meant though was all the encoded frames would be separated by 1/60th of a second, when in reality the framerate is variable and can drop when the program lags. When the FPS was lower than 60, the recording would speed up, as frames that should be further apart were being brought closer together in time, and vice versa when the FPS was higher than 60. My fix as of now was to just use V-Sync to cap the FPS at 60 and hope the FPS didn't drop too low.
 
@@ -2193,6 +2193,8 @@ https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
   And here is the result when adding that one line of code, the recording matches the on-screen program exactly and no drop in performance:
 
   https://github.com/user-attachments/assets/4f44bb9a-8c7f-45c6-80d5-dbf90b83d570
+
+* This works and the code is very minimal, but I felt like the performance could be improved. <!-- Talk about how when calling ffmpeg.exe it's a I/O bottleneck etc. and talk about the stack overflow post that used the FFmpeg API -->
 
 
   
