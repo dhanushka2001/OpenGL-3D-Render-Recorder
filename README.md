@@ -2194,7 +2194,18 @@ https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
 
   https://github.com/user-attachments/assets/4f44bb9a-8c7f-45c6-80d5-dbf90b83d570
 
-* This works and the code is very minimal, but I felt like the performance could be improved. <!-- Talk about how when calling ffmpeg.exe it's a I/O bottleneck etc. and talk about the stack overflow post that used the FFmpeg API -->
+* This works and the code is very minimal, but I felt like the performance could be improved. Remembering from much earlier I mentioned a Stack Overflow post that outlined a method for screen recording using "``libavcodec`` and ``libavformat``, [...] the libraries upon which ``ffmpeg`` is actually built"[^73] rather than using the FFmpeg command-line. I decided to try use the FFmpeg API, which is much more verbose and requires more library linking...
+* I found this [blog](https://friendlyuser.github.io/posts/tech/cpp/Using_FFmpeg_in_C++_A_Comprehensive_Guide)[^74] which has a guide on using the FFmpeg API, although this didn't really help much either as the API is just so verbose and at the end of the day it's just more boilerplate code. I ended up using ChatGPT again as there really aren't many easy-to-understand guides online.
+
+ [^73]: Andon M. Coleman. "Saving the openGL context as a video output" _Stack Overflow_, 28 Sep. 2013, [stackoverflow.com/a/19071087/7875204](https://stackoverflow.com/a/19071087/7875204).  
+
+ [^74]: David Li. "Using FFmpeg in C++ A Comprehensive Guide" _friendlyuser.github.io_, 3 May 2023, [friendlyuser.github.io/posts/tech/cpp/Using_FFmpeg_in_C++_A_Comprehensive_Guide](https://friendlyuser.github.io/posts/tech/cpp/Using_FFmpeg_in_C++_A_Comprehensive_Guide).
+
+<!-- Talk about downloading FFmpeg from github etc.
+
+
+
+  <!-- Talk about how when calling ffmpeg.exe it's a I/O bottleneck etc. and talk about the stack overflow post that used the FFmpeg API -->
 
 
   
