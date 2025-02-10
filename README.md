@@ -2211,6 +2211,9 @@ https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
     ```shell
     pacman -Syu
     ```
+
+  * Install GNU Make
+    
     ```shell
     pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-make
     ```
@@ -2222,6 +2225,12 @@ https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
     ```
     ```shell
     nasm --version
+    ```
+
+  * Install ``libiconv`` in MSYS2
+
+    ```shell
+    pacman -S mingw-w64-x86_64-libiconv
     ```
      
   * Navigate to the extracted FFmpeg folder (replace ``path-to-ffmpeg`` with the actual path)
@@ -2264,15 +2273,19 @@ https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
     * ``--cc=x86_64-w64-mingw32-gcc \ --cxx=x86_64-w64-mingw32-g++`` → Manually Set the Compiler 
 
 * Step 3: Compile FFmpeg
-  * Once configured, compile FFmpeg:
+  * Once configured, build FFmpeg using GNU Make (each command may take a while to complete):
 
     ```shell
     make clean
+    ```
+    ```shell
     make -j$(nproc)
+    ```
+    ```shell
     make install
     ```
 
-  * Each command may take a while to complete. After compilation, you should find the ``.a`` static libraries in ``C:/ffmpeg-build/lib/``:
+  * After compilation, you should find the ``.a`` static libraries in ``C:/ffmpeg-build/lib/``:
     * ``libavcodec.a``
     * ``livavdevice.a``
     * ``libavfilter.a``
@@ -2283,7 +2296,7 @@ https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
 
 * Step 4: Move Required FFmpeg Files to Your Project
   * Copy the entire FFmpeg ``include/`` directory to your project's ``include/`` folder: ``C:\ffmpeg-build\include\``  →  ``C:\YourProject\include\``
-  * Copy the ``.a`` static library files from FFmpeg's ``lib/`` folder to your project's ``lib/`` directory: ``C:\ffmpeg-build\lib\``  →  ``C:\YourProject\lib\``
+  * Copy all the ``.a`` static library files from FFmpeg's ``lib/`` folder to your project's ``lib/`` directory: ``C:\ffmpeg-build\lib\``  →  ``C:\YourProject\lib\``
 
   
 * Step 5: Link FFmpeg Statically in Your C++ Project
@@ -2292,26 +2305,23 @@ https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
     ```cpp
     "-lavformat",   // order matters! (libavformat depends on libavcodec so linker needs to resolve symbols from libavformat before libavcodec is processed)
     "-lavcodec",
-    "-lavutil",
+    "-lavutil",       // FFmpeg Internal Functions
     "-lswscale",
     "-lswresample",
     "-static",        // Forces static linking (no dependency on shared libraries).
     "-pthread",       // Links the POSIX threading library for multithreading. FFmpeg may use threads internally.
     "-lm",            // Links the math library (libm.a) for mathematical functions (e.g., pow(), sqrt()).
     "-lws2_32",       // Links Windows Sockets 2 library (ws2_32.dll). Required for network functionality in FFmpeg. (We can remove this since we disabled networking)
-    "-liconv",
-    "-llzma",
-    "-lole32",
-    "-lbcrypt",
-    "-luuid",
+    "-liconv",        // libiconv (iconv)
+    "-llzma",         // liblzma (lzma)
+    "-lole32",        // libole32 (ole32 Windows COM Libraries)
+    "-lbcrypt",       // Windows Cryptography
+    "-luuid",         // Windows COM API
     "-lstrmiids",
     ```
 
   
 
-
-
-<!-- Talk about downloading FFmpeg from github etc.
 
 
 
