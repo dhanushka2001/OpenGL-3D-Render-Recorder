@@ -2195,11 +2195,121 @@ https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
   https://github.com/user-attachments/assets/4f44bb9a-8c7f-45c6-80d5-dbf90b83d570
 
 * This works and the code is very minimal, but I felt like the performance could be improved. Remembering from much earlier I mentioned a Stack Overflow post that outlined a method for screen recording using "``libavcodec`` and ``libavformat``, [...] the libraries upon which ``ffmpeg`` is actually built"[^73] rather than using the FFmpeg command-line. I decided to try use the FFmpeg API, which is much more verbose and requires more library linking...
-* I found this [blog](https://friendlyuser.github.io/posts/tech/cpp/Using_FFmpeg_in_C++_A_Comprehensive_Guide)[^74] which has a guide on using the FFmpeg API, although this didn't really help much either as the API is just so verbose and at the end of the day it's just more boilerplate code. I ended up using ChatGPT again as there really aren't many easy-to-understand guides online.
+* I found this [blog](https://friendlyuser.github.io/posts/tech/cpp/Using_FFmpeg_in_C++_A_Comprehensive_Guide)[^74] which has a guide on using the FFmpeg API, although this didn't really help much either as the API is just so verbose and at the end of the day it's just more boilerplate code. I ended up using ChatGPT again as there really aren't any easy-to-understand guides online.
 
  [^73]: Andon M. Coleman. "Saving the openGL context as a video output" _Stack Overflow_, 28 Sep. 2013, [stackoverflow.com/a/19071087/7875204](https://stackoverflow.com/a/19071087/7875204).  
 
  [^74]: David Li. "Using FFmpeg in C++ A Comprehensive Guide" _friendlyuser.github.io_, 3 May 2023, [friendlyuser.github.io/posts/tech/cpp/Using_FFmpeg_in_C++_A_Comprehensive_Guide](https://friendlyuser.github.io/posts/tech/cpp/Using_FFmpeg_in_C++_A_Comprehensive_Guide).
+
+* Step 1: Download FFmpeg Source Code
+  * Download the source from: https://github.com/FFmpeg/FFmpeg by clicking on ``Download ZIP``.
+  * Or from: https://ffmpeg.org/download.html
+  * Then extract the archive
+* Step 2: Configure FFmpeg for Static Compilation
+  * Update packages
+
+    ```shell
+    pacman -Syu
+    ```
+    ```shell
+    pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-make
+    ```
+
+  * FFmpeg requires NASM (Netwide Assembler) to compile hand-optimized assembly code for x86. Install NASM and verify installation:
+
+    ```shell
+    pacman -S mingw-w64-x86_64-nasm
+    ```
+    ```shell
+    nasm --version
+    ```
+     
+  * Navigate to the extracted FFmpeg folder (replace ``path-to-ffmpeg`` with the actual path)
+
+    ```shell
+    cd C:/path-to-ffmpeg
+    ```
+
+  * Run the following command:
+ 
+    ```shell
+    ./configure \
+        --arch=x86_64 \
+        --target-os=mingw32 \
+        --prefix=/c/ffmpeg-build \
+        --disable-shared \
+        --enable-static \
+        --disable-debug \
+        --disable-doc \
+        --disable-ffplay \
+        --disable-ffprobe \
+        --disable-ffmpeg \
+        --disable-network \
+        --enable-small \
+        --enable-avdevice \
+        --cc=x86_64-w64-mingw32-gcc \
+        --cxx=x86_64-w64-mingw32-g++ \
+        --pkg-config=pkg-config \
+        --extra-cflags="-fvisibility=default" \
+        --extra-libs="-liconv -llzma -lole32 -luuid -lbcrypt"
+    ```
+
+    Explanation of flags:
+    
+    * ``--enable-static`` → Builds static .a libraries.
+    * ``--disable-shared`` → Disables dynamic .dll libraries.
+    * ``--prefix=/c/ffmpeg-build`` → Where FFmpeg will be compiled after building.
+    * ``--disable-ffplay / --disable-ffprobe / --disable-ffmpeg`` → Avoid building unnecessary programs.
+    * ``--enable-small`` → Optimized build.
+    * ``--cc=x86_64-w64-mingw32-gcc \ --cxx=x86_64-w64-mingw32-g++`` → Manually Set the Compiler 
+
+* Step 3: Compile FFmpeg
+  * Once configured, compile FFmpeg:
+
+    ```shell
+    make clean
+    make -j$(nproc)
+    make install
+    ```
+
+  * Each command may take a while to complete. After compilation, you should find the ``.a`` static libraries in ``C:/ffmpeg-build/lib/``:
+    * ``libavcodec.a``
+    * ``livavdevice.a``
+    * ``libavfilter.a``
+    * ``libavformat.a``
+    * ``libavutil.a``
+    * ``libswresample.a``
+    * ``libswscale.a``
+
+* Step 4: Move Required FFmpeg Files to Your Project
+  * Copy the entire FFmpeg ``include/`` directory to your project's ``include/`` folder: ``C:\ffmpeg-build\include\``  →  ``C:\YourProject\include\``
+  * Copy the ``.a`` static library files from FFmpeg's ``lib/`` folder to your project's ``lib/`` directory: ``C:\ffmpeg-build\lib\``  →  ``C:\YourProject\lib\``
+
+  
+* Step 5: Link FFmpeg Statically in Your C++ Project
+  * Add these linker flags to ``tasks.json``'s ``args``:
+
+    ```cpp
+    "-lavformat",   // order matters! (libavformat depends on libavcodec so linker needs to resolve symbols from libavformat before libavcodec is processed)
+    "-lavcodec",
+    "-lavutil",
+    "-lswscale",
+    "-lswresample",
+    "-static",        // Forces static linking (no dependency on shared libraries).
+    "-pthread",       // Links the POSIX threading library for multithreading. FFmpeg may use threads internally.
+    "-lm",            // Links the math library (libm.a) for mathematical functions (e.g., pow(), sqrt()).
+    "-lws2_32",       // Links Windows Sockets 2 library (ws2_32.dll). Required for network functionality in FFmpeg. (We can remove this since we disabled networking)
+    "-liconv",
+    "-llzma",
+    "-lole32",
+    "-lbcrypt",
+    "-luuid",
+    "-lstrmiids",
+    ```
+
+  
+
+
 
 <!-- Talk about downloading FFmpeg from github etc.
 
