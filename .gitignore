@@ -1,0 +1,5 @@
+# Ignore all build artifacts
+/build/
+
+# Ignore ImGui artifacts
+**/imgui.ini

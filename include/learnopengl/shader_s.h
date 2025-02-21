@@ -29,9 +29,9 @@ public:
         fShaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
         try 
         {
-            // open files
-            vShaderFile.open(vertexPath);
-            fShaderFile.open(fragmentPath);
+            // open files (find the shaders folder relative to the build folder)
+            vShaderFile.open(std::string("../shaders/") + vertexPath);
+            fShaderFile.open(std::string("../shaders/") + fragmentPath);
             std::stringstream vShaderStream, fShaderStream;
             // read file's buffer contents into streams
             vShaderStream << vShaderFile.rdbuf();
@@ -73,7 +73,7 @@ public:
     }
     // Activates the Shader Program
     // ------------------------------------------------------------------------
-    void Activate() 
+    void use() 
     { 
         glUseProgram(ID); 
     }

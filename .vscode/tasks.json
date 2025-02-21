@@ -4,33 +4,51 @@
             "type": "cppbuild",
             "label": "C/C++: gcc.exe build active file",
             "command": "C:\\msys64\\mingw64\\bin\\g++.exe",
+            // https://caiorss.github.io/C-Cpp-Notes/compiler-flags-options.html
             "args": [
-                "-g",
+                "-g",                                       // Generates debugging information.
                 "${workspaceFolder}/src/main.cpp",
                 "${workspaceFolder}/src/glad.c",
-                "-Wall",
+                "-Wall",                                    // Enables all the common warnings, helping you identify potential issues in your code.
+                "-O2",                                      // Enables a good level of optimization without increasing the instruction cache footprint excessively.
                 "-std=c++17",
                 "-I${workspaceFolder}/include",
                 "-I${workspaceFolder}/include/freetype2",
-                "-I${workspaceFolder}/include/brotli",
-                "-I${workspaceFolder}/include/graphite2",
-                "-I${workspaceFolder}/include/harfbuzz",
-                "-L${workspaceFolder}/lib",
-                // "-lglfw3dll",
-                "-lglfw3",
-                "-lfreetype",
-                "-lharfbuzz",
-                "-lgraphite2",
-                "-lpng",
-                "-lz",
-                "-lbz2",
-                "-lbrotlidec",
-                "-lbrotlienc",
-                "-lbrotlicommon",
-                "-lrpcrt4",
-                "-lgdi32",
-                "-o",
-                "${workspaceFolder}/src/myprogram.exe"
+                "-L${workspaceFolder}/lib/GLFW",
+                "-L${workspaceFolder}/lib/ffmpeg",
+                "-L${workspaceFolder}/lib/freetype",
+                "-L${workspaceFolder}/lib/imgui",
+                "-limgui",                                  // ImGui library
+                "-lavformat",                               // FFmpeg libavformat (order matters! libavformat depends on libavcodec so linker needs to resolve symbols from libavformat before libavcodec is processed)
+                "-lavcodec",                                // FFmpeg libavcodec
+                "-lavutil",                                 // FFmpeg libavutil (FFmpeg Internal Functions)
+                "-lswscale",                                // FFmpeg libswscale
+                "-lswresample",                             // FFmpeg libswresample
+                "-static",                                  // Forces static linking
+                "-pthread",                                 // POSIX threading library for multithreading
+                "-lm",                                      // libm math library (FFmpeg uses math operations)
+                "-lws2_32",                                 // Windows Sockets 2 library (required for network functionality in FFmpeg)
+                "-liconv",                                  // libiconv library
+                "-llzma",                                   // liblzma library
+                "-lole32",                                  // Windows COM Libraries
+                "-lbcrypt",                                 // libbcrypt library (Windows Cryptography)
+                "-luuid",                                   // IID_ICodecAPI (Windows COM API)
+                "-lstrmiids",                               // IID_ICodecAPI (Windows COM API)
+                "-lglfw3",                                  // GLFW library
+                "-lfreetype",                               // FreeType library
+                "-lharfbuzz",                               // HarfBuzz library
+                "-lgraphite2",                              // Graphite2 library
+                "-lpng",                                    // libpng library
+                "-lz",                                      // zlib library
+                "-lbz2",                                    // libbz2 library
+                "-lbrotlidec",                              // Brotli library
+                "-lbrotlienc",                              // Brotli library
+                "-lbrotlicommon",                           // Brotli library
+                "-lrpcrt4",                                 // Windows RPC runtime library
+                "-lgdi32",                                  // Windows GDI (Graphics Device Interface) ("GLFW in turn depends on gdi32 and must be listed before it.": https://www.glfw.org/docs/3.3/build_guide.html)
+                "-lopengl32",                               // For V-Sync
+                "-o",                                       // Specify the name of the output executable file.
+                "${workspaceFolder}/build/myprogram.exe"
             ],
             "options": {
                 "cwd": "${fileDirname}"
