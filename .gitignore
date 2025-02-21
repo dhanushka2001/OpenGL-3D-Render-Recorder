@@ -1,0 +1,8 @@
+# Ignore all build artifacts
+/build/
+
+# Ignore output folder
+/output/
+
+# Ignore ImGui artifacts
+**/imgui.ini

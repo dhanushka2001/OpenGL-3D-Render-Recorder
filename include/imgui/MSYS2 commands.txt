@@ -1,0 +1,7 @@
+// Step 1: Compiling the Source Files ("-c": compiles the .cpp files into .o object files)
+// --------------------------------------------------------------------------------------
+g++ -c -std=c++17 -O2 -I/c/LearnOpenGL/include imgui.cpp imgui_draw.cpp imgui_widgets.cpp imgui_tables.cpp imgui_impl_opengl3.cpp imgui_impl_glfw.cpp
+
+// Step 2: Archiving Object Files into a Static Library ("ar": archives the object files into a library. "rcs": "r" inserts files into the archive; "c" creates the archive if it doesn't exist; "s" writes an index to the archive for faster linking. "libimgui.a": the name of the resulting static library)
+// ----------------------------------------------------------------------------------------------------------------------------------------------------
+ar rcs libimgui.a imgui.o imgui_draw.o imgui_widgets.o imgui_tables.o imgui_impl_opengl3.o imgui_impl_glfw.o
