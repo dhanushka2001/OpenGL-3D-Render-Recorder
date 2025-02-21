@@ -79,16 +79,18 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 * I feel like 3 fragment shaders, 3 VBOs, 3 VAOs, and 3 EBOs are overkill just to render 3 different colours for 3 sets of 2 triangles. There's probably a way to have all 6 triangles in one VBO with their colour attributes also included.
   This will probably be explained in the next chapters.
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/OpenGL_EBO.png" width=80%>
+  ![OpenGL_EBO](https://github.com/user-attachments/assets/80c63661-a410-4a59-b655-37b9d6629856)
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/learnopengl.png" width=49%>
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/learnopengl2.png" width=49%>
+  ![learnopengl](https://github.com/user-attachments/assets/a78223b7-9662-49d5-9329-c6b9733cc4b4)
+
+  ![learnopengl2](https://github.com/user-attachments/assets/658d3a26-cea8-4b47-9e1c-a6d4d3d27650)
+
 
 ## Progress update 2 - Shaders - 20/07/24
 * I understand the render pipeline for OpenGL and what all the shaders in the pipeline do.
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/OpenGL_graphics-shader-pipeline.png" width=80%>
-  
+  ![OpenGL_graphics-shader-pipeline](https://github.com/user-attachments/assets/9030f814-770a-4185-b193-948204d5b5fb)
+
 * Gave each vertex a colour attribute as well as a position attribute, so instead of having 3 VBOs, 3 VAOs, and 3 EBOs, we just have 1 of each and 2 vertex attributes. One for each object makes sense (I assume when we get to rendering 1000s of identical objects we will encounter "instancing").
 * Removed the vertex shader and fragment shader GLSL code from the main.cpp file and put them into separate ``shader.vert`` and ``shader.frag`` text files (I recommend installing a GLSL syntax highlighter extension).
 * Made a shader class and header file that can handle retrieving source code; compiling, linking, deleting, and activating shaders; defining utility functions; and handling errors.
@@ -102,27 +104,24 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
 * This rainbow triangle was done by storing a red, green, and blue colour value as a second vertex attribute for each of the 3 vertices. "Fragment interpolation" occurs, where a linear combination of the colours is used for all the fragments (can think of them as pixels) between the 3 vertices.
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/rainbow-shader.png" width=50%>
+  ![rainbow-shader](https://github.com/user-attachments/assets/55060b30-221c-4074-a7fc-3fae7eac14cf)
+
 
 * This flipped offset gradient colour triangle was done by setting an offset float variable in the ``main.cpp`` file, then setting it as a uniform in the render loop using the utility uniform functions created in the shader header file. The weird colours were done by defining the ``FragColor`` to be the positions of the 3 vertices rather than the colour (Exercise 3), and fragment interpolation causes the gradient effect. (One thing to note is that if you input a negative float into one of the RGB channels it will be clamped to 0.0f (black)).
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/rainbow-shader2.png" width=50%>
+  ![rainbow-shader2](https://github.com/user-attachments/assets/0d31a4d3-1974-40c2-8a77-805ab5110d83)
 
 ## Progress update 3 - Textures - 22/08/24
 * I now understand how textures work, and I was able to render this rectangle with a crate PNG texture with an RGB overlay and the "Awesome face" PNG. I still need to do the exercises.
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/textures.png" width=50%>
+  ![textures](https://github.com/user-attachments/assets/7b44f9ef-dfd1-4c75-83a5-1d4279429f0c)
 
 * Alongside learning how to use textures, I wanted to do a mini-project rendering a rotating animated RGB triangle and learning how to render off-screen frames as images to memory rather than to a window on-screen.
 * The texture section introduced me to the [stb](https://github.com/nothings/stb) repo by Sean Barrett, in particular the ``stb_image.h`` header, a single header image loading library used to load an image into a texture; and the ``stb_image_write.h`` header, used for image writing from OpenGL to disk (PNG).
 * In order to make the triangle spin I used the standard 2D [rotation matrix](https://en.wikipedia.org/wiki/Rotation_matrix).
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl-rotation-matrix.png" width=100%>
-  <!--
-  &nbsp;&nbsp;
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl2.png" width=53%>
-  -->
-  
+  ![opengl-rotation-matrix](https://github.com/user-attachments/assets/139fdad8-0540-44e4-ad01-f3da638340f9)
+
   ```cpp
   // set up vertex data (and buffer(s)) and configure vertex attributes
   // ------------------------------------------------------------------
@@ -140,12 +139,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
 * In order to make the colours inside the triangle spin I used the [Sinebow](https://basecase.org/env/on-rainbows) over the HSV function as it has no branches making it faster for GPGPUs.[^22]
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/HSV-vs-Sinebow.png" width=40%>
-
-  <!--
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl3.1.png" width=48%>
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl4.1.png" width=45%>
-  -->
+  ![HSV-vs-Sinebow](https://github.com/user-attachments/assets/a6292e62-082b-457b-980b-2303232562f0)
 
   ```cpp
   float redValue(float T)
@@ -212,14 +206,14 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   
 * In order to implement off-screen rendering I initially found [this blog post](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/) which worked fine but I felt like the rendering could be done faster which led me to a [few posts](https://stackoverflow.com/a/25127895) from Stack Overflow that said to use [PBOs (pixel buffer objects)](https://www.khronos.org/opengl/wiki/Pixel_Buffer_Object), which allow for [asynchronous readback](https://www.songho.ca/opengl/gl_pbo.html#pack), which means rendering to system memory later rather than as soon as possible in the hopes of it being faster. Unfortunately, I found PBOs to not make any difference in performance, which led me to discover FBOs (framebuffer objects) which are essentially a non-default [framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer) (unlike the FRONT and BACK buffers which are) that allows you to do proper off-screen rendering to a memory buffer instead of the default screen buffers[^20] (OpenGL forces a window to be loaded on-screen, but with FBOs it will be black and you can just hide the screen (but don't minimize!), Vulkan is designed to support off-screen rendering better than OpenGL[^21] but is more verbose[^12] and thus harder to learn (maybe in the future...)). FBOs are optimized for data to be read back to the CPU, while the default buffers are made to stay on the GPU and display pixels on-screen.[^21]
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/opengl5.3.png" width=80%>
-  
+  ![opengl5 3](https://github.com/user-attachments/assets/14549a3d-faf1-4c0f-aed8-77dca57257f1)
+
 * Learning about FBOs naturally led me to learn about [RBOs (renderbuffer objects)](https://www.khronos.org/opengl/wiki/Renderbuffer_Object) which are specifically used by FBOs as a render target. Textures can alternatively be used if you want to re-use the pixels on-screen (e.g. a naive "security camera" in a game)[^20] or sample the pixels for post-processing,[^24] however since we just want to read-back the pixels and render off-screen, RBOs are the logical choice.
 * I have decided to keep the code with the PBO as even though it doesn't make any performative difference and just adds more lines of code, I may need them in the future. I ended up using 2 PBOs, while one has pixel data from the FBO written into it, the other is being mapped for reading. This has no performative benefit to just reading and writing to system memory from the FBO directly on every cycle since on every cycle I am still invoking ``glReadPixels`` which stalls the pipeline "because it has to safely map the data from the read buffer to the PBO and to a block of memory in main RAM", and I am mapping the other PBO which also stalls the pipeline until the pixel data has been converted to a png and saved to system memory.[^20]
 * I have tried to implement multiple PBOs to delay the writing to system memory step till every n<sup>th</sup> cycle, however, it doesn't seem to work properly. For some reason after every every n<sup>th</sup> cycle the rendered frames jump ahead, seemingly skipping multiple frames, is mapping the data not stalling the pipeline?
 * Implemented [off-screen MSAA](https://learnopengl.com/Advanced-OpenGL/Anti-Aliasing) (multisample anti-aliasing) which is an advanced topic but I skipped ahead. Needed to use 2 FBOs now since MSAA requires one to be multisample storage and the other to be a normal FBO to downsample the result to a single-sample image using glBlitFramebuffer(), as we cannot directly use the result from MSAA FBO (see: https://www.songho.ca/opengl/gl_fbo.html#msaa). Also required creating a depthbuffer alongside the colorbuffer for the MSAA FBO.
 
-  <img src="https://github.com/dhanushka2001/LearnOpenGL/blob/main/images/gl_fbo04.png" width=50%>
+  ![gl_fbo04](https://github.com/user-attachments/assets/05ef80e9-9876-4693-93b9-4d63282c269f)
 
 * The video below was rendered using the FFmpeg command below after running off-screen rendering for around 1 minute, converting 300 frames to a 10s video at 30fps. In the future, I'd like to make it so that the program feeds the frames into ffmpeg and continually builds the video at runtime rather than generating losslessly compressed frames which is costly for memory, especially for longer videos. For reference, the 300 frames total 35.3MB while the video rendered using those frames is just 856KB, ~40x less memory used.                                               
 
@@ -230,18 +224,6 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   https://github.com/user-attachments/assets/66e9a3a9-d633-4e1d-adf6-1e6356896643
 
 * The triangle isn't cycling through the Sinebow properly so it isn't true RGB, I'm not sure why yet, however, I prefer the colour scheme it's cycling through so I just kept it.
-
-  <!-- ADD BIBLIOGRAPHY -->
-  <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
-  <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
-
-<!--
-1. [How to render offscreen on OpenGL?](https://stackoverflow.com/a/12159293)
-2. [How to use GLUT/OpenGL to render to a file?](https://stackoverflow.com/a/14324292) 
-3. [On rainbows by Charlie Loyd](https://basecase.org/env/on-rainbows)
-4. [Save the OpenGL rendering to an image file - Lencerfs Walk](https://lencerf.github.io/post/2019-09-21-save-the-opengl-rendering-to-image-file/)
-5. [Transitioning from OpenGL to Vulkan- NVIDIA](https://developer.nvidia.com/transitioning-opengl-vulkan)
--->
 
 [^20]: KillianDS. "How to render offscreen on OpenGL?" _Stack Overflow_, 28 Aug. 2012, [stackoverflow.com/a/12159293](https://stackoverflow.com/a/12159293).
 [^21]: Ciro Santilli OurBigBook.com. "How to use GLUT/OpenGL to render to a file?" _Stack Overflow_, 14 Jan. 2013, [stackoverflow.com/a/14324292](https://stackoverflow.com/a/14324292).
@@ -378,17 +360,12 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   I am still blown away by how quickly the encoded video is rendered, basically instantly after the program terminates, the max runtime I've tried is 1 minute, maybe I should try rendering for longer, but I don't think it would be any less fast since FFmpeg is encoding the video frame by frame every cycle in the render loop. This could also just be due to the scene not being very intensive. The on-screen and off-screen renders match basically exactly, now I can do whatever I want, my first goal is to do some fractal rendering, continue the LearnOpenGL sections, and once I've learnt about instancing, try to implement the Saturn's rings code in OpenGL.
 
 * I also changed from using a C++ vector to using an array to store the frame (pixel) data, as this seems better suited to the job as the frame data is of a fixed size, and an array uses the heap rather than the stack making it faster.
+  
   ```cpp
   // Frame buffer to hold the raw frame data (RGB)
   // std::vector<unsigned char> frame(SCR_WIDTH * SCR_HEIGHT * 3);
   std::array<unsigned char, SCR_WIDTH * SCR_HEIGHT * 3> frame;
   ```
-
-<!--
-19. [OpenGL rendering from FBO to screen?](https://stackoverflow.com/a/10400048)
-20. [OpenGL - Is there an easier way to fill window with a texture, instead using VBO,etc?](https://stackoverflow.com/a/31487085) 
-21. [OpenGL Frame Buffer Object (FBO) - Example: Render To Texture - Songho](http://www.songho.ca/opengl/gl_fbo.html#example)
--->
 
 [^25]: genpfault. "OpenGL rendering from FBO to screen" _Stack Overflow_, 1 May 2012, [stackoverflow.com/a/10400048](https://stackoverflow.com/a/10400048).
 [^26]: Reto Koradi. "OpenGL - Is there an easier way to fill window with a texture, instead using VBO,etc?" _Stack Overflow_, 18 July 2015, [stackoverflow.com/a/31487085](https://stackoverflow.com/a/31487085).
@@ -396,6 +373,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
 ## Progress update 6 - Text rendering - 29/11/24
 * I wanted to be able to render text on-screen, to display the FPS for example. Rendering text in OpenGL is surprisingly non-trivial, a quick and easy way to see the FPS is to display it on the title of the window.
+
   ```cpp
   // FPS Counter: https://www.youtube.com/watch?v=BA6aR_5C_BM
   newTime = glfwGetTime();
