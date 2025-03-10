@@ -926,13 +926,17 @@ int main()
             // glfwGetWindowSize(window, &width, &height);
             // ImGui::SetNextWindowSize(ImVec2(width, height)); // ensures ImGui fits the GLFW window
             // ImGui::SetNextWindowPos(ImVec2(lowerLeftCornerOfViewportX, 100+lowerLeftCornerOfViewportY), ImGuiCond_);//, ImGuiCond_FirstUseEver);
-            // ImGui::Begin("My name is window, ImGUI window");
-            // ImGui::Text("Hello there adventurer!");
+            
+            ImGui::Begin("My name is window, ImGUI window");
+            ImGui::Text("Hello there adventurer!");
+            ImGui::End();
+            
             // Show the ImPlot demo window
             if (ImGui::Begin("ImPlot Demo")) {
                 ImPlot::ShowDemoWindow();
             }
             ImGui::End();
+            
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             #endif
