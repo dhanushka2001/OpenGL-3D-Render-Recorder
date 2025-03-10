@@ -3,6 +3,9 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
+//ImPlot
+#include <implot/implot.h>
+//------
 // FFmpeg
 // ------
 extern "C" {
@@ -25,6 +28,7 @@ extern "C" {
 #include <wglext.h>                 // For V-Sync
 #include <learnopengl/shader_s.h>   // Shader class
 #include <learnopengl/camera.h>     // Camera class
+#include <learnopengl/text.h>       // Text class
 #include <iostream>
 #include <filesystem>               // for std::filesystem
 #include <iomanip>                  // for std::precision(3)              
@@ -56,46 +60,30 @@ void processInput(GLFWwindow *window);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void startFFmpeg();
-void appendBuffer(unsigned char *frame, unsigned char *frameBuffer, unsigned int frameCount);
-void sendBlockBufferToFFmpeg(unsigned char* frameBuffer, int N);
-void sendFrameBufferToFFmpeg(unsigned char *frame, unsigned int bufferSize);
-void stopFFmpeg();
-void flipFrameVertically(unsigned char* frame);
-bool loadFont(FT_UInt &fontsize);
-void createTextureAtlas();
-void RenderText(Shader &textShader, const std::string &text, float x, float y, float scale, glm::vec3 color);
 std::string GetFPSText(float fps, float ms);
 void UpdateFPS(float crntTime);
 bool WGLExtensionSupported(const char *extension_name);
-void RenderAtlas(Shader &atlasShader, GLuint &atlasTexture);
 void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture);
 void RenderCrate(Shader &ourShader, glm::vec3 &trans);
-void custom_ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list args);
+// FFmpeg
+void flipFrameVertically(unsigned char* frame);
 bool initializeEncoder(const char* filename);
 bool encodeFrame(const uint8_t* rgbData);
 void finalizeEncoder();
 
-struct Glyph {
-    float textureX, textureY;  // Texture coordinates in the atlas
-    float width, height;       // Glyph's width and height
-    float offsetX, offsetY;    // Offsets (for positioning)
-    unsigned int advanceX;     // Horizontal advance (for spacing)
-};
-
 // settings
 // --------
-const unsigned int  SCR_WIDTH       = 800;//2560;  // 800;
-const unsigned int  SCR_HEIGHT      = 600;//1440;  // 600;
+const unsigned int  SCR_WIDTH       = 1920;//2560;  // 800;
+const unsigned int  SCR_HEIGHT      = 1080;//1440;  // 600;
 const unsigned int  CHANNEL_COUNT   =  3;
 const unsigned int  DATA_SIZE       = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
 const unsigned int  PBO_COUNT       =  2;
 const unsigned int  msaa            =  4;    // | 0 = no anti-aliasing | 4 = 4xMSAA |
 const bool          recording       =  1;
-bool                fullscreen      =  0;
+bool                fullscreen      =  1;
 bool                pbo             =  1;
 bool                paused          =  0;
-const int           vsync           = -1;   // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
+const int           vsync           =  0;   // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
 unsigned int        framerate       = 60;
 #define             RENDER_3D           1   // make sure to change in the shaders too
 #define             RENDER_EBO          0   // only matters when RENDER_3D=1
@@ -115,11 +103,11 @@ GLuint fboTexture;
 
 // textures
 // --------
-GLuint textureAtlasID;
+// GLuint textureAtlasID;
 GLuint crateTexture, awesomeTexture;
 // Initialize atlas dimensions
-const unsigned int atlasWidth   = 512;
-const unsigned int atlasHeight  = 512;
+// const unsigned int atlasWidth   = 512;
+// const unsigned int atlasHeight  = 512;
 
 // uniform variables
 // -----------------
@@ -158,7 +146,7 @@ int window_xPos, window_yPos, window_width, window_height;
 
 // viewport
 // --------
-int lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY;
+int lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY = 0;
 
 // IMGUI
 // -----
@@ -172,8 +160,8 @@ AVStream* videoStream = nullptr;
 SwsContext* swsCtx = nullptr;
 AVFrame* frameX = nullptr;
 AVPacket pkt = {};  // Zero-initialize the struct
-std::ofstream logFile;
-std::mutex logMutex;
+// std::ofstream logFile;
+// std::mutex logMutex;
 
 
 // light source
@@ -205,14 +193,14 @@ FILE* ffmpeg;
 
 // "C:/WINDOWS/FONTS/ARIAL.TTF"
 // "C:/WINDOWS/FONTS/BKANT.TTF"
-const std::string fontFilepath = "C:/WINDOWS/FONTS/ARIAL.TTF";
-FT_Library ft;
-FT_Face face;
+const std::string fontFilepath = "C:/WINDOWS/FONTS/HARLOWSI.TTF";
+// FT_Library ft;
+// FT_Face face;
 
-std::map<char, Glyph> glyphs;          // Store info about each glyph
+// std::map<char, Glyph> glyphs;          // Store info about each glyph
 GLuint VAO, VBO, EBO;
-GLuint textVAO, textVBO;
-GLuint quadVAO, quadVBO;
+// GLuint textVAO, textVBO;
+// GLuint quadVAO, quadVBO;
 
 unsigned char* frame = NULL;
 unsigned char* frame_old = NULL;
@@ -668,8 +656,17 @@ int main()
         return 1;
     }
     FT_UInt fontsize = 48;
-    loadFont(fontsize);
-    createTextureAtlas();
+    // loadFont(fontsize);
+    // createTextureAtlas();
+
+    // Render FPS text at the top-left corner
+    float scale = static_cast<float>(SCR_WIDTH)*0.3f/800.0f;
+    // Position on the screen
+    float x = lowerLeftCornerOfViewportX;
+    float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontsize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
+    glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
+
+    Text FPS_Counter("ARIAL", fontsize, "test", x, y, scale);
 
     // build and compile our text shader program
     // -----------------------------------------
@@ -748,56 +745,6 @@ int main()
     // ------------
     Shader lightShader("light.vert", "light.frag");
     lightShader.use();
-    // float light_cube[] = {
-    //     // positions          // texture coords
-    //     // -Z face
-    //      0.5f, -0.5f, -0.5f,   // (+,-,-) 1
-    //     -0.5f, -0.5f, -0.5f,   // (-,-,-) 0
-    //      0.5f,  0.5f, -0.5f,   // (+,+,-) 2
-    //      0.5f,  0.5f, -0.5f,   // (+,+,-) 2
-    //     -0.5f,  0.5f, -0.5f,   // (-,+,-) 3
-    //     -0.5f, -0.5f, -0.5f,   // (-,-,-) 0
-
-    //     // +Z face
-    //     -0.5f, -0.5f,  0.5f,   // (-,-,+) 4
-    //      0.5f, -0.5f,  0.5f,   // (+,-,+) 5
-    //      0.5f,  0.5f,  0.5f,   // (+,+,+) 6
-    //      0.5f,  0.5f,  0.5f,   // (+,+,+) 6
-    //     -0.5f,  0.5f,  0.5f,   // (-,+,+) 7
-    //     -0.5f, -0.5f,  0.5f,   // (-,-,+) 4
-
-    //     // -X face
-    //     -0.5f,  0.5f,  0.5f,   // (-,+,+) 7
-    //     -0.5f,  0.5f, -0.5f,   // (-,+,-) 3
-    //     -0.5f, -0.5f, -0.5f,   // (-,-,-) 0
-    //     -0.5f, -0.5f, -0.5f,   // (-,-,-) 0
-    //     -0.5f, -0.5f,  0.5f,   // (-,-,+) 4
-    //     -0.5f,  0.5f,  0.5f,   // (-,+,+) 7
-
-    //     // +X face
-    //      0.5f,  0.5f,  0.5f,   // (+,+,+) 6
-    //      0.5f,  0.5f, -0.5f,   // (+,+,-) 2
-    //      0.5f, -0.5f, -0.5f,   // (+,-,-) 1
-    //      0.5f, -0.5f, -0.5f,   // (+,-,-) 1
-    //      0.5f, -0.5f,  0.5f,   // (+,-,+) 5
-    //      0.5f,  0.5f,  0.5f,   // (+,+,+) 6
-
-    //     // -Y face
-    //     -0.5f, -0.5f, -0.5f,   // (-,-,-) 0
-    //      0.5f, -0.5f, -0.5f,   // (+,-,-) 1
-    //      0.5f, -0.5f,  0.5f,   // (+,-,+) 5
-    //      0.5f, -0.5f,  0.5f,   // (+,-,+) 5
-    //     -0.5f, -0.5f,  0.5f,   // (-,-,+) 4
-    //     -0.5f, -0.5f, -0.5f,   // (-,-,-) 0
-
-    //     // +Y face
-    //     -0.5f,  0.5f, -0.5f,   // (-,+,-) 3
-    //      0.5f,  0.5f, -0.5f,   // (+,+,-) 2
-    //      0.5f,  0.5f,  0.5f,   // (+,+,+) 6
-    //      0.5f,  0.5f,  0.5f,   // (+,+,+) 6
-    //     -0.5f,  0.5f,  0.5f,   // (-,+,+) 7
-    //     -0.5f,  0.5f, -0.5f,   // (-,+,-) 3
-    // };
     unsigned int lightVAO;
     glGenVertexArrays(1, &lightVAO);
     glBindVertexArray(lightVAO);
@@ -812,19 +759,17 @@ int main()
     glEnableVertexAttribArray(1);
     model = glm::mat4(1.0f);
     model = glm::translate(model, lightPos);
-    model = glm::scale(model, glm::vec3(0.2f));
+    model = glm::scale(model, glm::vec3(0.2f)); // scale by 0.2
     lightShader.setMat4("model", model);
     lightShader.setMat4("view", view);
     lightShader.setMat4("projection", projection);
-    // // draw the light cube object
-    // glBindVertexArray(lightVAO);
-    // glDrawArrays(GL_TRIANGLES, 0, 36);
 
     // IMGUI
     // -----
     #if IMGUI==1
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -844,7 +789,6 @@ int main()
     
     glEnable(GL_BLEND); // enable transparency
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // bool test = 0;
 
     // render loop
     // -----------
@@ -854,15 +798,11 @@ int main()
         // -----
         processInput(window);
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-        // framebuffer_size_callback(window, SCR_WIDTH, SCR_HEIGHT);
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
             std::cerr << "OpenGL Error after glTexImage2D: " << error << std::endl;
             break;
         }
-        // else {
-        //     std::cerr << "no error" << std::endl;
-        // }
 
         // render
         // ------
@@ -873,11 +813,6 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
         // Set the clear color to the background color of choice
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // background color
-        // Clear the area within the scissor box, that is, the viewport
-        // glScissor(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, SCR_WIDTH, SCR_HEIGHT);
-        // glEnable(GL_SCISSOR_TEST);
-        // glClear(GL_COLOR_BUFFER_BIT);
-        // glDisable(GL_SCISSOR_TEST);
         
         // IMGUI
         // -----
@@ -920,12 +855,17 @@ int main()
         std::string fpsText = GetFPSText(fps, msPerFrame);
 
         // Render FPS text at the top-left corner
-        float scale = static_cast<float>(SCR_WIDTH)*0.3f/800.0f;
+        // float scale = static_cast<float>(SCR_WIDTH)*0.3f/800.0f;
         // Position on the screen
         float x = lowerLeftCornerOfViewportX;
         float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontsize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
-        glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
+        // glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
 
+        FPS_Counter.X = x;
+        FPS_Counter.Y = y;
+        FPS_Counter.Body = fpsText;
+
+        // recording ON
         if (recording)
         {
             // Step 1: Render the scene to the MSAA FBO
@@ -971,8 +911,8 @@ int main()
                                       GL_COLOR_BUFFER_BIT,           // buffer mask
                                                GL_LINEAR);           // scale filter
             
-            RenderText(textShader, fpsText, x, y, scale, color);
-            RenderAtlas(atlasShader, textureAtlasID);
+            FPS_Counter.RenderText(textShader, fpsText, x, y, scale, color);
+            FPS_Counter.RenderAtlas(atlasShader, textureAtlasID);
             
             // IMGUI (visible in screen recording, messes up when window is resized)
             // ---------------------------------------------------------------------
@@ -986,8 +926,12 @@ int main()
             // glfwGetWindowSize(window, &width, &height);
             // ImGui::SetNextWindowSize(ImVec2(width, height)); // ensures ImGui fits the GLFW window
             // ImGui::SetNextWindowPos(ImVec2(lowerLeftCornerOfViewportX, 100+lowerLeftCornerOfViewportY), ImGuiCond_);//, ImGuiCond_FirstUseEver);
-            ImGui::Begin("My name is window, ImGUI window");
-            ImGui::Text("Hello there adventurer!");
+            // ImGui::Begin("My name is window, ImGUI window");
+            // ImGui::Text("Hello there adventurer!");
+            // Show the ImPlot demo window
+            if (ImGui::Begin("ImPlot Demo")) {
+                ImPlot::ShowDemoWindow();
+            }
             ImGui::End();
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -1063,7 +1007,7 @@ int main()
             }
         }
         
-        // recording=0
+        // recording OFF
         else
         {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1094,7 +1038,7 @@ int main()
             // glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
             // render the crate
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             // static crate
             glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
             RenderCrate(ourShader, translatenew);
@@ -1103,10 +1047,21 @@ int main()
             glm::vec3 translate = glm::vec3(xOffset, yOffset, zOffset);
             RenderCrate(ourShader, translate);
 
+            // draw the light cube object
+            // also draw the lamp object
+            lightShader.use();
+            lightShader.setMat4("projection", projection);
+            view = camera.GetViewMatrix();
+            lightShader.setMat4("view", view);
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, lightPos);
+            model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
+            lightShader.setMat4("model", model);
+
             // Render text in front: https://stackoverflow.com/a/5527249
             // glClear(GL_DEPTH_BUFFER_BIT);
-            RenderText(textShader, fpsText, x, y, scale, color);
-            RenderAtlas(atlasShader, textureAtlasID);
+            FPS_Counter.RenderText(textShader, fpsText, x, y, scale, color);
+            FPS_Counter.RenderAtlas(atlasShader, textureAtlasID);
 
             // IMGUI
             // -----
@@ -1137,8 +1092,13 @@ int main()
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
     glDeleteVertexArrays(1, &VAO);
+    // glDeleteVertexArrays(1, &textVAO);
+    // glDeleteVertexArrays(1, &quadVAO);
     glDeleteVertexArrays(1, &lightVAO);
     glDeleteBuffers(1, &VBO);
+    // glDeleteBuffers(1, &textVBO);
+    // glDeleteBuffers(1, &quadVBO);
+    FPS_Counter.Delete();
     #if RENDER_EBO==1 || RENDER_3D==0
     glDeleteBuffers(1, &EBO);
     #endif
@@ -1177,6 +1137,7 @@ int main()
     #if IMGUI==1
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
     #endif
 
@@ -1474,53 +1435,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-// Function to start the ffmpeg process
-void startFFmpeg() {
-    // https://www.codesansar.com/c-programming/binary-file-modes.htm
-    char command[300];
-    sprintf(command, FFmpegCommand, SCR_WIDTH, SCR_HEIGHT, framerate);
-    ffmpeg = _popen(command, "wb");
-    // Annoyingly this error check won't catch if the FFmpeg command is written incorrectly. So double check it is!
-    if (!ffmpeg) {
-        std::cerr << "Error: Unable to open FFmpeg process." << std::endl;
-        exit(EXIT_FAILURE);
-    }
-}
-
-// Fill frame buffer with nth frame
-void appendBuffer(unsigned char* frame, unsigned char* frameBuffer, unsigned int frameCount)
-{
-    for (int i = 0; i < (int)(SCR_WIDTH * SCR_HEIGHT * 3); i++)
-    {
-        frameBuffer[(SCR_WIDTH * SCR_HEIGHT * 3) * frameCount + i] = frame[i];
-    }
-}
-
-// Fill block buffer with nth frame
-void sendBlockBufferToFFmpeg(unsigned char* frameBuffer, int N)
-{
-    int byte_sequence_length = SCR_WIDTH * SCR_HEIGHT * 3;
-    unsigned char* byte_sequence = frameBuffer;
-    int N_min = std::min(N, static_cast<int>(60 / 20));
-    for (int i=0; i < N_min; ++i)
-        memcpy(buffer + i*byte_sequence_length, byte_sequence, byte_sequence_length); 
-    fwrite(buffer, 3, SCR_WIDTH * SCR_HEIGHT * N_min, ffmpeg);  // Each pixel has 3 bytes (RGB)
-    std::cout << "old frame added. fps = " << 1 / timeDiff << " N = " << N_min << std::endl;
-}
-
-// Function to send a frame to ffmpeg
-void sendFrameBufferToFFmpeg(unsigned char* frameBuffer, unsigned int bufferSize) {
-    fwrite(frameBuffer, 3, SCR_WIDTH * SCR_HEIGHT * bufferSize, ffmpeg);  // Each pixel has 3 bytes (RGB)
-}
-
-// Function to stop the ffmpeg process
-void stopFFmpeg() {
-    if (ffmpeg) {
-        _pclose(ffmpeg);
-        ffmpeg = nullptr;
-    }
-}
-
 // Flip the frame vertically
 void flipFrameVertically(unsigned char* frame) {
     for (unsigned int y = 0; y < SCR_HEIGHT / 2; y++) {
@@ -1529,250 +1443,6 @@ void flipFrameVertically(unsigned char* frame) {
             std::swap(frame[y * SCR_WIDTH * 3 + x], frame[oppositeY * SCR_WIDTH * 3 + x]);
         }
     }
-}
-
-// Load the font face (you should have a valid file path to the font)
-bool loadFont(FT_UInt &fontsize) {
-    if (FT_Init_FreeType(&ft)) {
-        std::cerr << "Could not initialize FreeType Library" << std::endl;
-        return false;
-    }
-    if (FT_New_Face(ft, fontFilepath.c_str(), 0, &face)) {
-        std::cerr << "Failed to load font" << std::endl;
-        return false;
-    }
-    if (FT_Select_Charmap(face, FT_ENCODING_UNICODE)) {
-        std::cerr << "Failed to set Unicode character map." << std::endl;
-        return false;
-    }
-    // Set the pixel size for glyphs
-    if (FT_Set_Pixel_Sizes(face, 0, fontsize)) {
-        std::cerr << "ERROR::FREETYPE: Failed to set pixel size." << std::endl;
-        return false;
-    }
-    if (!face) {
-        std::cerr << "Failed to load the font face. Ensure the file path is correct." << std::endl;
-        return false;
-    }
-    else {
-        std::cout << "FreeType successfully loaded font!" << std::endl;
-        // disable byte-alignment restriction
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        return true;
-    }
-}
-
-// Create texture atlas with all the glyphs
-void createTextureAtlas() {
-    // Variables for positioning glyphs in the atlas
-    int offsetX         = 0;
-    int offsetY         = 0;
-    int rowHeight       = 0;
-    // Variables for calculating area used/wasted
-    int maxWidth        = 0;
-    int totalglyphArea  = 0;
-    int wastedArea      = 0;
-    int minWastedArea   = 0;
-
-    // int maxAscent, maxDescent = 0;
-    glyphs.clear();
-
-    // Create the texture atlas
-    glGenTextures(1, &textureAtlasID);
-    glBindTexture(GL_TEXTURE_2D, textureAtlasID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlasWidth, atlasHeight, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
-    
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR) {
-        std::cerr << "OpenGL Error after glTexImage2D: " << error << std::endl;
-        return;
-    }
-    // Set texture filtering and wrapping
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    // Iterate over all printable ASCII characters
-    for (unsigned char c = 32; c < 127; ++c) {
-        // std::cout << "Processing character: " << c << std::endl;
-        unsigned int glyphIndex = FT_Get_Char_Index(face, c);
-        if (glyphIndex == 0) {
-            std::cerr << "Character not found in font: " << c << " (" << static_cast<int>(c) << ")" << std::endl;
-            continue;
-        }
-        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
-            std::cerr << "Failed to load character: " << c << " (" << static_cast<int>(c) << ")" << std::endl;
-            continue;
-        }
-        FT_GlyphSlot g = face->glyph;
-        if (g->bitmap.buffer == nullptr || g->bitmap.width == 0 || g->bitmap.rows == 0) {
-            // std::cerr << "Warning: Glyph '" << c << "' has no valid bitmap data!" << std::endl;
-            // continue; // Skip this character (comment out to allow for spaces)
-        }
-        if (glyphs.find(c) != glyphs.end()) {
-            std::cerr << "Error: Character " << c << " already exists in glyph map!" << std::endl;
-            break;
-        }
-        // Check if character doesn't fit in the row
-        if (offsetX + g->bitmap.width >= atlasWidth) {
-            std::cerr << "REACHED ATLAS WIDTH LIMIT. STARTING NEW ROW. " << offsetX << " + " << g->bitmap.rows << " = " << offsetX + static_cast<int>(g->bitmap.width) << " >= " << atlasWidth << std::endl;
-            maxWidth = std::max(maxWidth, offsetX);
-            offsetX = 0;
-            offsetY += rowHeight;
-            rowHeight = 0;
-        }
-        // Check if character doesn't fit in the atlas
-        if (offsetY + g->bitmap.rows >= atlasHeight) {
-            std::cerr << "Texture atlas too small!" << std::endl;
-            break;
-        }
-
-        FT_Bitmap &bitmap = face->glyph->bitmap;
-        // Flip the bitmap vertically before uploading
-        std::vector<unsigned char> flippedBitmap(bitmap.width * bitmap.rows);
-        for (int y = 0; y < (int)bitmap.rows; ++y) {
-            std::memcpy(
-                &flippedBitmap[y * bitmap.width],
-                &bitmap.buffer[(bitmap.rows - 1 - y) * bitmap.width],
-                bitmap.width);
-        }
-
-        // Copy glyph bitmap to the atlas
-        glTexSubImage2D(GL_TEXTURE_2D, 0,
-                        offsetX, offsetY,
-                        g->bitmap.width, g->bitmap.rows,
-                        GL_RED, GL_UNSIGNED_BYTE, flippedBitmap.data()
-        );
-
-        // Store glyph information
-        glyphs[c] = Glyph{
-            static_cast<float>(offsetX) / (float)atlasWidth,        // TextureX
-            static_cast<float>(offsetY) / (float)atlasHeight,       // TextureY
-            static_cast<float>(g->bitmap.width),                    // width
-            static_cast<float>(g->bitmap.rows),                     // height
-            static_cast<float>(g->bitmap_left),                     // OffsetX
-            static_cast<float>(g->bitmap_top),                      // OffsetY
-            static_cast<unsigned int>(g->advance.x)                 // AdvanceX
-        };
-        // maxAscent = int(face->ascender * (face->size->metrics.y_scale / 65536.0)) >> 6;
-        // maxDescent = int(abs(face->descender * (face->size->metrics.y_scale / 65536.0))) >> 6;
-        totalglyphArea += static_cast<int>(g->bitmap.width) * static_cast<int>(g->bitmap.rows);
-        offsetX += g->bitmap.width;
-        rowHeight = std::max(rowHeight, static_cast<int>(g->bitmap.rows));
-
-        // std::cout << "Loaded character: " << c << " (" << static_cast<int>(c) << ")" << std::endl;
-    }
-    
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    wastedArea = atlasWidth * atlasHeight - totalglyphArea;
-    minWastedArea = wastedArea - (atlasHeight*(atlasWidth-maxWidth)) - (maxWidth*(atlasHeight-offsetY));
-    
-    std::cout << " | Texture atlas created: " << atlasWidth << "x" << atlasHeight
-              << " | Wasted area: " << wastedArea*100/(atlasWidth*atlasHeight) << "%"
-              << " | Minimum size: " << maxWidth << "x" << offsetY
-              << " | Minimum wasted area: " << minWastedArea*100/(maxWidth*offsetY) << "% |"
-              << std::endl;
-
-    // Format output in columns: https://stackoverflow.com/a/49295288
-    // for (const auto& [key, glyph] : glyphs) {
-    //     std::cout.precision(6);
-    //     std::cout << " | " << "Glyph: "                     << static_cast<char>(key)   << " | "
-    //                        << "TextureX: "  << std::setw(9) << glyph.textureX           << " | "
-    //                        << "TextureY: "  << std::setw(9) << glyph.textureY           << " | "
-    //                        << "Width: "     << std::setw(2) << glyph.width              << " | "
-    //                        << "Height: "    << std::setw(2) << glyph.height             << " | "
-    //                        << "OffsetX: "   << std::setw(2) << glyph.offsetX            << " | "
-    //                        << "OffsetY: "   << std::setw(2) << glyph.offsetY            << " | "
-    //                        << "AdvanceX: "  << std::setw(5) << glyph.advanceX           << " | "
-    //                        << std::endl;
-    // }
-}
-
-// Render text (this function is in the render loop)
-void RenderText(Shader &textShader, const std::string &text, float x, float y, float scale, glm::vec3 color) {
-    // Use your text rendering shader
-    textShader.use();
-    textShader.setVec3("textColor", color);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textureAtlasID);  // Bind the texture atlas
-    textShader.setInt("textTextureAtlas", 0);
-
-    // Enable 2D rendering
-    glEnable(GL_BLEND); // enable transparency
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // Set up the transformation matrix for the text position
-    glm::mat4 projection = glm::ortho(lowerLeftCornerOfViewportX + 0.0f, lowerLeftCornerOfViewportX + static_cast<float>(SCR_WIDTH), lowerLeftCornerOfViewportY + 0.0f, lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
-    // glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
-    textShader.setMat4("projection", projection);
-
-    glBindVertexArray(textVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
-
-    // Iterate through characters
-    for (const char &c : text) {
-        // std::cout << "Processing character: " << c << std::endl;
-        // Skip characters that do not exist in the glyph map
-        if (glyphs.find(c) == glyphs.end()) {
-            // std::cerr << "Character " << c << " not found in glyph map!" << std::endl;
-            continue;
-        }
-        // Retrieve glyph
-        Glyph &glyph = glyphs[c];
-
-        // Calculate position and size of quad
-        float xpos = x + glyph.offsetX * scale;
-        float ypos = y + (glyph.offsetY - glyph.height) * scale;
-        float w = glyph.width * scale;
-        float h = glyph.height * scale;
-
-        // Update VBO
-        float tx = glyph.textureX;
-        float ty = glyph.textureY; 
-        float tw = glyph.width / atlasWidth;
-        float th = glyph.height / atlasHeight;
-
-        float vertices[6][4] = {
-           // positions          // texture coords
-            { xpos,     ypos + h,   tx,      ty + th }, // Top-left
-            { xpos,     ypos,       tx,      ty      }, // Bottom-left
-            { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
-
-            { xpos,     ypos + h,   tx,      ty + th }, // Top-left
-            { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
-            { xpos + w, ypos + h,   tx + tw, ty + th }  // Top-right
-        };
-        // float verticesnew[] = {
-        //     // positions          // texture coords
-        //     xpos,     ypos + h,   tx,      ty + th, // Top-left     0
-        //     xpos,     ypos,       tx,      ty     , // Bottom-left  1
-        //     xpos + w, ypos,       tx + tw, ty     , // Bottom-right 2
-        //     xpos + w, ypos + h,   tx + tw, ty + th  // Top-right    3
-        // };
-        // float indices[] = {
-        //     0, 1, 2,
-        //     0, 2, 3
-        // };
-
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);            // ideal for small subset updates
-        // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW); // better for reallocating and initializing large buffers
-
-        // Render quad
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        // Advance cursor
-        x += (glyph.advanceX >> 6) * scale; // Advance in pixels (1/64th units)
-    }
-
-    // Cleanup
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    // Disable blend mode after rendering the text
-    // glDisable(GL_BLEND); // disable transparency
 }
 
 std::string GetFPSText(float fps, float ms) {
@@ -1812,35 +1482,6 @@ bool WGLExtensionSupported(const char *extension_name)
 
     // extension is supported
     return true;
-}
-
-void RenderAtlas(Shader &atlasShader, GLuint &atlasTexture) {
-    atlasShader.use();
-    // Enable 2D rendering
-    glEnable(GL_BLEND); // enable transparency
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // bind VAO
-    glBindVertexArray(quadVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-
-    // Bind the texture (the texture atlas in this case)
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, atlasTexture); // atlasTextureId is the texture containing the atlas
-    atlasShader.setInt("screenTexture", 0);
-    glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
-    atlasShader.setVec3("textColor", color);
-
-    // glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-    // glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
-    // atlasShader.setMat4("projection", projection);
-
-    // Draw the quad
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    // glDrawArrays(GL_TRIANGLES, 0, 3);
-
-    // Cleanup
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture) {
@@ -2086,10 +1727,10 @@ void finalizeEncoder() {
     }
 
     // Close log file at the end
-    if (logFile.is_open())
-    {
-        logFile.close();
-    }
+    // if (logFile.is_open())
+    // {
+    //     logFile.close();
+    // }
 
     av_write_trailer(formatCtx);
     avcodec_free_context(&codecCtx);

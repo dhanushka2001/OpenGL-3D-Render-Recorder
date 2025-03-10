@@ -6,3 +6,6 @@
 
 # Ignore ImGui artifacts
 **/imgui.ini
+
+# Ignore CMake artifacts
+**/cmake_install.cmake

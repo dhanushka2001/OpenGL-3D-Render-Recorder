@@ -18,7 +18,9 @@
                 "-L${workspaceFolder}/lib/ffmpeg",
                 "-L${workspaceFolder}/lib/freetype",
                 "-L${workspaceFolder}/lib/imgui",
+                "-L${workspaceFolder}/lib/implot",
                 "-limgui",                                  // ImGui library
+                "-limplot",                                 // ImPlot library
                 "-lavformat",                               // FFmpeg libavformat (order matters! libavformat depends on libavcodec so linker needs to resolve symbols from libavformat before libavcodec is processed)
                 "-lavcodec",                                // FFmpeg libavcodec
                 "-lavutil",                                 // FFmpeg libavutil (FFmpeg Internal Functions)
