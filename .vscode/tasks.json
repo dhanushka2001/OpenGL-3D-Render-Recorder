@@ -14,13 +14,15 @@
                 "-std=c++17",
                 "-I${workspaceFolder}/include",
                 "-I${workspaceFolder}/include/freetype2",
+                "-L${workspaceFolder}/lib",
                 "-L${workspaceFolder}/lib/GLFW",
                 "-L${workspaceFolder}/lib/ffmpeg",
                 "-L${workspaceFolder}/lib/freetype",
-                "-L${workspaceFolder}/lib/imgui",
                 "-L${workspaceFolder}/lib/implot",
+                "-L${workspaceFolder}/lib/imgui",
+                "-limplot",                                 // ImPlot library (order matters! ImPlot depends on ImGui so linker needs to resolve symbols from ImPlot before ImGui is processed)
                 "-limgui",                                  // ImGui library
-                "-limplot",                                 // ImPlot library
+                "-lencoder",
                 "-lavformat",                               // FFmpeg libavformat (order matters! libavformat depends on libavcodec so linker needs to resolve symbols from libavformat before libavcodec is processed)
                 "-lavcodec",                                // FFmpeg libavcodec
                 "-lavutil",                                 // FFmpeg libavutil (FFmpeg Internal Functions)

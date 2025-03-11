@@ -61,6 +61,13 @@ add_custom_command(
     COMMENT "Copying /textures/ to build directory"
 )
 
+# Add the FFmpeg function library
+add_library(encoder STATIC
+    src/encoder.cpp
+)
+# Set the target properties for imgui (where libimgui.a will be created)
+set_target_properties(encoder PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
+
 # Add the ImGui library
 add_library(imgui STATIC
     third_party/imgui/imgui.cpp 
@@ -98,8 +105,9 @@ target_link_libraries(implot PUBLIC imgui)  # ImPlot depends on ImGui
 
 # Link all the found libraries
 target_link_libraries(${PROJECT_NAME}
-    imgui  # ImGui static library from CMake
+    imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
     implot # ImPlot static library from CMake
+    encoder
 
     #glfw  # GLFW target from CMake (alternative to libglfw3.a)
     #OpenGL::GL  # OpenGL target from CMake
