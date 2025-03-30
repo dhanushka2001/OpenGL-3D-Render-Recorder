@@ -16,6 +16,7 @@ make
 ```console
 ninja
 ```
+The executable will be inside ``/build/bin/``.
 
 ## Introduction
 * Learning to use OpenGL (GLFW) so I can do high-performance scientific computing and modelling on the GPU.
