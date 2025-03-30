@@ -1,5 +1,23 @@
 *Coding Project*
 # LearnOpenGL
+
+## How to run
+```console
+git clone https://github.com/dhanushka2001/LearnOpenGL.git
+cd C:/LearnOpenGL
+mkdir build
+cd build
+cmake ..
+```
+Then build using either ``make`` or ``ninja``.
+```console
+make
+```
+```console
+ninja
+```
+
+## Introduction
 * Learning to use OpenGL (GLFW) so I can do high-performance scientific computing and modelling on the GPU.
 * You may come across things like GLFW, GLUT, GLAD, GLEW, ..., a lot of 4-letter names beginning with "GL", or heard about other OpenGL APIs like SFML, I'll give sources explaining what they are below.
   
