@@ -4,7 +4,7 @@
 ## How to run
 ```console
 git clone https://github.com/dhanushka2001/LearnOpenGL.git
-cd C:/LearnOpenGL
+cd LearnOpenGL
 mkdir build
 cd build
 cmake ..
