@@ -6,34 +6,36 @@
 //ImPlot
 #include <implot/implot.h>
 //------
-// FFmpeg
-// ------
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libavutil/opt.h>
-#include <libswscale/swscale.h>
-#include <libavutil/log.h>
-}
-#include <fstream>
-#include <mutex>
+// // FFmpeg
+// // ------
+// extern "C" {
+// #include <libavformat/avformat.h>
+// #include <libavcodec/avcodec.h>
+// #include <libavutil/opt.h>
+// #include <libswscale/swscale.h>
+// #include <libavutil/log.h>
+// }
+// #include <fstream>
+// #include <mutex>
 // glad & GLFW
 // -----------
-#include <glad/glad.h>              // glad
-#include <GLFW/glfw3.h>             // GLFW (includes stdint.h)
+#include <glad/glad.h>                  // glad
+#include <GLFW/glfw3.h>                 // GLFW (includes stdint.h)
 #ifndef  NOMINMAX
-#define  NOMINMAX                   // disable Windows min/max macro (interferes with C++ std::min/max)
+#define  NOMINMAX                       // disable Windows min/max macro (interferes with C++ std::min/max)
 #endif
-#include <Windows.h>                // For V-Sync (unfortunately tied to Windows :( )
-#include <wglext.h>                 // For V-Sync
-#include <learnopengl/shader_s.h>   // Shader class
-#include <learnopengl/camera.h>     // Camera class
-#include <learnopengl/text.h>       // Text class
-#include <learnopengl/encoder.h>     // FFmpeg functions
-#include <iostream>                 // for std::cin/cout/cerr
-#include <filesystem>               // for std::filesystem
-#include <iomanip>                  // for std::precision(3)              
-#include <cstdio>                   // For sprintf
+#include <Windows.h>                    // For V-Sync (unfortunately tied to Windows :( )
+#include <wglext.h>                     // For V-Sync
+#include <learnopengl/shader_s.h>       // Shader class
+#include <learnopengl/camera.h>         // Camera class
+// #include <learnopengl/text.h>           // Text class
+#include <learnopengl/encoder.h>        // FFmpeg functions
+#include <learnopengl/fontmanager.h>    // Custom Font Manager
+#include <learnopengl/textrenderer.h>   // Custom Text Renderer
+#include <iostream>                     // for std::cin/cout/cerr
+#include <filesystem>                   // for std::filesystem
+#include <iomanip>                      // for std::precision(3)              
+#include <cstdio>                       // For sprintf
 #define  M_PI           3.14159265358979323846
 #include <cmath>
 #define  STB_IMAGE_IMPLEMENTATION
@@ -636,83 +638,81 @@ int main()
 
     // load font and create texture atlas
     // ----------------------------------
-    std::ifstream file(fontFilepath);
-    if (!file.good()) {
-        std::cerr << "ERROR: Font file not found at " << fontFilepath << std::endl;
-        return 1;
-    }
-    FT_UInt fontsize = 48;
-    // loadFont(fontsize);
-    // createTextureAtlas();
+    // std::ifstream file(fontFilepath);
+    // if (!file.good()) {
+    //     std::cerr << "ERROR: Font file not found at " << fontFilepath << std::endl;
+    //     return 1;
+    // }
+    // FT_UInt fontsize = 48;
 
     // Render FPS text at the top-left corner
-    float scale = static_cast<float>(SCR_WIDTH)*0.3f/800.0f;
+    // float scale = static_cast<float>(SCR_WIDTH)*0.3f/800.0f;
     // Position on the screen
-    float x = lowerLeftCornerOfViewportX;
-    float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontsize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
-    glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
+    // float x = lowerLeftCornerOfViewportX;
+    // float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontsize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
+    // glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
 
-    Text FPS_Counter("ARIAL", fontsize, "test", x, y, scale);
+    // Text FPS_Counter("ARIAL", fontsize, "test", x, y, scale);
 
     // build and compile our text shader program
     // -----------------------------------------
-    Shader textShader("text_shader.vert", "text_shader.frag");
+    // Shader textShader("text_shader.vert", "text_shader.frag");
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
-    glGenVertexArrays(1, &textVAO);
-    glGenBuffers(1, &textVBO);
+    // glGenVertexArrays(1, &textVAO);
+    // glGenBuffers(1, &textVBO);
 
-    glBindVertexArray(textVAO);
+    // glBindVertexArray(textVAO);
     
-    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    // glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
     
     // Position and texture attribute
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glEnableVertexAttribArray(0);
+    // glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    // glEnableVertexAttribArray(0);
 
     // Set up text shader and projection matrix
     // ----------------------------------------
-    textShader.use();
-    glm::mat4 projection_text = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
-    textShader.setMat4("projection", projection_text);
+    // textShader.use();
+    // glm::mat4 projection_text = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
+    // textShader.setMat4("projection", projection_text);
 
 
     // build and compile our fullscreen atlas shader program
     // ----------------------------------------------------
-    Shader atlasShader("atlas.vert", "atlas.frag");
+    // Shader atlasShader("atlas.vert", "atlas.frag");
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
-    float quad_vertices[] = {
-        // Positions   // Texture coordinates
-        -1.0f,  1.0f,  0.0f,  1.0f,  // Top-left
-        -1.0f, -1.0f,  0.0f,  0.0f,  // Bottom-left
-         1.0f, -1.0f,  1.0f,  0.0f,  // Bottom-right
+    // float quad_vertices[] = {
+    //     // Positions   // Texture coordinates
+    //     -1.0f,  1.0f,  0.0f,  1.0f,  // Top-left
+    //     -1.0f, -1.0f,  0.0f,  0.0f,  // Bottom-left
+    //      1.0f, -1.0f,  1.0f,  0.0f,  // Bottom-right
 
-        -1.0f,  1.0f,  0.0f,  1.0f,  // Top-left
-         1.0f, -1.0f,  1.0f,  0.0f,  // Bottom-right
-         1.0f,  1.0f,  1.0f,  1.0f   // Top-right
-    };
+    //     -1.0f,  1.0f,  0.0f,  1.0f,  // Top-left
+    //      1.0f, -1.0f,  1.0f,  0.0f,  // Bottom-right
+    //      1.0f,  1.0f,  1.0f,  1.0f   // Top-right
+    // };
 
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
+    // glGenVertexArrays(1, &quadVAO);
+    // glGenBuffers(1, &quadVBO);
 
-    glBindVertexArray(quadVAO);
+    // glBindVertexArray(quadVAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
+    // glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
 
     // Position attribute
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    // glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    // glEnableVertexAttribArray(0);
 
     // Texture coordinate attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    atlasShader.use();
-    atlasShader.setMat4("projection", projection_text);
+    // glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    // glEnableVertexAttribArray(1);
+    // atlasShader.use();
+    // atlasShader.setMat4("projection", projection_text);
 
 
     // build and compile our fullscreen quad shader program
@@ -776,6 +776,10 @@ int main()
     glEnable(GL_BLEND); // enable transparency
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    FontManager fontManager;
+    fontManager.loadFont("Arial", 48);
+    
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -783,7 +787,6 @@ int main()
         // input
         // -----
         processInput(window);
-        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
             std::cerr << "OpenGL Error after glTexImage2D: " << error << std::endl;
@@ -843,13 +846,13 @@ int main()
         // Render FPS text at the top-left corner
         // float scale = static_cast<float>(SCR_WIDTH)*0.3f/800.0f;
         // Position on the screen
-        float x = lowerLeftCornerOfViewportX;
-        float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontsize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
+        // float x = lowerLeftCornerOfViewportX;
+        // float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontsize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
         // glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
 
-        FPS_Counter.X = x;
-        FPS_Counter.Y = y;
-        FPS_Counter.Body = fpsText;
+        // FPS_Counter.X = x;
+        // FPS_Counter.Y = y;
+        // FPS_Counter.Body = fpsText;
 
         // recording ON
         if (recording)
@@ -897,8 +900,8 @@ int main()
                                       GL_COLOR_BUFFER_BIT,           // buffer mask
                                                GL_LINEAR);           // scale filter
             
-            FPS_Counter.RenderText(textShader, fpsText, x, y, scale, color);
-            FPS_Counter.RenderAtlas(atlasShader, textureAtlasID);
+            // FPS_Counter.RenderText(textShader, fpsText, x, y, scale, color);
+            // FPS_Counter.RenderAtlas(atlasShader, textureAtlasID);
             
             // IMGUI (visible in screen recording, messes up when window is resized)
             // ---------------------------------------------------------------------
@@ -1050,8 +1053,8 @@ int main()
 
             // Render text in front: https://stackoverflow.com/a/5527249
             // glClear(GL_DEPTH_BUFFER_BIT);
-            FPS_Counter.RenderText(textShader, fpsText, x, y, scale, color);
-            FPS_Counter.RenderAtlas(atlasShader, textureAtlasID);
+            // FPS_Counter.RenderText(textShader, fpsText, x, y, scale, color);
+            // FPS_Counter.RenderAtlas(atlasShader, textureAtlasID);
 
             // IMGUI
             // -----
@@ -1088,7 +1091,7 @@ int main()
     glDeleteBuffers(1, &VBO);
     // glDeleteBuffers(1, &textVBO);
     // glDeleteBuffers(1, &quadVBO);
-    FPS_Counter.Delete();
+    // FPS_Counter.Delete();
     #if RENDER_EBO==1 || RENDER_3D==0
     glDeleteBuffers(1, &EBO);
     #endif
@@ -1099,13 +1102,13 @@ int main()
     // Delete all the shader programs we've created
 	ourShader.Delete();
     lightShader.Delete();
-    textShader.Delete();
-    atlasShader.Delete();
+    // textShader.Delete();
+    // atlasShader.Delete();
 	// Delete window before ending the program
 	glfwDestroyWindow(window);
 
-    FT_Done_Face(face);
-    FT_Done_FreeType(ft);
+    // FT_Done_Face(face);
+    // FT_Done_FreeType(ft);
     if (recording)
     {
         // glDeleteBuffers(PBO_COUNT, pboIds);
@@ -1353,10 +1356,12 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     
     // keep viewport size fixed (recording doesn't get messed up)
     // ----------------------------------------------------------
-    lowerLeftCornerOfViewportX = 0.5*(width - static_cast<int>(SCR_WIDTH));    // need to convert SCR_WIDTH/HEIGHT from unsigned int->int!
-    lowerLeftCornerOfViewportY = 0.5*(height - static_cast<int>(SCR_HEIGHT));
-    lowerLeftCornerOfViewportX = std::max(lowerLeftCornerOfViewportX, 0);
-    lowerLeftCornerOfViewportY = std::max(lowerLeftCornerOfViewportY, 0);
+    // lowerLeftCornerOfViewportX = 0.5*(width - static_cast<int>(SCR_WIDTH));    // need to convert SCR_WIDTH/HEIGHT from unsigned int->int!
+    // lowerLeftCornerOfViewportY = 0.5*(height - static_cast<int>(SCR_HEIGHT));
+    // lowerLeftCornerOfViewportX = std::max(lowerLeftCornerOfViewportX, 0);
+    // lowerLeftCornerOfViewportY = std::max(lowerLeftCornerOfViewportY, 0);
+    
+    glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
     // MAKE IT SO THE GAME PAUSES WHEN RESIZING WINDOW.
 
@@ -1480,8 +1485,8 @@ void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     // bind VAO
-    glBindVertexArray(quadVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    // glBindVertexArray(quadVAO);
+    // glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
 
     // Bind the texture (the texture atlas in this case)
     glActiveTexture(GL_TEXTURE0);

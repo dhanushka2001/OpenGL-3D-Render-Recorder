@@ -1,5 +1,4 @@
 #include <learnopengl/encoder.h>
-// #include <glad/glad.h>
 #include <iostream>                 // for std::cin/cout/cerr
 
 // FFmpeg
