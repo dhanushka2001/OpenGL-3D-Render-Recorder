@@ -1,5 +1,7 @@
+#include <glad/glad.h>
 #include <learnopengl/textrenderer.h>
 #include <learnopengl/shader_s.h>
+// #include <learnopengl/globals.h>
 #include <iostream>
 
 TextRenderer::TextRenderer(FontManager &fm)
@@ -7,19 +9,31 @@ TextRenderer::TextRenderer(FontManager &fm)
       textShader("text_shader.vert", "text_shader.frag"),
       atlasShader("atlas.vert", "atlas.frag")
 {
-
-    // build and compile our text shader program
-    // textShader("text_shader.vert", "text_shader.frag");
-
     // set up vertex data (and buffer(s)) and configure vertex attributes
     glGenVertexArrays(1, &textVAO);
     glGenBuffers(1, &textVBO);
 
-    // build and compile our fullscreen atlas shader program
-    // atlasShader("atlas.vert", "atlas.frag");
+    glBindVertexArray(textVAO);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    
+    // Position and texture attribute
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glEnableVertexAttribArray(0);
 
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &quadVBO);
+}
+
+TextRenderer::~TextRenderer()
+{
+    textShader.Delete();
+    atlasShader.Delete();
+    glDeleteVertexArrays(1, &textVAO);
+    glDeleteVertexArrays(1, &quadVAO);
+    glDeleteBuffers(1, &textVBO);
+    glDeleteBuffers(1, &quadVBO);
 }
 
 void TextRenderer::renderText(const std::string &text, float x, float y, float scale, glm::vec3 color, const std::string &fontName) {
@@ -32,10 +46,23 @@ void TextRenderer::renderText(const std::string &text, float x, float y, float s
     int atlasWidth = font->getAtlasWidth();
     int atlasHeight = font->getAtlasHeight();
 
+    // Use text rendering shader
     textShader.use();
     textShader.setVec3("textColor", color);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, font->getTextureAtlas());
+    textShader.setInt("textTextureAtlas", 0);
+
+    // Enable 2D rendering
+    glEnable(GL_BLEND); // enable transparency
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Set up the transformation matrix for the text position
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
+    textShader.setMat4("projection", projection);
 
     glBindVertexArray(textVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
 
     // Iterate through characters
     for (const char &c : text) {
@@ -70,8 +97,6 @@ void TextRenderer::renderText(const std::string &text, float x, float y, float s
             { xpos + w, ypos + h,   tx + tw, ty + th }  // Top-right
         };
 
-        glBindTexture(GL_TEXTURE_2D, font->getTextureAtlas());
-        glBindBuffer(GL_ARRAY_BUFFER, textVBO);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);            // ideal for small subset updates
         // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW); // better for reallocating and initializing large buffers
 
@@ -87,7 +112,6 @@ void TextRenderer::renderText(const std::string &text, float x, float y, float s
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
-
 
 void TextRenderer::renderAtlas(const std::string &fontName) {
     Font *font = fontManager.getFont(fontName);

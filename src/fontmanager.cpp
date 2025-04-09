@@ -15,11 +15,14 @@ bool FontManager::loadFont(const std::string& name, int size) {
     }
 
     fonts[name] = new Font(name, size);
+    std::cout << "New font created: " << name << ", size " << size << std::endl;
+
     return true;
 }
 
 Font* FontManager::getFont(const std::string& name) {
     if (fonts.find(name) != fonts.end()) {
+        // std::cout << "Font found: " << name << std::endl;
         return fonts[name];
     }
     return nullptr;

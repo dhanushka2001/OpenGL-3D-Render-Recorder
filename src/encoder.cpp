@@ -1,4 +1,5 @@
 #include <learnopengl/encoder.h>
+// #include <learnopengl/globals.h>
 #include <iostream>                 // for std::cin/cout/cerr
 
 // FFmpeg

@@ -20,6 +20,11 @@ private:
     std::map<char, Glyph> glyphs;
     GLuint textureAtlasID;
     int atlasWidth, atlasHeight;
+    FT_Library ft;
+    FT_Face face;
+
+    void loadFont(const std::string& name, int size);
+    void createTextureAtlas();
 
 public:
     // constructor and destructor

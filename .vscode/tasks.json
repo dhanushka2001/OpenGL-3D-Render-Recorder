@@ -20,6 +20,7 @@
                 "-L${workspaceFolder}/lib/freetype",
                 "-L${workspaceFolder}/lib/implot",
                 "-L${workspaceFolder}/lib/imgui",
+                "-ltext",
                 "-limplot",                                 // ImPlot library (order matters! ImPlot depends on ImGui so linker needs to resolve symbols from ImPlot before ImGui is processed)
                 "-limgui",                                  // ImGui library
                 "-lencoder",

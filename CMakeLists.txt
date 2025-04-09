@@ -31,7 +31,6 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/lib/GLFW
     ${CMAKE_SOURCE_DIR}/lib/ffmpeg
     ${CMAKE_SOURCE_DIR}/lib/freetype
-    #${CMAKE_SOURCE_DIR}/lib/imgui
 )
 
 # Executable target
@@ -60,6 +59,15 @@ add_custom_command(
         ${TEXTURE_SOURCE_DIR} ${TEXTURE_DEST_DIR}
     COMMENT "Copying /textures/ to build directory"
 )
+
+# Add the custom text function library
+add_library(text STATIC
+    src/font.cpp
+    src/fontmanager.cpp
+    src/textrenderer.cpp
+)
+# Set the target properties for imgui (where libimgui.a will be created)
+set_target_properties(text PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
 
 # Add the FFmpeg function library
 add_library(encoder STATIC
@@ -108,6 +116,7 @@ target_link_libraries(${PROJECT_NAME}
     imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
     implot # ImPlot static library from CMake
     encoder
+    text
 
     #glfw  # GLFW target from CMake (alternative to libglfw3.a)
     #OpenGL::GL  # OpenGL target from CMake

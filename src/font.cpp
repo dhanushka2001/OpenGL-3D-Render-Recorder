@@ -1,3 +1,4 @@
+#include <glad/glad.h>
 #include <learnopengl/font.h>
 #include <iostream>
 #include <iomanip>
@@ -6,22 +7,34 @@
 #include <cstring>
 
 Font::Font(const std::string& name, int size) {
+    loadFont(name, size);
+    createTextureAtlas();
+
+    FT_Done_Face(face);
+    FT_Done_FreeType(ft);
+}
+
+Font::~Font() {
+    glDeleteTextures(1, &textureAtlasID);
+}
+
+void Font::loadFont(const std::string& name, int size) {
+    std::cout << "[Font] Constructor called for " << name << ", size " << size << "\n";
+    std::cout << "Loading font...\n";
 
     // LOAD FONT
     // ---------
-    FT_Library ft;
-    FT_Face face;
-
     if (FT_Init_FreeType(&ft)) {
         std::cerr << "Could not initialize FreeType Library" << std::endl;
         return;
     }
-    if (!face) {
-        std::cerr << "Failed to load the font face. Ensure the file path is correct." << std::endl;
+    std::string fontPath = "C:/WINDOWS/FONTS/" + name + ".TTF";
+    if (FT_New_Face(ft, fontPath.c_str(), 0, &face)) {
+        std::cerr << "Failed to load font face from: " << fontPath << std::endl;
         return;
     }
-    if (FT_New_Face(ft, (std::string("C:/WINDOWS/FONTS/") + name + std::string(".TTF")).c_str(), 0, &face)) {
-        std::cerr << "Failed to load font" << std::endl;
+    if (!face) {
+        std::cerr << "Failed to load the font face. Ensure the file path is correct." << std::endl;
         return;
     }
     if (FT_Select_Charmap(face, FT_ENCODING_UNICODE)) {
@@ -39,9 +52,12 @@ Font::Font(const std::string& name, int size) {
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         return;
     }
+}
 
+void Font::createTextureAtlas() {
     // CREATE TEXTURE ATLAS
     // --------------------
+    std::cout << "Creating texture atlas..." << std::endl;
 
     // Calculate texture atlas size (simplified)
     atlasWidth = 512;
@@ -68,7 +84,7 @@ Font::Font(const std::string& name, int size) {
     
     GLenum error = glGetError();
     if (error != GL_NO_ERROR) {
-        std::cerr << "OpenGL Error after glTexImage2D: " << error << std::endl;
+        std::cerr << ":D OpenGL Error after glTexImage2D: " << error << std::endl;
         return;
     }
     // Set texture filtering and wrapping
@@ -150,6 +166,7 @@ Font::Font(const std::string& name, int size) {
         rowHeight = std::max(rowHeight, static_cast<int>(g->bitmap.rows));
 
         // std::cout << "Loaded character: " << c << " (" << static_cast<int>(c) << ") Asc: " << ascenderPx << " Desc: " << descenderPx << std::endl;
+        // std::cout << "Successfully loaded glyph: " << c << std::endl;
     }
     
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -177,15 +194,15 @@ Font::Font(const std::string& name, int size) {
                            << "AdvanceX: "  << std::setw(5) << (glyph.advanceX >> 6)    << " | "
                            << std::endl;
     }
-
-    FT_Done_Face(face);
-    FT_Done_FreeType(ft);
-}
-
-Font::~Font() {
-    glDeleteTextures(1, &textureAtlasID);
 }
 
 const Glyph& Font::getGlyph(char c) const {
-    return glyphs.at(c);
+    auto it = glyphs.find(c);
+    if (it != glyphs.end()) {
+        return it->second;
+    }
+
+    static Glyph fallback {};  // a default zero glyph
+    std::cerr << "Warning: Glyph not found for character '" << c << "' (" << static_cast<int>(c) << ")" << std::endl;
+    return fallback;
 }

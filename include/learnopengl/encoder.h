@@ -3,9 +3,9 @@
 
 #include <stdint.h>     // for uint8_t
 
+extern       unsigned int  framerate;
 extern const unsigned int  SCR_WIDTH;
 extern const unsigned int  SCR_HEIGHT;
-extern       unsigned int  framerate;
 
 
 namespace Encoder {

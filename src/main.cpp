@@ -4,19 +4,8 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 //ImPlot
-#include <implot/implot.h>
 //------
-// // FFmpeg
-// // ------
-// extern "C" {
-// #include <libavformat/avformat.h>
-// #include <libavcodec/avcodec.h>
-// #include <libavutil/opt.h>
-// #include <libswscale/swscale.h>
-// #include <libavutil/log.h>
-// }
-// #include <fstream>
-// #include <mutex>
+#include <implot/implot.h>
 // glad & GLFW
 // -----------
 #include <glad/glad.h>                  // glad
@@ -73,8 +62,8 @@ void flipFrameVertically(unsigned char* frame);
 
 // settings
 // --------
-const unsigned int  SCR_WIDTH       = 1920;//2560;  // 800;
-const unsigned int  SCR_HEIGHT      = 1080;//1440;  // 600;
+const unsigned int  SCR_WIDTH       = 2560;  // 800;
+const unsigned int  SCR_HEIGHT      = 1440;  // 600;
 const unsigned int  CHANNEL_COUNT   =  3;
 const unsigned int  DATA_SIZE       = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
 const unsigned int  PBO_COUNT       =  2;
@@ -635,54 +624,6 @@ int main()
         }
     }
 
-
-    // load font and create texture atlas
-    // ----------------------------------
-    // std::ifstream file(fontFilepath);
-    // if (!file.good()) {
-    //     std::cerr << "ERROR: Font file not found at " << fontFilepath << std::endl;
-    //     return 1;
-    // }
-    // FT_UInt fontsize = 48;
-
-    // Render FPS text at the top-left corner
-    // float scale = static_cast<float>(SCR_WIDTH)*0.3f/800.0f;
-    // Position on the screen
-    // float x = lowerLeftCornerOfViewportX;
-    // float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontsize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
-    // glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
-
-    // Text FPS_Counter("ARIAL", fontsize, "test", x, y, scale);
-
-    // build and compile our text shader program
-    // -----------------------------------------
-    // Shader textShader("text_shader.vert", "text_shader.frag");
-
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    // glGenVertexArrays(1, &textVAO);
-    // glGenBuffers(1, &textVBO);
-
-    // glBindVertexArray(textVAO);
-    
-    // glBindBuffer(GL_ARRAY_BUFFER, textVBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
-    
-    // Position and texture attribute
-    // glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    // glEnableVertexAttribArray(0);
-
-    // Set up text shader and projection matrix
-    // ----------------------------------------
-    // textShader.use();
-    // glm::mat4 projection_text = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
-    // textShader.setMat4("projection", projection_text);
-
-
-    // build and compile our fullscreen atlas shader program
-    // ----------------------------------------------------
-    // Shader atlasShader("atlas.vert", "atlas.frag");
-
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     // float quad_vertices[] = {
@@ -711,9 +652,6 @@ int main()
     // Texture coordinate attribute
     // glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     // glEnableVertexAttribArray(1);
-    // atlasShader.use();
-    // atlasShader.setMat4("projection", projection_text);
-
 
     // build and compile our fullscreen quad shader program
     // ----------------------------------------------------
@@ -764,7 +702,6 @@ int main()
 
     // Start ffmpeg process
     // --------------------
-    // startFFmpeg();
     namespace fs = std::filesystem;
     if (!fs::exists("../output/")) {
         fs::create_directory("../output/"); // Create directory if it doesn't exist
@@ -776,9 +713,19 @@ int main()
     glEnable(GL_BLEND); // enable transparency
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+
+    FT_UInt fontSize = 48;
+    // Render FPS text at the top-left corner
+    float scale = static_cast<float>(SCR_WIDTH)*0.3f/800.0f;
+    // Position on the screen
+    float x = lowerLeftCornerOfViewportX;
+    float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontSize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
+    glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
+
     FontManager fontManager;
-    fontManager.loadFont("Arial", 48);
-    
+    fontManager.loadFont("ARIAL", 48);
+
+    TextRenderer textRenderer(fontManager);
 
     // render loop
     // -----------
@@ -843,17 +790,6 @@ int main()
         UpdateFPS(crntTime);
         std::string fpsText = GetFPSText(fps, msPerFrame);
 
-        // Render FPS text at the top-left corner
-        // float scale = static_cast<float>(SCR_WIDTH)*0.3f/800.0f;
-        // Position on the screen
-        // float x = lowerLeftCornerOfViewportX;
-        // float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontsize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
-        // glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
-
-        // FPS_Counter.X = x;
-        // FPS_Counter.Y = y;
-        // FPS_Counter.Body = fpsText;
-
         // recording ON
         if (recording)
         {
@@ -900,8 +836,8 @@ int main()
                                       GL_COLOR_BUFFER_BIT,           // buffer mask
                                                GL_LINEAR);           // scale filter
             
-            // FPS_Counter.RenderText(textShader, fpsText, x, y, scale, color);
-            // FPS_Counter.RenderAtlas(atlasShader, textureAtlasID);
+            textRenderer.renderText(fpsText, x, y, scale, color, "ARIAL");
+            textRenderer.renderAtlas("ARIAL");
             
             // IMGUI (visible in screen recording, messes up when window is resized)
             // ---------------------------------------------------------------------
@@ -949,13 +885,11 @@ int main()
 
                 // Step 4: Read pixels from the resolved FBO for off-screen encoding (without PBOs)
                 // --------------------------------------------------------------------------------
-                
                 glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
 
                 // Flip the frame vertically
                 flipFrameVertically(frame);
 
-                // sendFrameBufferToFFmpeg(frame, 1);
                 Encoder::encodeFrame(frame, crntTime);
             }
             // PBO on
@@ -989,7 +923,6 @@ int main()
                     
                     // Encode frame using FFmpeg
                     // -------------------------
-                    // sendFrameBufferToFFmpeg(ptr, 1);
                     Encoder::encodeFrame(ptr, crntTime);
                     
                     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -1030,8 +963,6 @@ int main()
             glBindVertexArray(VAO);
             // glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-            // render the crate
-            // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             // static crate
             glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
             RenderCrate(ourShader, translatenew);
@@ -1053,8 +984,8 @@ int main()
 
             // Render text in front: https://stackoverflow.com/a/5527249
             // glClear(GL_DEPTH_BUFFER_BIT);
-            // FPS_Counter.RenderText(textShader, fpsText, x, y, scale, color);
-            // FPS_Counter.RenderAtlas(atlasShader, textureAtlasID);
+            textRenderer.renderText(fpsText, x, y, scale, color, "ARIAL");
+            textRenderer.renderAtlas("ARIAL");
 
             // IMGUI
             // -----
@@ -1085,13 +1016,8 @@ int main()
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
     glDeleteVertexArrays(1, &VAO);
-    // glDeleteVertexArrays(1, &textVAO);
-    // glDeleteVertexArrays(1, &quadVAO);
     glDeleteVertexArrays(1, &lightVAO);
     glDeleteBuffers(1, &VBO);
-    // glDeleteBuffers(1, &textVBO);
-    // glDeleteBuffers(1, &quadVBO);
-    // FPS_Counter.Delete();
     #if RENDER_EBO==1 || RENDER_3D==0
     glDeleteBuffers(1, &EBO);
     #endif
@@ -1102,16 +1028,15 @@ int main()
     // Delete all the shader programs we've created
 	ourShader.Delete();
     lightShader.Delete();
-    // textShader.Delete();
-    // atlasShader.Delete();
 	// Delete window before ending the program
 	glfwDestroyWindow(window);
 
-    // FT_Done_Face(face);
-    // FT_Done_FreeType(ft);
     if (recording)
     {
-        // glDeleteBuffers(PBO_COUNT, pboIds);
+        if (pbo)
+        {
+            glDeleteBuffers(PBO_COUNT, pboIds);
+        }
         glDeleteFramebuffers(1,&fboMsaaId);
         glDeleteFramebuffers(1,&fboId);
         glDeleteRenderbuffers(1,&rboMsaaColorId);
@@ -1120,10 +1045,7 @@ int main()
 
         // Stop ffmpeg
         // -----------
-        // stopFFmpeg();
         Encoder::finalizeEncoder();
-
-        // duration = glfwGetTime();
     }
     // IMGUI
     // -----
