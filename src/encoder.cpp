@@ -67,6 +67,8 @@ namespace Encoder {
         codecCtx->bit_rate = 60000000;  // 60 Mbps
         codecCtx->gop_size = 10;
         codecCtx->max_b_frames = 1;
+        codecCtx-> thread_count = 2;
+        codecCtx->thread_type = FF_THREAD_FRAME;
         // codecCtx->rc_max_rate = codecCtx->bit_rate;  // Set maximum bitrate limit
         // codecCtx->rc_buffer_size = codecCtx->bit_rate;  // Set buffer size to match bitrate
 
@@ -92,9 +94,6 @@ namespace Encoder {
 
         // Make sure that your AVStream has the same time_base
         videoStream->time_base = codecCtx->time_base;
-        // Force the output stream to interpret it as CFR (Constant Frame Rate)
-        // videoStream->avg_frame_rate = (AVRational){60, 1};  // Force the output to exactly 60 FPS
-        // av_dict_set(&formatCtx->metadata, "video-cfr", "1", 0);
 
         // Open output file
         if (!(formatCtx->oformat->flags & AVFMT_NOFILE)) {
@@ -127,12 +126,10 @@ namespace Encoder {
     bool encodeFrame(const uint8_t* rgbData, float crntTime) {
         // Convert RGB to YUV420P
         uint8_t* inData[1] = {(uint8_t*)rgbData};  // Input RGB data
-        int inLinesize[1] = {3 * SCR_WIDTH};          // Input stride
+        int inLinesize[1] = {3 * static_cast<int>(SCR_WIDTH)};          // Input stride
         sws_scale(swsCtx, inData, inLinesize, 0, SCR_HEIGHT, frameX->data, frameX->linesize);
 
-        frameX->pts = static_cast<int64_t>(crntTime * 60 * 1000); //* AV_TIME_BASE);
-        // frameX->pts = 1000 * frameIndex; // Simple frame count to force 60 FPS
-        // frameIndex++;
+        frameX->pts = static_cast<int64_t>(crntTime * 60 * 1000); //* AV_TIME_BASE;
         
         // Encode the frame
         if (avcodec_send_frame(codecCtx, frameX) < 0) {
@@ -143,7 +140,6 @@ namespace Encoder {
         // Retrieve the encoded packet
         pkt.data = nullptr;
         pkt.size = 0;
-        // pkt.dts = (frameX->pts < pkt.dts) ? pkt.dts + 1 : frameX->pts;
         pkt.dts = frameX->pts;
 
         while (avcodec_receive_packet(codecCtx, &pkt) == 0) {

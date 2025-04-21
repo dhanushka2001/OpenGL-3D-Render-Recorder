@@ -6,6 +6,13 @@
 #include <vector>
 #include <cstring>
 
+// FreeType
+// --------
+#ifdef _WIN32
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#endif
+
 Font::Font(const std::string& name, int size) {
     loadFont(name, size);
     createTextureAtlas();
@@ -28,7 +35,7 @@ void Font::loadFont(const std::string& name, int size) {
         std::cerr << "Could not initialize FreeType Library" << std::endl;
         return;
     }
-    std::string fontPath = "C:/WINDOWS/FONTS/" + name + ".TTF";
+    std::string fontPath = "../assets/fonts/" + name + ".ttf";
     if (FT_New_Face(ft, fontPath.c_str(), 0, &face)) {
         std::cerr << "Failed to load font face from: " << fontPath << std::endl;
         return;

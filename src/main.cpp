@@ -10,17 +10,21 @@
 // -----------
 #include <glad/glad.h>                  // glad
 #include <GLFW/glfw3.h>                 // GLFW (includes stdint.h)
+
+#ifdef _WIN32
 #ifndef  NOMINMAX
 #define  NOMINMAX                       // disable Windows min/max macro (interferes with C++ std::min/max)
 #endif
 #include <Windows.h>                    // For V-Sync (unfortunately tied to Windows :( )
 #include <wglext.h>                     // For V-Sync
+#endif
+
 #include <learnopengl/shader_s.h>       // Shader class
 #include <learnopengl/camera.h>         // Camera class
-// #include <learnopengl/text.h>           // Text class
 #include <learnopengl/encoder.h>        // FFmpeg functions
 #include <learnopengl/fontmanager.h>    // Custom Font Manager
 #include <learnopengl/textrenderer.h>   // Custom Text Renderer
+
 #include <iostream>                     // for std::cin/cout/cerr
 #include <filesystem>                   // for std::filesystem
 #include <iomanip>                      // for std::precision(3)              
@@ -43,10 +47,6 @@
 #ifndef  PATH_MAX
 #define  PATH_MAX 4096
 #endif
-// FreeType
-// --------
-#include <ft2build.h>
-#include FT_FREETYPE_H
 
 void processInput(GLFWwindow *window);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
@@ -54,7 +54,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 std::string GetFPSText(float fps, float ms);
 void UpdateFPS(float crntTime);
-bool WGLExtensionSupported(const char *extension_name);
+// bool WGLExtensionSupported(const char *extension_name);
 void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture);
 void RenderCrate(Shader &ourShader, glm::vec3 &trans);
 // FFmpeg
@@ -80,8 +80,8 @@ unsigned int        framerate       = 60;
 
 // pbo settings
 // ------------
-int index = 0;
-int nextIndex = 1;
+int pbo1 = 0;
+int pbo2 = 1;
 GLuint pboIds[PBO_COUNT];
 
 // fbo settings
@@ -92,11 +92,7 @@ GLuint fboTexture;
 
 // textures
 // --------
-// GLuint textureAtlasID;
 GLuint crateTexture, awesomeTexture;
-// Initialize atlas dimensions
-// const unsigned int atlasWidth   = 512;
-// const unsigned int atlasHeight  = 512;
 
 // uniform variables
 // -----------------
@@ -114,6 +110,9 @@ float   camZ        =  -4.5f;
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float   lastX       = SCR_WIDTH / 2.0f;
 float   lastY       = SCR_HEIGHT / 2.0f;
+double lastXpos     = 0;
+double lastYpos     = 0;
+bool    firstMouse  = true;
 
 // timing
 // ------
@@ -143,41 +142,11 @@ int lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY = 0;
 
 // light source
 // ------------
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 lightPos(3.2f, 5.0f, 2.0f);
 glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
 
-
-// Path to ffmpeg binary, if it's not in the system path, provide the full path. MAKE SURE THE FRAME RESOLUTION IS CORRECT!
-// split strings over multiple lines in C (MAKE SURE TO ADD A SPACE AT THE END OF EACH LINE!): https://stackoverflow.com/a/797351
-// Formatting char array: https://stackoverflow.com/a/10820457
-// If video is not outputting correctly, check ffmpeg_log.txt, probably a fault in the FFmpegCommand.
-const char* FFmpegCommand = "ffmpeg "
-                            "-y "                               // Overwrites the output file if it exists.
-                            "-f rawvideo "                      // Tells FFmpeg to expect raw video frames.
-                            "-pixel_format rgb24 "              // The format of the raw pixel data (RGB, 8 bits per channel).
-                            "-video_size %dx%d "                // The resolution of each frame (WIDTHxHEIGHT).
-                            "-framerate %d "                    // The frame rate of the video.
-                            "-use_wallclock_as_timestamps 1 "   // Preserves frame timestamp (variable FPS) https://video.stackexchange.com/a/25953
-                            "-i - "                             // Tells FFmpeg to read input from stdin ("-").
-                            "-c:v libx264 "                     // Uses the H.264 codec to compress the video.
-                            "-crf 18 -preset slow "             // Constant rate factor (18=visually lossless, 23=default)
-                            // "-tune animation "
-                            "-pix_fmt yuv420p "                 // Sets the pixel format to YUV 4:2:0, which is widely supported by media players.
-                            "output.mp4 "                       // The output file name.
-                            "2> ffmpeg_log.txt";                // Saves FFmpeg’s output and error messages to a file called "ffmpeg_log.txt".
-
-FILE* ffmpeg;
-
-// "C:/WINDOWS/FONTS/ARIAL.TTF"
-// "C:/WINDOWS/FONTS/BKANT.TTF"
-const std::string fontFilepath = "C:/WINDOWS/FONTS/HARLOWSI.TTF";
-// FT_Library ft;
-// FT_Face face;
-
-// std::map<char, Glyph> glyphs;          // Store info about each glyph
 GLuint VAO, VBO, EBO;
-// GLuint textVAO, textVBO;
-// GLuint quadVAO, quadVBO;
 
 unsigned char* frame = NULL;
 unsigned char* frame_old = NULL;
@@ -249,21 +218,21 @@ int main()
     // V-SYNC: Initialize function pointers
     // ------------------------------------
     // https://stackoverflow.com/a/589232
-    PFNWGLSWAPINTERVALEXTPROC       wglSwapIntervalEXT    = NULL;
-    PFNWGLGETSWAPINTERVALEXTPROC    wglGetSwapIntervalEXT = NULL;
+    // PFNWGLSWAPINTERVALEXTPROC       wglSwapIntervalEXT    = NULL;
+    // PFNWGLGETSWAPINTERVALEXTPROC    wglGetSwapIntervalEXT = NULL;
 
-    if (WGLExtensionSupported("WGL_EXT_swap_control"))
-    {
-        // Extension is supported, init pointers.
-        wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC) wglGetProcAddress("wglSwapIntervalEXT");
+    // if (WGLExtensionSupported("WGL_EXT_swap_control"))
+    // {
+    //     // Extension is supported, init pointers.
+    //     wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC) wglGetProcAddress("wglSwapIntervalEXT");
 
-        // this is another function from WGL_EXT_swap_control extension
-        wglGetSwapIntervalEXT = (PFNWGLGETSWAPINTERVALEXTPROC) wglGetProcAddress("wglGetSwapIntervalEXT");
-    }
-    // 0 = V-Sync Off, 1 = V-Sync On, -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz)
-    // https://www.khronos.org/opengl/wiki/Swap_Interval
-    wglSwapIntervalEXT(vsync);
-    std::cout << "\nwglSwapIntervalEXT: " << wglGetSwapIntervalEXT() << std::endl;
+    //     // this is another function from WGL_EXT_swap_control extension
+    //     wglGetSwapIntervalEXT = (PFNWGLGETSWAPINTERVALEXTPROC) wglGetProcAddress("wglGetSwapIntervalEXT");
+    // }
+    // // 0 = V-Sync Off, 1 = V-Sync On, -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz)
+    // // https://www.khronos.org/opengl/wiki/Swap_Interval
+    // wglSwapIntervalEXT(vsync);
+    // std::cout << "\nwglSwapIntervalEXT: " << wglGetSwapIntervalEXT() << std::endl;
 
     // build and compile our shader program to render the crates
     // ---------------------------------------------------------
@@ -289,54 +258,54 @@ int main()
     // 3D cube without EBO (6 faces * 2 triangles * 3 vertices each = 36 vertices. 8 unique vertices. 78% redundancy) (each face has its own unique texture coords)
     #if RENDER_EBO==0
     float vertices[] = {
-        // positions          // texture coords
+      // positions            normal             texture coords
         // -Z face
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,   // (-,-,-) 0
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,   // (+,-,-) 1
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (+,+,-) 2
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (+,+,-) 2
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,   // (-,+,-) 3
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,   // (-,-,-) 0
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f,   // (-,-,-) 0
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f,   // (+,-,-) 1
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f,   // (+,+,-) 2
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f,   // (+,+,-) 2
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f,   // (-,+,-) 3
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f,   // (-,-,-) 0
 
         // +Z face
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (-,-,+) 4
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,   // (+,-,+) 5
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,   // (+,+,+) 6
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,   // (+,+,+) 6
-        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,   // (-,+,+) 7
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (-,-,+) 4
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f,   // (-,-,+) 4
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f,   // (+,-,+) 5
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f,   // (+,+,+) 6
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f,   // (+,+,+) 6
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f,   // (-,+,+) 7
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f,   // (-,-,+) 4
 
         // -X face
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (-,+,+) 7
-        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (-,+,-) 3
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (-,-,-) 0
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (-,-,-) 0
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (-,-,+) 4
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (-,+,+) 7
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f,   // (-,+,+) 7
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f,   // (-,+,-) 3
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f,   // (-,-,-) 0
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f,   // (-,-,-) 0
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f,   // (-,-,+) 4
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f,   // (-,+,+) 7
 
         // +X face
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (+,+,+) 6
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (+,+,-) 2
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (+,-,-) 1
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (+,-,-) 1
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (+,-,+) 5
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (+,+,+) 6
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f,   // (+,+,+) 6
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f,   // (+,+,-) 2
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f,   // (+,-,-) 1
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f,   // (+,-,-) 1
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f,   // (+,-,+) 5
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f,   // (+,+,+) 6
 
         // -Y face
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (-,-,-) 0
-         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,   // (+,-,-) 1
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,   // (+,-,+) 5
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,   // (+,-,+) 5
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (-,-,+) 4
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,   // (-,-,-) 0
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f,   // (-,-,-) 0
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f,   // (+,-,-) 1
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,   // (+,-,+) 5
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,   // (+,-,+) 5
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f,   // (-,-,+) 4
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f,   // (-,-,-) 0
 
         // +Y face
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,   // (-,+,-) 3
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (+,+,-) 2
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (+,+,+) 6
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,   // (+,+,+) 6
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,   // (-,+,+) 7
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f    // (-,+,-) 3
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f,   // (-,+,-) 3
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f,   // (+,+,-) 2
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f,   // (+,+,+) 6
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f,   // (+,+,+) 6
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f,   // (-,+,+) 7
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f    // (-,+,-) 3
     };
     #endif  /* RENDER_EBO==0 */
     // 3D cube with EBO (8 unique vertices. Each vertex is shared by 3 faces. One vertex's texture coords for one face are being shared for the two other neighboring faces, rather than them having their own unique texture)
@@ -422,11 +391,14 @@ int main()
     // 3D
     // --
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    // texture coord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    // normal attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    // texture coord attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
     #endif /* RENDER_3D==1 */
 
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
@@ -453,7 +425,7 @@ int main()
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
     // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
-    unsigned char *data = stbi_load("../textures/container.jpg", &width, &height, &nrChannels, 0);
+    unsigned char *data = stbi_load("../assets/textures/container.jpg", &width, &height, &nrChannels, 0);
     if (data)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -476,7 +448,7 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load image, create texture and generate mipmaps
-    data = stbi_load("../textures/awesomeface.png", &width, &height, &nrChannels, 0);
+    data = stbi_load("../assets/textures/awesomeface.png", &width, &height, &nrChannels, 0);
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
@@ -507,6 +479,8 @@ int main()
     // glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
     ourShader.setMat4("projection", projection);
     ourShader.setVec3("lightColor", lightColor);
+    ourShader.setVec3("objectColor", objectColor);
+    ourShader.setVec3("lightPos", lightPos);
 
     // bind Texture
     glActiveTexture(GL_TEXTURE0);
@@ -624,47 +598,6 @@ int main()
         }
     }
 
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    // float quad_vertices[] = {
-    //     // Positions   // Texture coordinates
-    //     -1.0f,  1.0f,  0.0f,  1.0f,  // Top-left
-    //     -1.0f, -1.0f,  0.0f,  0.0f,  // Bottom-left
-    //      1.0f, -1.0f,  1.0f,  0.0f,  // Bottom-right
-
-    //     -1.0f,  1.0f,  0.0f,  1.0f,  // Top-left
-    //      1.0f, -1.0f,  1.0f,  0.0f,  // Bottom-right
-    //      1.0f,  1.0f,  1.0f,  1.0f   // Top-right
-    // };
-
-    // glGenVertexArrays(1, &quadVAO);
-    // glGenBuffers(1, &quadVBO);
-
-    // glBindVertexArray(quadVAO);
-
-    // glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
-
-    // Position attribute
-    // glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(0);
-
-    // Texture coordinate attribute
-    // glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    // glEnableVertexAttribArray(1);
-
-    // build and compile our fullscreen quad shader program
-    // ----------------------------------------------------
-    // Shader quadShader("quad.vert", "quad.frag");
-
-    // // Position attribute
-    // glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(0);
-
-    // // Texture coordinate attribute
-    // glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    // glEnableVertexAttribArray(1);
-
     // light source
     // ------------
     Shader lightShader("light.vert", "light.frag");
@@ -676,11 +609,8 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     // glBufferData(GL_ARRAY_BUFFER, sizeof(light_cube), light_cube, GL_STATIC_DRAW);
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    // texture coord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
     model = glm::mat4(1.0f);
     model = glm::translate(model, lightPos);
     model = glm::scale(model, glm::vec3(0.2f)); // scale by 0.2
@@ -723,7 +653,7 @@ int main()
     glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
 
     FontManager fontManager;
-    fontManager.loadFont("ARIAL", 48);
+    fontManager.loadFont("Arial", 48);
 
     TextRenderer textRenderer(fontManager);
 
@@ -748,7 +678,8 @@ int main()
         // At this point the entire framebuffer is black
         glClear(GL_COLOR_BUFFER_BIT);
         // Set the clear color to the background color of choice
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // background color
+        // glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // background color
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // background color
         
         // IMGUI
         // -----
@@ -820,48 +751,31 @@ int main()
             model = glm::translate(model, lightPos);
             model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
             lightShader.setMat4("model", model);
-
             glBindVertexArray(lightVAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
-
-            // glDisable(GL_BLEND);
             
             // Step 2: Resolve MSAA FBO to standard non-MSAA FBO
             // -------------------------------------------------
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
-            glBlitFramebuffer(//lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, lowerLeftCornerOfViewportX+SCR_WIDTH, lowerLeftCornerOfViewportY+SCR_HEIGHT,           // src rect
-                              0, 0, SCR_WIDTH, SCR_HEIGHT,
-                              0, 0, SCR_WIDTH, SCR_HEIGHT,
-                              //lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, lowerLeftCornerOfViewportX + static_cast<int>(SCR_WIDTH), lowerLeftCornerOfViewportY + static_cast<int>(SCR_HEIGHT),           // dst rect
+            glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                              0, 0, SCR_WIDTH, SCR_HEIGHT,           // dest rect
                                       GL_COLOR_BUFFER_BIT,           // buffer mask
                                                GL_LINEAR);           // scale filter
             
-            textRenderer.renderText(fpsText, x, y, scale, color, "ARIAL");
-            textRenderer.renderAtlas("ARIAL");
+            textRenderer.renderText(fpsText, x, y, scale, color, "Arial");
+            textRenderer.renderAtlas("Arial");
             
             // IMGUI (visible in screen recording, messes up when window is resized)
             // ---------------------------------------------------------------------
             #if IMGUI==1
-            // Position ImGui window within the viewport
-            // float offsetX = 10.0f;
-            // float offsetY = 10.0f;
-            // ImGui::SetNextWindowPos(ImVec2(lowerLeftCornerOfViewportX*0 + offsetX, lowerLeftCornerOfViewportY*0 + offsetY));
-            // here's the ImGui window resizing code
-            // int width, height;
-            // glfwGetWindowSize(window, &width, &height);
-            // ImGui::SetNextWindowSize(ImVec2(width, height)); // ensures ImGui fits the GLFW window
-            // ImGui::SetNextWindowPos(ImVec2(lowerLeftCornerOfViewportX, 100+lowerLeftCornerOfViewportY), ImGuiCond_);//, ImGuiCond_FirstUseEver);
-            
             ImGui::Begin("My name is window, ImGUI window");
             ImGui::Text("Hello there adventurer!");
             ImGui::End();
-            
             // Show the ImPlot demo window
             if (ImGui::Begin("ImPlot Demo")) {
                 ImPlot::ShowDemoWindow();
             }
             ImGui::End();
-            
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             #endif
@@ -875,13 +789,10 @@ int main()
             if (!pbo)
             {
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-                glBlitFramebuffer(//lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, lowerLeftCornerOfViewportX + static_cast<int>(SCR_WIDTH), lowerLeftCornerOfViewportY + static_cast<int>(SCR_HEIGHT),           // src rect
-                                  0, 0, SCR_WIDTH, SCR_HEIGHT,
-                                  0, 0, SCR_WIDTH, SCR_HEIGHT,
-                                  //lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, lowerLeftCornerOfViewportX + static_cast<int>(SCR_WIDTH), lowerLeftCornerOfViewportY + static_cast<int>(SCR_HEIGHT),
+                glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                                  0, 0, SCR_WIDTH, SCR_HEIGHT,           // dest rect
                                           GL_COLOR_BUFFER_BIT,           // buffer mask
                                                   GL_NEAREST);           // scale filter
-                // RenderFullscreenQuad(quadShader, fboTexture);
 
                 // Step 4: Read pixels from the resolved FBO for off-screen encoding (without PBOs)
                 // --------------------------------------------------------------------------------
@@ -897,26 +808,21 @@ int main()
             {
                 // Step 4: Read pixels from the resolved FBO for off-screen encoding (with PBOs)
                 // -----------------------------------------------------------------------------
-                // "index" is used for GPU to read pixels from framebuffer to a PBO
-                // "nextIndex" is used for CPU to update/process pixels in the other PBO
-                index = (index + 1) % 2;
-                nextIndex = (index + 1) % 2;
                 // read pixels from framebuffer to PBO (pack)
                 // glReadPixels() should return immediately.
-                glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[index]);
+                glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[pbo1]);
                 glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, 0);  // array.data() is a built-in function in C++ STL which returns a pointer pointing to the first element in the array object
 
                 // map the PBO to process its data by CPU (unpack)
-                glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[nextIndex]);
-                GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_WRITE);
+                glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[pbo2]);
+                GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
                 if (ptr)
                 {
                     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
                     glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
                                       0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
-                                            GL_COLOR_BUFFER_BIT,           // buffer mask
-                                                    GL_NEAREST);           // scale filter
-                    // RenderFullscreenQuad(quadShader, fboTexture);
+                                              GL_COLOR_BUFFER_BIT,           // buffer mask
+                                                      GL_NEAREST);           // scale filter
 
                     // Flip the frame vertically
                     flipFrameVertically(ptr);
@@ -927,6 +833,11 @@ int main()
                     
                     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
                 }
+
+                // (0) is used for GPU to read pixels from framebuffer to a PBO
+                // (1) is used for CPU to update/process pixels in the other PBO
+                pbo1 = (pbo1 + 1) % 2; // (0)->(1) / (1)->(0)
+                pbo2 = (pbo1 + 1) % 2; // (1)->(0) / (0)->(1)
 
                 // back to conventional pixel operation
                 glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -981,17 +892,24 @@ int main()
             model = glm::translate(model, lightPos);
             model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
             lightShader.setMat4("model", model);
+            glBindVertexArray(lightVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
 
             // Render text in front: https://stackoverflow.com/a/5527249
             // glClear(GL_DEPTH_BUFFER_BIT);
-            textRenderer.renderText(fpsText, x, y, scale, color, "ARIAL");
-            textRenderer.renderAtlas("ARIAL");
+            textRenderer.renderText(fpsText, x, y, scale, color, "Arial");
+            textRenderer.renderAtlas("Arial");
 
             // IMGUI
             // -----
             #if IMGUI==1
             ImGui::Begin("My name is window, ImGUI window");
             ImGui::Text("Hello there adventurer!");
+            ImGui::End();
+            // Show the ImPlot demo window
+            if (ImGui::Begin("ImPlot Demo")) {
+                ImPlot::ShowDemoWindow();
+            }
             ImGui::End();
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -1021,9 +939,7 @@ int main()
     #if RENDER_EBO==1 || RENDER_3D==0
     glDeleteBuffers(1, &EBO);
     #endif
-    // De-allocate frame buffer
-    // free(frame);
-    // This deletes all items in the array
+    // De-allocate frame buffer (deletes all items in the array)
     delete[] frame;
     // Delete all the shader programs we've created
 	ourShader.Delete();
@@ -1064,8 +980,7 @@ int main()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
-{
+void processInput(GLFWwindow *window) {
     // Exit
     // ----
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -1243,16 +1158,20 @@ void processInput(GLFWwindow *window)
     // -----
     if (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
     {
+        // pause -> unpause
         if (paused)
         {
-            glfwSetCursorPos(window, lastX, lastY);  // set cursor in centre of screen to remove whiplash cursor jump
+            firstMouse = true;
+            lastXpos = static_cast<double>(lastX);
+            lastYpos = static_cast<double>(lastY);
+            glfwSetCursorPos(window, lastXpos, lastYpos);  // remove whiplash cursor jump
             // tell GLFW to capture our mouse
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             paused = 0;
         }
+        // unpause -> pause
         else
         {
-            glfwSetCursorPos(window, lowerLeftCornerOfViewportX + SCR_WIDTH/2.0f, lowerLeftCornerOfViewportY + SCR_HEIGHT/2.0f);  // set cursor in centre of screen to remove whiplash cursor jump
             // tell GLFW to uncapture our mouse
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             paused = 1;
@@ -1269,10 +1188,9 @@ void processInput(GLFWwindow *window)
     // }
 }
 
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
+// glfw: whenever window size changes (by OS or user) this callback function executes
+// ----------------------------------------------------------------------------------
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     
@@ -1327,13 +1245,19 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
-{
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     // only update when unpaused
     if (!paused)
     {
         float xpos = static_cast<float>(xposIn);
         float ypos = static_cast<float>(yposIn);
+
+        if (firstMouse)
+        {
+            lastX = xpos;
+            lastY = ypos;
+            firstMouse = false;
+        }
 
         float xoffset = xpos - lastX;
         float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
@@ -1347,8 +1271,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
@@ -1383,23 +1306,23 @@ void UpdateFPS(float crntTime) {
     }
 }
 
-bool WGLExtensionSupported(const char *extension_name)
-{
-    // this is pointer to function which returns pointer to string with list of all wgl extensions
-    PFNWGLGETEXTENSIONSSTRINGEXTPROC _wglGetExtensionsStringEXT = NULL;
+// bool WGLExtensionSupported(const char *extension_name)
+// {
+//     // this is pointer to function which returns pointer to string with list of all wgl extensions
+//     PFNWGLGETEXTENSIONSSTRINGEXTPROC _wglGetExtensionsStringEXT = NULL;
 
-    // determine pointer to wglGetExtensionsStringEXT function
-    _wglGetExtensionsStringEXT = (PFNWGLGETEXTENSIONSSTRINGEXTPROC) wglGetProcAddress("wglGetExtensionsStringEXT");
+//     // determine pointer to wglGetExtensionsStringEXT function
+//     _wglGetExtensionsStringEXT = (PFNWGLGETEXTENSIONSSTRINGEXTPROC) wglGetProcAddress("wglGetExtensionsStringEXT");
 
-    if (strstr(_wglGetExtensionsStringEXT(), extension_name) == NULL)
-    {
-        // string was not found
-        return false;
-    }
+//     if (strstr(_wglGetExtensionsStringEXT(), extension_name) == NULL)
+//     {
+//         // string was not found
+//         return false;
+//     }
 
-    // extension is supported
-    return true;
-}
+//     // extension is supported
+//     return true;
+// }
 
 void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture) {
     quadShader.use();
@@ -1449,20 +1372,6 @@ void RenderCrate(Shader &ourShader, glm::vec3 &trans) {
     model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));  
     ourShader.setMat4("model", model);
 
-    // view
-    // ----
-    // moveable camera
-    // glm::mat4 view = glm::mat4(1.0f);
-    // note that we're translating the scene in the reverse direction of where we want to move
-    // view = glm::translate(view, glm::vec3(camX, camY, camZ));
-    
-    // turntable camera
-    // const float radius = 10.0f;
-    // float camX = sin(glfwGetTime()) * radius;
-    // float camZ = cos(glfwGetTime()) * radius;
-    // glm::mat4 view;
-    // view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-    
     // moveable camera + swivel
     glm::mat4 view = camera.GetViewMatrix();
     
@@ -1470,11 +1379,13 @@ void RenderCrate(Shader &ourShader, glm::vec3 &trans) {
 
     // projection
     // ----------
-    // glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH/(float)SCR_HEIGHT, 0.1f, 100.0f);
-    // ourShader.setMat4("projection", projection);
     // pass projection matrix to shader (note that in this case it could change every frame)
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
     ourShader.setMat4("projection", projection);
+
+    // light
+    // -----
+    ourShader.setVec3("lightPos", lightPos);
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);

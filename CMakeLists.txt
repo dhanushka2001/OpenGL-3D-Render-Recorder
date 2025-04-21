@@ -18,47 +18,51 @@ set(SOURCES
     src/glad.c
 )
 
-# Find GLFW (make sure it's installed on your system)
-#find_package(GLFW3 REQUIRED)
-
-# Find OpenGL (on Windows, it'll look for OpenGL32.lib; on Linux, it looks for libGL)
-#find_package(OpenGL REQUIRED)    
-
 # Include headers for FFmpeg and others
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/freetype2
-    ${CMAKE_SOURCE_DIR}/lib/GLFW
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg
-    ${CMAKE_SOURCE_DIR}/lib/freetype
+    # ${CMAKE_SOURCE_DIR}/lib/GLFW
+    # ${CMAKE_SOURCE_DIR}/lib/ffmpeg
+    # ${CMAKE_SOURCE_DIR}/third_party/freetype/include/freetype
 )
 
 # Executable target
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-# Define the source and destination directories for shaders
-set(SHADER_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
-set(SHADER_DEST_DIR   ${CMAKE_BINARY_DIR}/shaders)
+# Define the source and destination directories for /assets/
+set(ASSETS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/assets)
+set(ASSETS_DEST_DIR   ${CMAKE_BINARY_DIR})
 
-# Create a custom command to copy shaders
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    	${SHADER_SOURCE_DIR} ${SHADER_DEST_DIR}
-    COMMENT "Copying /shaders/ to build directory"
-)
+# Define the source and destination directories for /shaders/
+set(SHADERS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
+set(SHADERS_DEST_DIR   ${CMAKE_BINARY_DIR})
 
-# Define the source and destination directories for textures
-set(TEXTURE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/textures)
-set(TEXTURE_DEST_DIR   ${CMAKE_BINARY_DIR}/textures)
+# Shader copy target
+if(UNIX)
+    add_custom_target(sync_assets ALL
+        COMMAND rsync -a --delete ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
+        COMMAND rsync -a --delete ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}
+        COMMENT "Syncing assets and shaders using rsync"
+    )
+endif(UNIX)
 
-# Create a custom command to copy textures
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${TEXTURE_SOURCE_DIR} ${TEXTURE_DEST_DIR}
-    COMMENT "Copying /textures/ to build directory"
-)
+if(WIN32)
+    add_custom_target(sync_assets ALL
+        COMMAND robocopy ASSETS_SOURCE_DIR ASSETS_DEST_DIR /MIR /NFL /NDL
+        COMMAND robocopy ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
+        COMMAND robocopy ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}
+        COMMENT "Syncing assets and shaders using robocopy"
+    )
+endif(WIN32)
+
+# # Create a custom command to copy assets
+# add_custom_command(
+#     TARGET ${PROJECT_NAME} POST_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E copy_directory
+#         ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
+#     COMMENT "Copying /assets/ to build directory"
+# )
 
 # Add the custom text function library
 add_library(text STATIC
@@ -111,48 +115,73 @@ target_include_directories(implot PUBLIC
 # Link ImPlot to ImGui
 target_link_libraries(implot PUBLIC imgui)  # ImPlot depends on ImGui
 
-# Link all the found libraries
-target_link_libraries(${PROJECT_NAME}
-    imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
-    implot # ImPlot static library from CMake
-    encoder
-    text
+if(UNIX)
+    find_package(OpenGL REQUIRED)
+    find_package(glfw3 REQUIRED)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
+        libavcodec
+        libavformat
+        libavutil
+        libswscale
+    )
+    pkg_check_modules(FREETYPE2 REQUIRED IMPORTED_TARGET
+        freetype2
+    )
+    target_link_libraries(${PROJECT_NAME}
+        imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
+        implot # ImPlot static library from CMake
+        encoder
+        text
+        OpenGL::GL
+        glfw
+        PkgConfig::FFMPEG
+        PkgConfig::FREETYPE2
+    )
+endif(UNIX)
 
-    #glfw  # GLFW target from CMake (alternative to libglfw3.a)
-    #OpenGL::GL  # OpenGL target from CMake
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME}
+        imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
+        implot # ImPlot static library from CMake
+        encoder
+        text
 
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavformat.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavcodec.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavutil.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswscale.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswresample.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libpthread.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libm.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libws2_32.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libiconv.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/liblzma.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libole32.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libbcrypt.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libuuid.a
-    ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libstrmiids.a
+        #glfw  # GLFW target from CMake (alternative to libglfw3.a)
+        #OpenGL::GL  # OpenGL target from CMake
+        ${CMAKE_SOURCE_DIR}/lib/GLFW/libglfw3.a
+        ${CMAKE_SOURCE_DIR}/lib/libopengl32.a  # OpenGL
 
-    ${CMAKE_SOURCE_DIR}/lib/GLFW/libglfw3.a
-    
-    ${CMAKE_SOURCE_DIR}/lib/freetype/libfreetype.a
-    ${CMAKE_SOURCE_DIR}/lib/freetype/libharfbuzz.a
-    ${CMAKE_SOURCE_DIR}/lib/freetype/libgraphite2.a
-    ${CMAKE_SOURCE_DIR}/lib/freetype/libpng.a
-    ${CMAKE_SOURCE_DIR}/lib/freetype/libz.a
-    ${CMAKE_SOURCE_DIR}/lib/freetype/libbz2.a
-    ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlidec.a
-    ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlienc.a
-    ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlicommon.a
-    ${CMAKE_SOURCE_DIR}/lib/freetype/librpcrt4.a
-    ${CMAKE_SOURCE_DIR}/lib/freetype/libgdi32.a
+        # FFmpeg
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavformat.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavcodec.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavutil.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswscale.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswresample.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libpthread.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libm.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libws2_32.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libiconv.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/liblzma.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libole32.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libbcrypt.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libuuid.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libstrmiids.a
 
-    ${CMAKE_SOURCE_DIR}/lib/libopengl32.a  # OpenGL
-)
-    
+        # Freetype
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libfreetype.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libharfbuzz.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libgraphite2.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libpng.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libz.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libbz2.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlidec.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlienc.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlicommon.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/librpcrt4.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libgdi32.a
+    )
+endif(WIN32)
 
 # Set output directory for the executable
 set_target_properties(${PROJECT_NAME} PROPERTIES
