@@ -48,21 +48,29 @@ if(UNIX)
 endif(UNIX)
 
 if(WIN32)
-    add_custom_target(sync_assets ALL
-        COMMAND robocopy ASSETS_SOURCE_DIR ASSETS_DEST_DIR /MIR /NFL /NDL
-        COMMAND robocopy ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
-        COMMAND robocopy ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}
-        COMMENT "Syncing assets and shaders using robocopy"
+    # file(TO_NATIVE_PATH ${ASSETS_SOURCE_DIR} ASSETS_SRC_NATIVE)
+    # file(TO_NATIVE_PATH ${ASSETS_DEST_DIR} ASSETS_DST_NATIVE)
+    # file(TO_NATIVE_PATH ${SHADERS_SOURCE_DIR} SHADERS_SRC_NATIVE)
+    # file(TO_NATIVE_PATH ${SHADERS_DEST_DIR} SHADERS_DST_NATIVE)
+
+    # add_custom_target(sync_assets ALL
+    #     COMMAND cmd /c robocopy ${ASSETS_SRC_NATIVE} ${ASSETS_DST_NATIVE} /MIR /NJH /NJS /NFL /NDL /NS /NC /NP ^> nul || exit 0
+    #     COMMAND cmd /c robocopy ${SHADERS_SRC_NATIVE} ${SHADERS_DST_NATIVE} /MIR /NJH /NJS /NFL /NDL /NS /NC /NP ^> nul || exit 0
+    #     # COMMAND cmd /c exit 0
+    #     COMMENT "Syncing assets and shaders using robocopy"
+    #     VERBATIM
+    # )
+
+    # Create a custom command to copy assets
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}/assets
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}/shaders
+        COMMENT "Copying /assets/ and /shaders/ to build directory"
     )
 endif(WIN32)
-
-# # Create a custom command to copy assets
-# add_custom_command(
-#     TARGET ${PROJECT_NAME} POST_BUILD
-#     COMMAND ${CMAKE_COMMAND} -E copy_directory
-#         ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
-#     COMMENT "Copying /assets/ to build directory"
-# )
 
 # Add the custom text function library
 add_library(text STATIC
