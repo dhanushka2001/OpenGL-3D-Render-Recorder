@@ -1,5 +1,5 @@
 #include <learnopengl/encoder.h>
-// #include <learnopengl/globals.h>
+#include <learnopengl/Config.h>
 #include <iostream>                 // for std::cin/cout/cerr
 
 // FFmpeg
@@ -15,6 +15,8 @@ extern "C" {
 namespace Encoder {
 
     namespace {     // anonymous namespace (encapsulation)
+        // unsigned int SCR_WIDTH = Config::GetScreenWidth();
+        // unsigned int SCR_HEIGHT = Config::GetScreenHeight();
 
         // FFmpeg
         // ------
@@ -30,6 +32,8 @@ namespace Encoder {
 
     // Function to initialize FFmpeg encoder
     bool initializeEncoder(const char* filename) {
+        unsigned int SCR_WIDTH = Config::GetScreenWidth();
+        unsigned int SCR_HEIGHT = Config::GetScreenHeight();
         // Set up ffmpeg's log callback
         // av_log_set_callback(custom_ffmpeg_log_callback);
 
@@ -57,7 +61,7 @@ namespace Encoder {
         }
 
         // Set up the codec context
-        int FPS = static_cast<int>(framerate);
+        int FPS = static_cast<int>(Config::GetFramerate());
         codecCtx = avcodec_alloc_context3(codec);
         codecCtx->width = SCR_WIDTH;
         codecCtx->height = SCR_HEIGHT;
@@ -124,6 +128,8 @@ namespace Encoder {
 
     // Encode frame using FFmpeg
     bool encodeFrame(const uint8_t* rgbData, float crntTime) {
+        unsigned int SCR_WIDTH = Config::GetScreenWidth();
+        unsigned int SCR_HEIGHT = Config::GetScreenHeight();
         // Convert RGB to YUV420P
         uint8_t* inData[1] = {(uint8_t*)rgbData};  // Input RGB data
         int inLinesize[1] = {3 * static_cast<int>(SCR_WIDTH)};          // Input stride

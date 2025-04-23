@@ -5,9 +5,6 @@
 #include <learnopengl/fontmanager.h>
 #include <learnopengl/shader_s.h>
 
-extern const unsigned int  SCR_WIDTH;
-extern const unsigned int  SCR_HEIGHT;
-
 class TextRenderer {
 private:
     FontManager& fontManager;
@@ -15,6 +12,8 @@ private:
     GLuint quadVAO, quadVBO;
     Shader textShader;
     Shader atlasShader;
+    unsigned int SCR_WIDTH;
+    unsigned int SCR_HEIGHT;
 public:
     TextRenderer(FontManager& fm);
     ~TextRenderer();

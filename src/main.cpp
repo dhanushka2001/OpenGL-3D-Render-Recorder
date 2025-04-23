@@ -24,6 +24,7 @@
 #include <learnopengl/encoder.h>        // FFmpeg functions
 #include <learnopengl/fontmanager.h>    // Custom Font Manager
 #include <learnopengl/textrenderer.h>   // Custom Text Renderer
+#include <learnopengl/Config.h>         // Config
 
 #include <iostream>                     // for std::cin/cout/cerr
 #include <filesystem>                   // for std::filesystem
@@ -54,7 +55,9 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 std::string GetFPSText(float fps, float ms);
 void UpdateFPS(float crntTime);
+// #ifdef _WIN32
 // bool WGLExtensionSupported(const char *extension_name);
+// #endif
 void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture);
 void RenderCrate(Shader &ourShader, glm::vec3 &trans);
 // FFmpeg
@@ -62,18 +65,20 @@ void flipFrameVertically(unsigned char* frame);
 
 // settings
 // --------
-const unsigned int  SCR_WIDTH       = 2560;  // 800;
-const unsigned int  SCR_HEIGHT      = 1440;  // 600;
-const unsigned int  CHANNEL_COUNT   =  3;
-const unsigned int  DATA_SIZE       = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
-const unsigned int  PBO_COUNT       =  2;
-const unsigned int  msaa            =  4;    // | 0 = no anti-aliasing | 4 = 4xMSAA |
-const bool          recording       =  1;
-bool                fullscreen      =  1;
-bool                pbo             =  1;
-bool                paused          =  0;
-const int           vsync           =  0;   // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
-unsigned int        framerate       = 60;
+namespace {     // anonymous namespace (encapsulation)
+    unsigned int        SCR_WIDTH;
+    unsigned int        SCR_HEIGHT;
+    unsigned int        framerate;
+    bool                fullscreen;
+    int                 vsync;
+    bool                pbo;
+    bool                paused;
+    unsigned int        msaa;
+    bool                recording;
+    const unsigned int  CHANNEL_COUNT   =  3;
+    const unsigned int  PBO_COUNT       =  2;
+}
+
 #define             RENDER_3D           1   // make sure to change in the shaders too
 #define             RENDER_EBO          0   // only matters when RENDER_3D=1
 #define             IMGUI               1
@@ -108,8 +113,8 @@ float   camZ        =  -4.5f;
 // camera
 // ------
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
-float   lastX       = SCR_WIDTH / 2.0f;
-float   lastY       = SCR_HEIGHT / 2.0f;
+float   lastX       = 0;
+float   lastY       = 0;
 double lastXpos     = 0;
 double lastYpos     = 0;
 bool    firstMouse  = true;
@@ -130,7 +135,8 @@ float msPerFrame = 0.0f;
 
 // window
 // ------
-int window_xPos, window_yPos, window_width, window_height;
+int window_xPos, window_yPos = 0;
+int window_width, window_height;
 
 // viewport
 // --------
@@ -183,6 +189,27 @@ int main()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
+    // Set window size (needs to be fixed when recording)
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+    Config::SetScreenResolution(mode->width, mode->height);
+    // Config::SetScreenResolution(800, 600);
+
+    // Set our local cached values
+    SCR_WIDTH   = Config::GetScreenWidth();
+    SCR_HEIGHT  = Config::GetScreenHeight();
+    framerate   = Config::GetFramerate();
+    fullscreen  = Config::GetFullscreen();
+    pbo         = Config::GetPBO();
+    paused      = Config::GetPaused();
+    msaa        = Config::GetMSAA();
+    recording   = Config::GetRecording();
+
+    lastX = SCR_WIDTH / 2;
+    lastY = SCR_HEIGHT / 2;
+    window_width = SCR_WIDTH;
+    window_height = SCR_HEIGHT;
+
     // glfw window creation
     // --------------------
     GLFWwindow* window;
@@ -218,6 +245,7 @@ int main()
     // V-SYNC: Initialize function pointers
     // ------------------------------------
     // https://stackoverflow.com/a/589232
+    // #ifdef _WIN32
     // PFNWGLSWAPINTERVALEXTPROC       wglSwapIntervalEXT    = NULL;
     // PFNWGLGETSWAPINTERVALEXTPROC    wglGetSwapIntervalEXT = NULL;
 
@@ -233,6 +261,7 @@ int main()
     // // https://www.khronos.org/opengl/wiki/Swap_Interval
     // wglSwapIntervalEXT(vsync);
     // std::cout << "\nwglSwapIntervalEXT: " << wglGetSwapIntervalEXT() << std::endl;
+    // #endif /* _WIN32 */
 
     // build and compile our shader program to render the crates
     // ---------------------------------------------------------
@@ -507,6 +536,7 @@ int main()
         {
             // create 2 pixel buffer objects, you need to delete them when program exits.
             // glBufferData() with NULL pointer reserves only memory space.
+            const unsigned int DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
             glGenBuffers(PBO_COUNT, pboIds);
             glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[0]);
             glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
@@ -656,6 +686,8 @@ int main()
     fontManager.loadFont("Arial", 48);
 
     TextRenderer textRenderer(fontManager);
+    
+    glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
     // render loop
     // -----------
@@ -663,6 +695,7 @@ int main()
     {
         // input
         // -----
+        // glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         processInput(window);
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
@@ -930,6 +963,7 @@ int main()
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);    // swap the BACK buffer with the FRONT buffer
         glfwPollEvents();           // take care of all GLFW events
+        glfwSwapInterval(vsync);    // vsync
     }
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
@@ -1120,8 +1154,8 @@ void processInput(GLFWwindow *window) {
             glfwSetWindowMonitor(window,
                                  NULL,
                                  window_xPos, window_yPos,
-                                //  window_width, window_height,
-                                 SCR_WIDTH, SCR_HEIGHT,
+                                 window_width, window_height,
+                                //  SCR_WIDTH, SCR_HEIGHT,
                                  framerate
             );
             fullscreen = 0;
@@ -1306,6 +1340,7 @@ void UpdateFPS(float crntTime) {
     }
 }
 
+// #ifdef _WIN32
 // bool WGLExtensionSupported(const char *extension_name)
 // {
 //     // this is pointer to function which returns pointer to string with list of all wgl extensions
@@ -1323,6 +1358,7 @@ void UpdateFPS(float crntTime) {
 //     // extension is supported
 //     return true;
 // }
+// #endif
 
 void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture) {
     quadShader.use();

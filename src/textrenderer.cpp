@@ -1,8 +1,11 @@
 #include <glad/glad.h>
 #include <learnopengl/textrenderer.h>
 #include <learnopengl/shader_s.h>
-// #include <learnopengl/globals.h>
+#include <learnopengl/Config.h>
 #include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 TextRenderer::TextRenderer(FontManager &fm)
     : fontManager(fm),
@@ -24,6 +27,9 @@ TextRenderer::TextRenderer(FontManager &fm)
 
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &quadVBO);
+
+    SCR_WIDTH = Config::GetScreenWidth();
+    SCR_HEIGHT = Config::GetScreenHeight();
 }
 
 TextRenderer::~TextRenderer()

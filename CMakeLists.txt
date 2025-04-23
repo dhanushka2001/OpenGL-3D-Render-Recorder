@@ -22,9 +22,6 @@ set(SOURCES
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/freetype2
-    # ${CMAKE_SOURCE_DIR}/lib/GLFW
-    # ${CMAKE_SOURCE_DIR}/lib/ffmpeg
-    # ${CMAKE_SOURCE_DIR}/third_party/freetype/include/freetype
 )
 
 # Executable target
@@ -62,13 +59,41 @@ if(WIN32)
     # )
 
     # Create a custom command to copy assets
+    # add_custom_command(
+    #     TARGET ${PROJECT_NAME} POST_BUILD
+    #     COMMAND ${CMAKE_COMMAND} -E copy_directory
+    #         ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}/assets
+    #     COMMAND ${CMAKE_COMMAND} -E copy_directory
+    #         ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}/shaders
+    #     COMMENT "Copying /assets/ and /shaders/ to build directory"
+    # )
+
+    set(ASSETS_COPY_STAMP ${CMAKE_BINARY_DIR}/assets_robocopy.stamp)
+    set(SHADERS_COPY_STAMP ${CMAKE_BINARY_DIR}/shaders_robocopy.stamp)
+
+    file(TO_NATIVE_PATH ${ASSETS_SOURCE_DIR} ASSETS_SRC_NATIVE)
+    file(TO_NATIVE_PATH ${ASSETS_DEST_DIR}/assets ASSETS_DST_NATIVE)
+    file(TO_NATIVE_PATH ${SHADERS_SOURCE_DIR} SHADERS_SRC_NATIVE)
+    file(TO_NATIVE_PATH ${SHADERS_DEST_DIR}/shaders SHADERS_DST_NATIVE)
+
     add_custom_command(
-        TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}/assets
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}/shaders
-        COMMENT "Copying /assets/ and /shaders/ to build directory"
+        OUTPUT ${ASSETS_COPY_STAMP}
+        COMMAND cmd /c robocopy "${ASSETS_SRC_NATIVE}" "${ASSETS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP ^> nul || exit 0
+        COMMAND ${CMAKE_COMMAND} -E touch "${ASSETS_COPY_STAMP}"
+        COMMENT "Syncing /assets/ with robocopy"
+        VERBATIM
+    )
+
+    add_custom_command(
+        OUTPUT ${SHADERS_COPY_STAMP}
+        COMMAND cmd /c robocopy "${SHADERS_SRC_NATIVE}" "${SHADERS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP ^> nul || exit 0
+        COMMAND ${CMAKE_COMMAND} -E touch "${SHADERS_COPY_STAMP}"
+        COMMENT "Syncing /shaders/ with robocopy"
+        VERBATIM
+    )
+
+    add_custom_target(sync_resources ALL
+        DEPENDS ${ASSETS_COPY_STAMP} ${SHADERS_COPY_STAMP}
     )
 endif(WIN32)
 
@@ -78,14 +103,14 @@ add_library(text STATIC
     src/fontmanager.cpp
     src/textrenderer.cpp
 )
-# Set the target properties for imgui (where libimgui.a will be created)
+# Set the target properties for text (where libtext.a will be created)
 set_target_properties(text PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
 
 # Add the FFmpeg function library
 add_library(encoder STATIC
     src/encoder.cpp
 )
-# Set the target properties for imgui (where libimgui.a will be created)
+# Set the target properties for encoder (where libencoder.a will be created)
 set_target_properties(encoder PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
 
 # Add the ImGui library
@@ -123,6 +148,18 @@ target_include_directories(implot PUBLIC
 # Link ImPlot to ImGui
 target_link_libraries(implot PUBLIC imgui)  # ImPlot depends on ImGui
 
+# Add the Config library
+add_library(config STATIC
+    src/Config.cpp
+)
+
+# Set the target properties for config (where libconfig.a will be created)
+set_target_properties(config PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
+
+# Link config into any target that needs it
+target_link_libraries(encoder PUBLIC config)
+target_link_libraries(text PUBLIC config)
+
 if(UNIX)
     find_package(OpenGL REQUIRED)
     find_package(glfw3 REQUIRED)
@@ -137,6 +174,7 @@ if(UNIX)
         freetype2
     )
     target_link_libraries(${PROJECT_NAME}
+        config # don't even need to link as config already linked to encoder and text, but no harm in including again
         imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
         implot # ImPlot static library from CMake
         encoder
