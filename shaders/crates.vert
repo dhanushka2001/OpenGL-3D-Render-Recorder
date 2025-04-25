@@ -32,10 +32,11 @@ void main()
 	#endif
 
 	#if RENDER_3D==1
-	FragPos = vec3(model * vec4(aPos, 1.0));
+	FragPos = vec3(model * transform * vec4(aPos, 1.0));
 	Normal = mat3(model) * aNormal;
 	// Normal = aNormal;
-	#endif
+	// Normal = mat3(transpose(inverse(model))) * aNormal;  // inversing matrices is a costly operation
+    #endif
 	
 	TexCoord = vec2(aTexCoord.x, aTexCoord.y);
 }

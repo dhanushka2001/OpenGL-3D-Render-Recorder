@@ -4,12 +4,12 @@ namespace {     // anonymous namespace (encapsulation)
     unsigned int        SCR_WIDTH       =  0;
     unsigned int        SCR_HEIGHT      =  0;
     const unsigned int  framerate       = 60;
-    bool                fullscreen      =  0;
+    bool                fullscreen      =  1;
     int                 vsync           =  0;   // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
     bool                pbo             =  1;   // +10FPS boost when enabled
     bool                paused          =  0;
-    unsigned int        msaa            =  4;    // | 0 = no anti-aliasing | 4 = 4xMSAA |
-    bool                recording       =  1;
+    unsigned int        msaa            =  0;    // | 0 = no anti-aliasing | 4 = 4xMSAA |
+    bool                recording       =  0;
 
 }
 

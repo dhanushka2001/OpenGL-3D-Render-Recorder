@@ -510,6 +510,7 @@ int main()
     ourShader.setVec3("lightColor", lightColor);
     ourShader.setVec3("objectColor", objectColor);
     ourShader.setVec3("lightPos", lightPos);
+    ourShader.setVec3("viewPos", camera.Position);
 
     // bind Texture
     glActiveTexture(GL_TEXTURE0);
@@ -887,24 +888,24 @@ int main()
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            // set the texture mix value in the shader (this needs to be in the render loop)
-            ourShader.use();
-            ourShader.setFloat("mixValue", mixValue);
+            // // set the texture mix value in the shader (this needs to be in the render loop)
+            // ourShader.use();
+            // ourShader.setFloat("mixValue", mixValue);
 
-            // bind Texture
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, crateTexture);
-            ourShader.setInt("texture1", 0);
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, awesomeTexture);
-            ourShader.setInt("texture2", 1);
+            // // bind Texture
+            // glActiveTexture(GL_TEXTURE0);
+            // glBindTexture(GL_TEXTURE_2D, crateTexture);
+            // ourShader.setInt("texture1", 0);
+            // glActiveTexture(GL_TEXTURE1);
+            // glBindTexture(GL_TEXTURE_2D, awesomeTexture);
+            // ourShader.setInt("texture2", 1);
 
-            glm::mat4 trans = glm::mat4(1.0f);
-            trans = glm::translate(trans, glm::vec3(xOffset, yOffset, 0.0f));
+            // glm::mat4 trans = glm::mat4(1.0f);
+            // trans = glm::translate(trans, glm::vec3(xOffset, yOffset, 0.0f));
             // trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-            ourShader.setMat4("transform", trans);
+            // ourShader.setMat4("transform", trans);
 
-            glBindVertexArray(VAO);
+            // glBindVertexArray(VAO);
             // glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
             // static crate
@@ -1165,13 +1166,13 @@ void processInput(GLFWwindow *window) {
         {
             glfwGetWindowPos(window, &window_xPos, &window_yPos);
             glfwGetWindowSize(window, &window_width, &window_height);
-            // GLFWmonitor *monitor = glfwGetPrimaryMonitor();
-            // const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+            GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode *mode = glfwGetVideoMode(monitor);
             glfwSetWindowMonitor(window,
                                  glfwGetPrimaryMonitor(),
                                  0, 0,
-                                //  mode->width, mode->height,
-                                 SCR_WIDTH, SCR_HEIGHT,
+                                 mode->width, mode->height,
+                                 // SCR_WIDTH, SCR_HEIGHT,
                                  framerate
             );
             fullscreen = 1;
@@ -1422,6 +1423,7 @@ void RenderCrate(Shader &ourShader, glm::vec3 &trans) {
     // light
     // -----
     ourShader.setVec3("lightPos", lightPos);
+    ourShader.setVec3("viewPos", camera.Position);
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
