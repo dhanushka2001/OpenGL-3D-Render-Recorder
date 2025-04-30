@@ -45,53 +45,51 @@ if(UNIX)
 endif(UNIX)
 
 if(WIN32)
-    # file(TO_NATIVE_PATH ${ASSETS_SOURCE_DIR} ASSETS_SRC_NATIVE)
-    # file(TO_NATIVE_PATH ${ASSETS_DEST_DIR} ASSETS_DST_NATIVE)
-    # file(TO_NATIVE_PATH ${SHADERS_SOURCE_DIR} SHADERS_SRC_NATIVE)
-    # file(TO_NATIVE_PATH ${SHADERS_DEST_DIR} SHADERS_DST_NATIVE)
+    # Set source and destination directories
+    set(ASSETS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/assets)
+    set(SHADERS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
+    set(ASSETS_DEST_DIR ${CMAKE_BINARY_DIR}/assets)
+    set(SHADERS_DEST_DIR ${CMAKE_BINARY_DIR}/shaders)
 
-    # add_custom_target(sync_assets ALL
-    #     COMMAND cmd /c robocopy ${ASSETS_SRC_NATIVE} ${ASSETS_DST_NATIVE} /MIR /NJH /NJS /NFL /NDL /NS /NC /NP ^> nul || exit 0
-    #     COMMAND cmd /c robocopy ${SHADERS_SRC_NATIVE} ${SHADERS_DST_NATIVE} /MIR /NJH /NJS /NFL /NDL /NS /NC /NP ^> nul || exit 0
-    #     # COMMAND cmd /c exit 0
-    #     COMMENT "Syncing assets and shaders using robocopy"
-    #     VERBATIM
-    # )
+    # Convert paths to Windows native format
+    file(TO_NATIVE_PATH ${ASSETS_SOURCE_DIR} ASSETS_SRC_NATIVE)
+    file(TO_NATIVE_PATH ${ASSETS_DEST_DIR} ASSETS_DST_NATIVE)
+    file(TO_NATIVE_PATH ${SHADERS_SOURCE_DIR} SHADERS_SRC_NATIVE)
+    file(TO_NATIVE_PATH ${SHADERS_DEST_DIR} SHADERS_DST_NATIVE)
 
-    # Create a custom command to copy assets
-    # add_custom_command(
-    #     TARGET ${PROJECT_NAME} POST_BUILD
-    #     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    #         ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}/assets
-    #     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    #         ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}/shaders
-    #     COMMENT "Copying /assets/ and /shaders/ to build directory"
-    # )
+    # Recursively find all files to track for rebuilds
+    file(GLOB_RECURSE ASSET_FILES RELATIVE ${ASSETS_SOURCE_DIR} "${ASSETS_SOURCE_DIR}/*")
+    file(GLOB_RECURSE SHADER_FILES RELATIVE ${SHADERS_SOURCE_DIR} "${SHADERS_SOURCE_DIR}/*")
 
+    # Prepend full path to each file
+    list(TRANSFORM ASSET_FILES PREPEND "${ASSETS_SOURCE_DIR}/")
+    list(TRANSFORM SHADER_FILES PREPEND "${SHADERS_SOURCE_DIR}/")
+
+    # Create stamp file names
     set(ASSETS_COPY_STAMP ${CMAKE_BINARY_DIR}/assets_robocopy.stamp)
     set(SHADERS_COPY_STAMP ${CMAKE_BINARY_DIR}/shaders_robocopy.stamp)
 
-    file(TO_NATIVE_PATH ${ASSETS_SOURCE_DIR} ASSETS_SRC_NATIVE)
-    file(TO_NATIVE_PATH ${ASSETS_DEST_DIR}/assets ASSETS_DST_NATIVE)
-    file(TO_NATIVE_PATH ${SHADERS_SOURCE_DIR} SHADERS_SRC_NATIVE)
-    file(TO_NATIVE_PATH ${SHADERS_DEST_DIR}/shaders SHADERS_DST_NATIVE)
-
+    # Robocopy for assets
     add_custom_command(
         OUTPUT ${ASSETS_COPY_STAMP}
-        COMMAND cmd /c robocopy "${ASSETS_SRC_NATIVE}" "${ASSETS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP ^> nul || exit 0
+        COMMAND cmd /c robocopy "${ASSETS_SRC_NATIVE}" "${ASSETS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
         COMMAND ${CMAKE_COMMAND} -E touch "${ASSETS_COPY_STAMP}"
+        DEPENDS ${ASSET_FILES}
         COMMENT "Syncing /assets/ with robocopy"
         VERBATIM
     )
 
+    # Robocopy for shaders
     add_custom_command(
         OUTPUT ${SHADERS_COPY_STAMP}
-        COMMAND cmd /c robocopy "${SHADERS_SRC_NATIVE}" "${SHADERS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP ^> nul || exit 0
+        COMMAND cmd /c robocopy "${SHADERS_SRC_NATIVE}" "${SHADERS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
         COMMAND ${CMAKE_COMMAND} -E touch "${SHADERS_COPY_STAMP}"
+        DEPENDS ${SHADER_FILES}
         COMMENT "Syncing /shaders/ with robocopy"
         VERBATIM
     )
 
+    # Target that triggers both syncs
     add_custom_target(sync_resources ALL
         DEPENDS ${ASSETS_COPY_STAMP} ${SHADERS_COPY_STAMP}
     )
