@@ -3,20 +3,39 @@
 
 ## How to run
 ```console
-git clone https://github.com/dhanushka2001/LearnOpenGL.git
+git clone https://github.com/dhanushka2001/LearnOpenGL
 cd LearnOpenGL
 mkdir build
 cd build
 cmake ..
 ```
+
 Then build using either ``make`` or ``ninja``.
-```console
-make
-```
-```console
-ninja
-```
-The executable will be inside ``/build/bin/``.
+* On Linux:
+  
+  ```console
+  make
+  ```
+* On Windows:
+  
+  ```console
+  ninja
+  ```
+  
+  Windows seems to default to building for ``ninja``, which is faster as it tries to compile files in parallel, however, this can cause out-of-memory errors for machines with low RAM, like my laptop, in which case you should use:
+
+  ```console
+  ninja -j1
+  ```
+
+  which limits ``ninja`` to 1 job at a time. Or you can use ``mingw32-make`` instead by doing:
+
+  ```console
+  cmake .. -G "MinGW Makefiles"
+  mingw32-make
+  ```
+
+The executable will be inside ``/build/bin/``, and screen recordings will be inside ``/build/output/``.
 
 ## Introduction
 * Learning to use OpenGL (GLFW) so I can do high-performance scientific computing and modelling on the GPU.
