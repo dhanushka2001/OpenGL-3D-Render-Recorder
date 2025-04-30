@@ -9,7 +9,7 @@ namespace {     // anonymous namespace (encapsulation)
     bool                pbo             =  1;   // +10FPS boost when enabled
     bool                paused          =  0;
     unsigned int        msaa            =  0;    // | 0 = no anti-aliasing | 4 = 4xMSAA |
-    bool                recording       =  0;
+    bool                recording       =  1;
 
 }
 
