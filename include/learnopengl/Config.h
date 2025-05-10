@@ -3,15 +3,19 @@
 
 namespace Config {
     void SetScreenResolution(int width, int height);
+    void TogglePBO();
+    void ToggleFlipShader();
     unsigned int        GetScreenWidth();
     unsigned int        GetScreenHeight();
-    unsigned int        GetFramerate();
+    const unsigned int  GetFramerate();
     bool                GetFullscreen();
     int                 GetVsync();
     bool                GetPBO();
+    const unsigned int  GetPBO_COUNT();
     bool                GetPaused();
-    unsigned int        GetMSAA();
+    bool                GetMSAA();
     bool                GetRecording();
+    bool                GetFlipShader();
 }
 
 #endif /* CONFIG_H */

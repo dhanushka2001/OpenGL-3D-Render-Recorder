@@ -35,6 +35,9 @@ set(ASSETS_DEST_DIR   ${CMAKE_BINARY_DIR})
 set(SHADERS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
 set(SHADERS_DEST_DIR   ${CMAKE_BINARY_DIR})
 
+# Define the destination directory for recordings, /output/
+set(SHADERS_DEST_DIR   ${CMAKE_BINARY_DIR}/output)
+
 # Shader copy target
 if(UNIX)
     add_custom_target(sync_assets ALL
@@ -58,8 +61,8 @@ if(WIN32)
     file(TO_NATIVE_PATH ${SHADERS_DEST_DIR} SHADERS_DST_NATIVE)
 
     # Recursively find all files to track for rebuilds
-    file(GLOB_RECURSE ASSET_FILES RELATIVE ${ASSETS_SOURCE_DIR} "${ASSETS_SOURCE_DIR}/*")
-    file(GLOB_RECURSE SHADER_FILES RELATIVE ${SHADERS_SOURCE_DIR} "${SHADERS_SOURCE_DIR}/*")
+    file(GLOB_RECURSE ASSET_FILES CONFIGURE_DEPENDS RELATIVE ${ASSETS_SOURCE_DIR} "${ASSETS_SOURCE_DIR}/*")
+    file(GLOB_RECURSE SHADER_FILES CONFIGURE_DEPENDS RELATIVE ${SHADERS_SOURCE_DIR} "${SHADERS_SOURCE_DIR}/*")
 
     # Prepend full path to each file
     list(TRANSFORM ASSET_FILES PREPEND "${ASSETS_SOURCE_DIR}/")
@@ -95,6 +98,13 @@ if(WIN32)
     )
 endif(WIN32)
 
+# Add the custom timer function library
+add_library(timer STATIC
+    src/timer.cpp
+)
+# Set the target properties for text (where libtext.a will be created)
+set_target_properties(timer PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
+
 # Add the custom text function library
 add_library(text STATIC
     src/font.cpp
@@ -121,7 +131,6 @@ add_library(imgui STATIC
     third_party/imgui/imgui_impl_glfw.cpp
     third_party/imgui/imgui_demo.cpp
 )
-
 # Set the target properties for imgui (where libimgui.a will be created)
 set_target_properties(imgui PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/imgui)
 
@@ -131,7 +140,6 @@ add_library(implot STATIC
     third_party/implot/implot_items.cpp
     third_party/implot/implot_demo.cpp
 )
-
 # Set the target properties for implot (where libimplot.a will be created)
 set_target_properties(implot PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/implot)
 
@@ -172,6 +180,7 @@ if(UNIX)
         freetype2
     )
     target_link_libraries(${PROJECT_NAME}
+        timer
         config # don't even need to link as config already linked to encoder and text, but no harm in including again
         imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
         implot # ImPlot static library from CMake
@@ -190,6 +199,7 @@ if(WIN32)
         implot # ImPlot static library from CMake
         encoder
         text
+        timer
 
         #glfw  # GLFW target from CMake (alternative to libglfw3.a)
         #OpenGL::GL  # OpenGL target from CMake

@@ -12,7 +12,7 @@ TextRenderer::TextRenderer(FontManager &fm)
       textShader("text_shader.vert", "text_shader.frag"),
       atlasShader("atlas.vert", "atlas.frag")
 {
-    // set up vertex data (and buffer(s)) and configure vertex attributes
+    // set up vertex data (and buffer(s)) and configure vertex attributes for text
     glGenVertexArrays(1, &textVAO);
     glGenBuffers(1, &textVBO);
 
@@ -25,8 +25,8 @@ TextRenderer::TextRenderer(FontManager &fm)
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
     glEnableVertexAttribArray(0);
 
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
+    // You must bind a VAO even if you don't use vertex attributes for full-screen atlas
+    glGenVertexArrays(1, &dummyVAO);
 
     SCR_WIDTH = Config::GetScreenWidth();
     SCR_HEIGHT = Config::GetScreenHeight();
@@ -37,9 +37,8 @@ TextRenderer::~TextRenderer()
     textShader.Delete();
     atlasShader.Delete();
     glDeleteVertexArrays(1, &textVAO);
-    glDeleteVertexArrays(1, &quadVAO);
+    glDeleteVertexArrays(1, &dummyVAO);
     glDeleteBuffers(1, &textVBO);
-    glDeleteBuffers(1, &quadVBO);
 }
 
 void TextRenderer::renderText(const std::string &text, float x, float y, float scale, glm::vec3 color, const std::string &fontName) {
@@ -131,8 +130,7 @@ void TextRenderer::renderAtlas(const std::string &fontName) {
     glEnable(GL_BLEND); // enable transparency
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     // bind VAO
-    glBindVertexArray(quadVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBindVertexArray(dummyVAO);
 
     // Bind the texture (the texture atlas in this case)
     glActiveTexture(GL_TEXTURE0);

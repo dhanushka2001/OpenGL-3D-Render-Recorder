@@ -1,6 +1,7 @@
 #include <learnopengl/encoder.h>
 #include <learnopengl/Config.h>
 #include <iostream>                 // for std::cin/cout/cerr
+#include <mutex>
 
 // FFmpeg
 // ------
@@ -13,6 +14,7 @@ extern "C" {
 }
 
 namespace Encoder {
+    std::mutex encoderMutex;
 
     namespace {     // anonymous namespace (encapsulation)
         // unsigned int SCR_WIDTH = Config::GetScreenWidth();
@@ -27,7 +29,6 @@ namespace Encoder {
         AVFrame* frameX = nullptr;
         AVPacket pkt = {};  // Zero-initialize the struct
         // std::ofstream logFile;
-        // std::mutex logMutex;
     }
 
     // Function to initialize FFmpeg encoder
@@ -68,23 +69,22 @@ namespace Encoder {
         codecCtx->time_base = (AVRational){1, FPS*1000};  // Frame rate
         codecCtx->framerate = (AVRational){FPS, 1};
         codecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
-        codecCtx->bit_rate = 60000000;  // 60 Mbps
+        codecCtx->bit_rate = 30'000'000;  // 60 Mbps
         codecCtx->gop_size = 10;
         codecCtx->max_b_frames = 1;
-        codecCtx-> thread_count = 2;
-        codecCtx->thread_type = FF_THREAD_FRAME;
+        codecCtx-> thread_count = 8;
+        codecCtx->thread_type = FF_THREAD_SLICE;
         // codecCtx->rc_max_rate = codecCtx->bit_rate;  // Set maximum bitrate limit
         // codecCtx->rc_buffer_size = codecCtx->bit_rate;  // Set buffer size to match bitrate
 
         // Set H.264 options
-        av_opt_set(codecCtx->priv_data, "preset", "slow", 0);
-        av_opt_set(codecCtx->priv_data, "crf", "18", 0);
+        av_opt_set(codecCtx->priv_data, "preset", "ultrafast", 0);
+        av_opt_set(codecCtx->priv_data, "crf", "23", 0);
         // av_opt_set(codecCtx->priv_data, "bitrate", "30000k", 0);   // Set bitrate to 5000 kbps
         // av_opt_set(codecCtx->priv_data, "maxrate", "30000k", 0);   // Max bitrate
         // av_opt_set(codecCtx->priv_data, "bufsize", "30000k", 0);   // Buffer size
         // av_opt_set(codecCtx->priv_data, "profile", "high", 0);     // Set profile to "high" for better quality
         av_opt_set(codecCtx->priv_data, "pix_fmt", "yuv420p", 0);  // Try using yuv422p or yuv444p for better quality
-
 
         // Open the encoder
         if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
@@ -115,25 +115,59 @@ namespace Encoder {
 
         // Allocate frame and conversion context
         frameX = av_frame_alloc();
+        if (!frameX) {
+            std::cerr << "Could not allocate frame\n";
+            return false;
+        }
         frameX->format = AV_PIX_FMT_YUV420P;
         frameX->width = SCR_WIDTH;
         frameX->height = SCR_HEIGHT;
-        av_frame_get_buffer(frameX, 32);
+
+        // Allocate frame buffer
+        if (av_frame_get_buffer(frameX, 32) < 0) {
+            std::cerr << "Failed to allocate frame buffer for frameX\n";
+            return false;
+        }
+        if (!frameX->data[0]) {
+            std::cerr << "frameX->data[0] is still null after get_buffer!\n";
+            return false;
+        }
 
         swsCtx = sws_getContext(SCR_WIDTH, SCR_HEIGHT, AV_PIX_FMT_RGB24,
                                 SCR_WIDTH, SCR_HEIGHT, AV_PIX_FMT_YUV420P,
                                 SWS_BILINEAR, nullptr, nullptr, nullptr);
+
         return true;
     }
 
     // Encode frame using FFmpeg
     bool encodeFrame(const uint8_t* rgbData, float crntTime) {
+        // av_frame_unref(frameX);  // Unref previous frame
         unsigned int SCR_WIDTH = Config::GetScreenWidth();
         unsigned int SCR_HEIGHT = Config::GetScreenHeight();
+
+        // Ensure frameX->data is valid
+        if (!frameX->data[0]) {
+            std::cerr << "frameX->data[0] is null before sws_scale!\n";
+            return false;
+        }
+
         // Convert RGB to YUV420P
         uint8_t* inData[1] = {(uint8_t*)rgbData};  // Input RGB data
         int inLinesize[1] = {3 * static_cast<int>(SCR_WIDTH)};          // Input stride
+        
+        if (!swsCtx) {
+            std::cerr << "swsCtx is null!\n";
+            return false;
+        }
+        // Scale the image to YUV420P  
         sws_scale(swsCtx, inData, inLinesize, 0, SCR_HEIGHT, frameX->data, frameX->linesize);
+        
+        // Check if the frame was properly scaled
+        if (frameX->data[0] == nullptr) {
+            std::cerr << "After sws_scale, frameX->data[0] is null!\n";
+            return false;
+        }
 
         frameX->pts = static_cast<int64_t>(crntTime * 60 * 1000); //* AV_TIME_BASE;
         
@@ -153,7 +187,7 @@ namespace Encoder {
             av_interleaved_write_frame(formatCtx, &pkt);
             av_packet_unref(&pkt);
         }
-
+        
         return true;
     }
 

@@ -9,7 +9,7 @@ class TextRenderer {
 private:
     FontManager& fontManager;
     GLuint textVAO, textVBO;
-    GLuint quadVAO, quadVBO;
+    GLuint dummyVAO;
     Shader textShader;
     Shader atlasShader;
     unsigned int SCR_WIDTH;

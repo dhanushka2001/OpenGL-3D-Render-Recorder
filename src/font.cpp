@@ -188,19 +188,19 @@ void Font::createTextureAtlas() {
             << std::endl;
 
     // Format output in columns: https://stackoverflow.com/a/49295288
-    for (const auto& [key, glyph] : glyphs) {
-        std::cout.precision(5);
-        // std::cout << std::fixed;
-        std::cout << " | " << "Glyph: "                     << static_cast<char>(key)   << " | "
-                           << "TextureX: "  << std::setw(9) << glyph.textureX           << " | "
-                           << "TextureY: "  << std::setw(9) << glyph.textureY           << " | "
-                           << "Width: "     << std::setw(2) << glyph.width              << " | "
-                           << "Height: "    << std::setw(2) << glyph.height             << " | "
-                           << "OffsetX: "   << std::setw(2) << glyph.offsetX            << " | "
-                           << "OffsetY: "   << std::setw(2) << glyph.offsetY            << " | "
-                           << "AdvanceX: "  << std::setw(5) << (glyph.advanceX >> 6)    << " | "
-                           << std::endl;
-    }
+    // for (const auto& [key, glyph] : glyphs) {
+    //     std::cout.precision(5);
+    //     // std::cout << std::fixed;
+    //     std::cout << " | " << "Glyph: "                     << static_cast<char>(key)   << " | "
+    //                        << "TextureX: "  << std::setw(9) << glyph.textureX           << " | "
+    //                        << "TextureY: "  << std::setw(9) << glyph.textureY           << " | "
+    //                        << "Width: "     << std::setw(2) << glyph.width              << " | "
+    //                        << "Height: "    << std::setw(2) << glyph.height             << " | "
+    //                        << "OffsetX: "   << std::setw(2) << glyph.offsetX            << " | "
+    //                        << "OffsetY: "   << std::setw(2) << glyph.offsetY            << " | "
+    //                        << "AdvanceX: "  << std::setw(5) << (glyph.advanceX >> 6)    << " | "
+    //                        << std::endl;
+    // }
 }
 
 const Glyph& Font::getGlyph(char c) const {
