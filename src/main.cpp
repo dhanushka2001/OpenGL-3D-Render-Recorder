@@ -196,7 +196,7 @@ int main()
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
     Config::SetScreenResolution(mode->width, mode->height);
-    // Config::SetScreenResolution(1600, 900);
+    // Config::SetScreenResolution(1280, 720);
 
     // Set our local cached values
     SCR_WIDTH   = Config::GetScreenWidth();
@@ -739,6 +739,14 @@ int main()
     Timer::init();
     std::chrono::high_resolution_clock::time_point t;
 
+    // create output directory
+    namespace fs = std::filesystem;
+    fs::path outputDir = "../output";
+    if (!fs::exists(outputDir)) {
+        fs::create_directories(outputDir);
+    }
+
+    // encoder thread
     std::thread encoderThread([&]() {
         glfwMakeContextCurrent(sharedContextWindow);  // Make encoder's context current here
         gladLoadGL(); // Needed again in this thread!
@@ -891,7 +899,7 @@ int main()
 
         deltaTime = crntTime - oldTime;
 		counter++;
-		if (deltaTime >= 1.0 / 30.0)
+		if (deltaTime >= 60.0 / 60.0)
 		{
 			// Creates new title
 			std::string FPS = std::to_string((1.0 / deltaTime) * counter);
@@ -965,7 +973,8 @@ int main()
             }
 
             Timer::startTimer(t);
-            textRenderer.renderText(fpsText, x, y, scale, color, "Arial");
+            // textRenderer.renderText(fpsText, x, y, scale, color, "Arial");
+            textRenderer.renderTextFast(fpsText, x, y, scale, color, "Arial");
             textRenderer.renderAtlas("Arial");
             {
                 std::lock_guard<std::mutex> lock(coutMutex);
@@ -1042,7 +1051,7 @@ int main()
 
 
                 encodeDiff = crntTime - encodeTime;
-                if (encodeDiff >= 1.0 / 60.0) {
+                if (encodeDiff >= 1.0 / framerate) {
                     // FrameData data;
                     // data.frame = frame;
                     // data.pts = crntTime;
@@ -1076,7 +1085,7 @@ int main()
             else
             {
                 encodeDiff = crntTime - encodeTime;
-                if (encodeDiff >= 1.0 / 60.0) {
+                if (encodeDiff >= 1.0 / framerate) {
                     // float t0, t1;
                     // Step 4: Read pixels from FBO into PBO (glReadPixels() should return immediately)
                     // --------------------------------------------------------------------------------
@@ -1407,8 +1416,8 @@ void processInput(GLFWwindow *window) {
             glfwSetWindowMonitor(window,
                                  glfwGetPrimaryMonitor(),
                                  0, 0,
-                                 mode->width, mode->height,
-                                 // SCR_WIDTH, SCR_HEIGHT,
+                                //  mode->width, mode->height,      // viewport size accurate to window size
+                                 SCR_WIDTH, SCR_HEIGHT,             // viewport fills window
                                  framerate
             );
             fullscreen = 1;
@@ -1427,8 +1436,10 @@ void processInput(GLFWwindow *window) {
     }
     // Pause
     // -----
-    if (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS && (!press))
     {
+        press = 1;
+
         // pause -> unpause
         if (paused)
         {
@@ -1448,6 +1459,8 @@ void processInput(GLFWwindow *window) {
             paused = 1;
         }
     }
+    if ((glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_RELEASE) && (press))
+        press = 0;
     // PBO
     // ---
     if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) && (!press))
@@ -1458,17 +1471,18 @@ void processInput(GLFWwindow *window) {
         // std::cout << "Toggled PBO: " << !pbo << "->" << pbo << std::endl;
     }
     if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) && (press))
-    {
         press = 0;
-    }
     // Flip Shader
     // -----------
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && (!press))
     {
+        press = 1;
         Config::ToggleFlipShader();
         flip_shader = Config::GetFlipShader();
         // std::cout << "Toggled PBO: " << !pbo << "->" << pbo << std::endl;
     }
+    if ((glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) && (press))
+        press = 0;
 }
 
 // glfw: whenever window size changes (by OS or user) this callback function executes
@@ -1484,6 +1498,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     // lowerLeftCornerOfViewportX = std::max(lowerLeftCornerOfViewportX, 0);
     // lowerLeftCornerOfViewportY = std::max(lowerLeftCornerOfViewportY, 0);
     
+    window_width = width;
+    window_height = height;
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
     // MAKE IT SO THE GAME PAUSES WHEN RESIZING WINDOW.

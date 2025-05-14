@@ -35,9 +35,6 @@ set(ASSETS_DEST_DIR   ${CMAKE_BINARY_DIR})
 set(SHADERS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
 set(SHADERS_DEST_DIR   ${CMAKE_BINARY_DIR})
 
-# Define the destination directory for recordings, /output/
-set(SHADERS_DEST_DIR   ${CMAKE_BINARY_DIR}/output)
-
 # Shader copy target
 if(UNIX)
     add_custom_target(sync_assets ALL

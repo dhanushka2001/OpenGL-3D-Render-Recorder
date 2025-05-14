@@ -17,8 +17,9 @@ namespace Encoder {
     std::mutex encoderMutex;
 
     namespace {     // anonymous namespace (encapsulation)
-        // unsigned int SCR_WIDTH = Config::GetScreenWidth();
-        // unsigned int SCR_HEIGHT = Config::GetScreenHeight();
+        unsigned int SCR_WIDTH;
+        unsigned int SCR_HEIGHT;
+        int framerate;
 
         // FFmpeg
         // ------
@@ -33,13 +34,14 @@ namespace Encoder {
 
     // Function to initialize FFmpeg encoder
     bool initializeEncoder(const char* filename) {
-        unsigned int SCR_WIDTH = Config::GetScreenWidth();
-        unsigned int SCR_HEIGHT = Config::GetScreenHeight();
+        SCR_WIDTH = Config::GetScreenWidth();
+        SCR_HEIGHT = Config::GetScreenHeight();
+        framerate = static_cast<int>(Config::GetFramerate());
         // Set up ffmpeg's log callback
         // av_log_set_callback(custom_ffmpeg_log_callback);
 
         // Optional: Set log level (AV_LOG_DEBUG=full logs, AV_LOG_INFO=default, AV_LOG_WARNING=only warnings, AV_LOG_ERROR=only errors)
-        // av_log_set_level(AV_LOG_INFO);
+        av_log_set_level(AV_LOG_INFO);
 
         avformat_alloc_output_context2(&formatCtx, nullptr, "mp4", filename);
         if (!formatCtx) {
@@ -49,6 +51,15 @@ namespace Encoder {
 
         // Find the H.264 encoder
         const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+        // const AVCodec* codec = avcodec_find_encoder_by_name("h264_qsv");
+        // const char* preferred_encoders[] = { "h264_qsv", "h264_nvenc", "h264_mf", "libx264" };
+        // const AVCodec* codec = nullptr;
+        // for (const char* encName : preferred_encoders) {
+        //     codec = avcodec_find_encoder_by_name(encName);
+        //     if (codec) break;
+        // }
+        // printf("Using encoder: %s\n", codec->name);
+
         if (!codec) {
             printf("H.264 encoder not found\n");
             return false;
@@ -62,29 +73,35 @@ namespace Encoder {
         }
 
         // Set up the codec context
-        int FPS = static_cast<int>(Config::GetFramerate());
+        // int FPS = static_cast<int>(Config::GetFramerate());
         codecCtx = avcodec_alloc_context3(codec);
         codecCtx->width = SCR_WIDTH;
         codecCtx->height = SCR_HEIGHT;
-        codecCtx->time_base = (AVRational){1, FPS*1000};  // Frame rate
-        codecCtx->framerate = (AVRational){FPS, 1};
+        codecCtx->time_base = (AVRational){1, framerate * 1000};  // Frame rate
+        codecCtx->framerate = (AVRational){framerate, 1};
         codecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
+        // codecCtx->pix_fmt = AV_PIX_FMT_NV12;
         codecCtx->bit_rate = 30'000'000;  // 60 Mbps
-        codecCtx->gop_size = 10;
-        codecCtx->max_b_frames = 1;
+        codecCtx->gop_size = 5;
+        codecCtx->max_b_frames = 3;
         codecCtx-> thread_count = 8;
         codecCtx->thread_type = FF_THREAD_SLICE;
         // codecCtx->rc_max_rate = codecCtx->bit_rate;  // Set maximum bitrate limit
         // codecCtx->rc_buffer_size = codecCtx->bit_rate;  // Set buffer size to match bitrate
 
         // Set H.264 options
-        av_opt_set(codecCtx->priv_data, "preset", "ultrafast", 0);
-        av_opt_set(codecCtx->priv_data, "crf", "23", 0);
-        // av_opt_set(codecCtx->priv_data, "bitrate", "30000k", 0);   // Set bitrate to 5000 kbps
-        // av_opt_set(codecCtx->priv_data, "maxrate", "30000k", 0);   // Max bitrate
-        // av_opt_set(codecCtx->priv_data, "bufsize", "30000k", 0);   // Buffer size
-        // av_opt_set(codecCtx->priv_data, "profile", "high", 0);     // Set profile to "high" for better quality
-        av_opt_set(codecCtx->priv_data, "pix_fmt", "yuv420p", 0);  // Try using yuv422p or yuv444p for better quality
+        // av_opt_set(codecCtx->priv_data, "preset", "ultrafast", 0);
+        // av_opt_set(codecCtx->priv_data, "crf", "23", 0);
+        // // av_opt_set(codecCtx->priv_data, "bitrate", "30000k", 0);   // Set bitrate to 5000 kbps
+        // // av_opt_set(codecCtx->priv_data, "maxrate", "30000k", 0);   // Max bitrate
+        // // av_opt_set(codecCtx->priv_data, "bufsize", "30000k", 0);   // Buffer size
+        // // av_opt_set(codecCtx->priv_data, "profile", "high", 0);     // Set profile to "high" for better quality
+        // av_opt_set(codecCtx->priv_data, "pix_fmt", "yuv420p", 0);  // Try using yuv422p or yuv444p for better quality
+        if (strcmp(codec->name, "h264_mf") == 0) { // libx264
+            av_opt_set(codecCtx->priv_data, "preset", "ultrafast", 0);
+            av_opt_set(codecCtx->priv_data, "crf", "23", 0);
+            av_opt_set(codecCtx->priv_data, "async_depth", "1", 0);
+        }
 
         // Open the encoder
         if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
@@ -120,6 +137,7 @@ namespace Encoder {
             return false;
         }
         frameX->format = AV_PIX_FMT_YUV420P;
+        // frameX->format = AV_PIX_FMT_NV12;
         frameX->width = SCR_WIDTH;
         frameX->height = SCR_HEIGHT;
 
@@ -135,6 +153,7 @@ namespace Encoder {
 
         swsCtx = sws_getContext(SCR_WIDTH, SCR_HEIGHT, AV_PIX_FMT_RGB24,
                                 SCR_WIDTH, SCR_HEIGHT, AV_PIX_FMT_YUV420P,
+                                // SCR_WIDTH, SCR_HEIGHT, AV_PIX_FMT_NV12,
                                 SWS_BILINEAR, nullptr, nullptr, nullptr);
 
         return true;
@@ -143,8 +162,9 @@ namespace Encoder {
     // Encode frame using FFmpeg
     bool encodeFrame(const uint8_t* rgbData, float crntTime) {
         // av_frame_unref(frameX);  // Unref previous frame
-        unsigned int SCR_WIDTH = Config::GetScreenWidth();
-        unsigned int SCR_HEIGHT = Config::GetScreenHeight();
+        // unsigned int SCR_WIDTH = Config::GetScreenWidth();
+        // unsigned int SCR_HEIGHT = Config::GetScreenHeight();
+        // unsigned int framerate = Config::GetFramerate();
 
         // Ensure frameX->data is valid
         if (!frameX->data[0]) {
@@ -169,7 +189,8 @@ namespace Encoder {
             return false;
         }
 
-        frameX->pts = static_cast<int64_t>(crntTime * 60 * 1000); //* AV_TIME_BASE;
+        // frameX->pts = static_cast<int64_t>(crntTime * 60 * 1000); //* AV_TIME_BASE;
+	    frameX->pts = static_cast<int64_t>(crntTime * framerate * 1000);
         
         // Encode the frame
         if (avcodec_send_frame(codecCtx, frameX) < 0) {

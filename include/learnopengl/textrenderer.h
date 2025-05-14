@@ -19,6 +19,7 @@ public:
     ~TextRenderer();
     
     void renderText(const std::string& text, float x, float y, float scale, glm::vec3 color, const std::string& fontName);
+    void renderTextFast(const std::string &text, float x, float y, float scale, glm::vec3 color, const std::string &fontName);
     void renderAtlas(const std::string &fontName);
 };
 

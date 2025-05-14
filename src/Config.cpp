@@ -3,10 +3,10 @@
 namespace {     // anonymous namespace (encapsulation)
     unsigned int        SCR_WIDTH       =  0;
     unsigned int        SCR_HEIGHT      =  0;
-    const unsigned int  framerate       = 60;
+    unsigned int        framerate       = 60;
     bool                fullscreen      =  1;
     int                 vsync           =  1;   // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
-    bool                pbo             =  0;
+    bool                pbo             =  1;
     const unsigned int  PBO_COUNT       =  2;
     bool                paused          =  0;
     bool                msaa            =  1;    // | 0 = no anti-aliasing | 1 = 4xMSAA |
