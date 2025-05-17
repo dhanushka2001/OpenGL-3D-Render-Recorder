@@ -134,7 +134,13 @@ float lastTime = 0.0f;
 int frameCountFPS = 0;
 float fps = 0.0f;
 float msPerFrame = 0.0f;
-bool press = 0;
+
+// button press
+// ------------
+bool pboPressed = false;
+bool flipPressed = false;
+bool pausePressed = false;
+bool vsyncPressed = false;
 
 // window
 // ------
@@ -196,7 +202,7 @@ int main()
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
     Config::SetScreenResolution(mode->width, mode->height);
-    // Config::SetScreenResolution(1280, 720);
+    // Config::SetScreenResolution(1600, 900); // if the resolution is too low, FPS could get too high (~1000fps) and program will crash
 
     // Set our local cached values
     SCR_WIDTH   = Config::GetScreenWidth();
@@ -208,6 +214,7 @@ int main()
     msaa        = Config::GetMSAA();
     recording   = Config::GetRecording();
     flip_shader = Config::GetFlipShader();
+    vsync       = Config::GetVsync();
 
     lastX = SCR_WIDTH / 2;
     lastY = SCR_HEIGHT / 2;
@@ -278,7 +285,7 @@ int main()
     }
     // 0 = V-Sync Off, 1 = V-Sync On, -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz)
     // https://www.khronos.org/opengl/wiki/Swap_Interval
-    wglSwapIntervalEXT(vsync);
+    // wglSwapIntervalEXT(vsync);
     std::cout << "\nwglSwapIntervalEXT: " << wglGetSwapIntervalEXT() << std::endl;
     #endif /* _WIN32 */
 
@@ -705,7 +712,7 @@ int main()
     // ----
     FT_UInt fontSize = 48;
     // Render FPS text at the top-left corner
-    float scale = static_cast<float>(SCR_WIDTH)*0.20f/800.0f;
+    float scale = static_cast<float>(SCR_WIDTH)*0.16f/800.0f;
     // Position on the screen
     float x = lowerLeftCornerOfViewportX;
     float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontSize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
@@ -1076,6 +1083,14 @@ int main()
                     //     }
                     // }
 
+                    // Timer::startTimer(t);
+                    if (!flip_shader) {
+                        flipFrameVertically(frame);
+                    }
+                    // {
+                    //     std::lock_guard<std::mutex> lock(coutMutex);
+                    //     Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                    // }
                     Encoder::encodeFrame(frame, crntTime);
                     // Resets times and counter
 			        encodeTime = crntTime;
@@ -1206,7 +1221,7 @@ int main()
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);    // swap the BACK buffer with the FRONT buffer
         glfwPollEvents();           // take care of all GLFW events
-        // glfwSwapInterval(vsync);    // vsync
+        glfwSwapInterval(vsync);    // vsync
     }
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
@@ -1436,9 +1451,9 @@ void processInput(GLFWwindow *window) {
     }
     // Pause
     // -----
-    if (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS && (!press))
+    if ((glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) && (!pausePressed))
     {
-        press = 1;
+        pausePressed = 1;
 
         // pause -> unpause
         if (paused)
@@ -1459,30 +1474,47 @@ void processInput(GLFWwindow *window) {
             paused = 1;
         }
     }
-    if ((glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_RELEASE) && (press))
-        press = 0;
+    if ((glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_RELEASE) && (pausePressed)) {
+        pausePressed = 0;
+    }
     // PBO
     // ---
-    if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) && (!press))
-    {
-        press = 1;
+    if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) && (!pboPressed)) {
+        std::cout << "P key pressed. Press = " << pboPressed << std::endl;
+        pboPressed = true;
+        std::cout << "Press = " << pboPressed << std::endl;
         Config::TogglePBO();
         pbo = Config::GetPBO();
-        // std::cout << "Toggled PBO: " << !pbo << "->" << pbo << std::endl;
+        // std::cout << "P key pressed: " << !pbo << "->" << pbo << " Press: " << !pboPressed << "->" << pboPressed << " Time: " << crntTime << std::endl;
     }
-    if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) && (press))
-        press = 0;
+    if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) && (pboPressed)) {
+        pboPressed = false;
+        std::cout << "P key released: " << !pbo << "->" << pbo << " Press: " << !pboPressed << "->" << pboPressed << " Time: " << crntTime << std::endl;
+    }
     // Flip Shader
     // -----------
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && (!press))
+    if ((glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) && (!flipPressed))
     {
-        press = 1;
+        flipPressed = true;
         Config::ToggleFlipShader();
         flip_shader = Config::GetFlipShader();
         // std::cout << "Toggled PBO: " << !pbo << "->" << pbo << std::endl;
     }
-    if ((glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) && (press))
-        press = 0;
+    if ((glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) && (flipPressed)) {
+        flipPressed = false;
+    }
+    // VSYNC
+    // -----
+    if ((glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) && (!vsyncPressed))
+    {
+        vsyncPressed = true;
+        Config::ToggleVsync();
+        vsync = Config::GetVsync();
+        // std::cout << "Toggled Vsync: " << !vsync << "->" << vsync << std::endl;
+    }
+    if ((glfwGetKey(window, GLFW_KEY_V) == GLFW_RELEASE) && (vsyncPressed)) {
+        vsyncPressed = false;
+    }
 }
 
 // glfw: whenever window size changes (by OS or user) this callback function executes
@@ -1598,11 +1630,12 @@ void flipFrameVertically(unsigned char* frame) {
 }
 
 std::string GetFPSText(float fps, float ms) {
-    char buffer[200];
+    char buffer[250];
+    bool press = pboPressed || flipPressed || pausePressed || vsyncPressed;
     // "FPS: %.1f | %.1f ms"
     // "AaBbCcDdEeFfGg1!2£4$"
     // "In the dream, they took me to the light. A beautiful lie."
-    snprintf(buffer, sizeof(buffer), "FPS: %u | %.3f ms | Time: %.1f | mix=%.1f | FOV=%.1f | PBO=%s | Flip Shader=%s | pos=%.1f,%.1f,%.1f | cam=%.1f,%.1f,%.1f | YAW= %.1f | PITCH=%.1f | %s", static_cast<int>(fps), ms, crntTime, mixValue, camera.Zoom, pbo ? "ON" : "OFF", flip_shader ? "ON" : "OFF", xOffset, yOffset, zOffset, camera.Position.x, camera.Position.y, camera.Position.z, camera.Yaw, camera.Pitch, paused ? "PAUSED" : "");
+    snprintf(buffer, sizeof(buffer), "FPS: %u | %.3f ms | Time: %.1f s | mix=%.1f | FOV=%.1f | PBO(P)=%s | Flip Shader(F)=%s | Vsync(V)=%s | Fullscreen(F11)=%s | PRESS=%s | pos=%.1f,%.1f,%.1f | cam=%.1f,%.1f,%.1f | YAW= %.1f | PITCH=%.1f | %s", static_cast<int>(fps), ms, crntTime, mixValue, camera.Zoom, pbo ? "ON" : "OFF", flip_shader ? "ON" : "OFF", vsync ? "ON" : "OFF", fullscreen ? "ON" : "OFF", press ? "YES" : "NO", xOffset, yOffset, zOffset, camera.Position.x, camera.Position.y, camera.Position.z, camera.Yaw, camera.Pitch, paused ? "PAUSED" : "");
     return std::string(buffer);
 }
 

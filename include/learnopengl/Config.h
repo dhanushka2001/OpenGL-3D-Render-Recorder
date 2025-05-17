@@ -2,9 +2,10 @@
 #define CONFIG_H
 
 namespace Config {
-    void SetScreenResolution(int width, int height);
-    void TogglePBO();
-    void ToggleFlipShader();
+    void                SetScreenResolution(int width, int height);
+    void                TogglePBO();
+    void                ToggleFlipShader();
+    void                ToggleVsync();
     unsigned int        GetScreenWidth();
     unsigned int        GetScreenHeight();
     const unsigned int  GetFramerate();

@@ -5,13 +5,13 @@ namespace {     // anonymous namespace (encapsulation)
     unsigned int        SCR_HEIGHT      =  0;
     unsigned int        framerate       = 60;
     bool                fullscreen      =  1;
-    int                 vsync           =  1;   // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
-    bool                pbo             =  1;
+    int                 vsync           =  0;   // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
+    bool                pbo             =  0;
     const unsigned int  PBO_COUNT       =  2;
     bool                paused          =  0;
     bool                msaa            =  1;    // | 0 = no anti-aliasing | 1 = 4xMSAA |
     bool                recording       =  1;
-    bool                flip_shader     =  1;
+    bool                flip_shader     =  0;
 }
 
 namespace Config {
@@ -26,6 +26,10 @@ namespace Config {
     void ToggleFlipShader() {
         if (flip_shader)    { flip_shader = 0; }
         else                { flip_shader = 1; }
+    }
+    void ToggleVsync() {
+        if (vsync)    { vsync = 0; }
+        else          { vsync = 1; }
     }
 
     unsigned int        GetScreenWidth() { return SCR_WIDTH; }
