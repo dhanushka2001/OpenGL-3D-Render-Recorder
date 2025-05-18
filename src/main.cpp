@@ -146,6 +146,7 @@ bool vsyncPressed = false;
 // ------
 int window_xPos, window_yPos = 0;
 int window_width, window_height;
+int left, top, right, bottom;
 
 // viewport
 // --------
@@ -201,8 +202,9 @@ int main()
     // Set window size (needs to be fixed when recording)
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-    Config::SetScreenResolution(mode->width, mode->height);
-    // Config::SetScreenResolution(1600, 900); // if the resolution is too low, FPS could get too high (~1000fps) and program will crash
+    // Config::SetScreenResolution(mode->width, mode->height);
+    Config::SetScreenResolution(1600, 900); // if the resolution is too low, FPS could get too high (~1000fps) and program will crash
+    // Config::SetScreenResolution(1920, 1080);
 
     // Set our local cached values
     SCR_WIDTH   = Config::GetScreenWidth();
@@ -1412,12 +1414,15 @@ void processInput(GLFWwindow *window) {
         // fullscreen->windowed
         if (fullscreen)
         {
+            int adjusted_width  = window_width;
+            int adjusted_height = window_height + top;
             glfwSetWindowMonitor(window,
                                  NULL,
                                  window_xPos, window_yPos,
-                                 window_width, window_height,
-                                //  SCR_WIDTH, SCR_HEIGHT,
-                                 framerate
+                                //  adjusted_width, adjusted_height,
+                                //  window_width, window_height,
+                                 SCR_WIDTH, SCR_HEIGHT,
+                                 GLFW_DONT_CARE
             );
             fullscreen = 0;
         }
@@ -1426,6 +1431,7 @@ void processInput(GLFWwindow *window) {
         {
             glfwGetWindowPos(window, &window_xPos, &window_yPos);
             glfwGetWindowSize(window, &window_width, &window_height);
+            glfwGetWindowFrameSize(window, &left, &top, &right, &bottom);
             GLFWmonitor *monitor = glfwGetPrimaryMonitor();
             const GLFWvidmode *mode = glfwGetVideoMode(monitor);
             glfwSetWindowMonitor(window,
@@ -1433,7 +1439,7 @@ void processInput(GLFWwindow *window) {
                                  0, 0,
                                 //  mode->width, mode->height,      // viewport size accurate to window size
                                  SCR_WIDTH, SCR_HEIGHT,             // viewport fills window
-                                 framerate
+                                 GLFW_DONT_CARE
             );
             fullscreen = 1;
         }
@@ -1480,16 +1486,15 @@ void processInput(GLFWwindow *window) {
     // PBO
     // ---
     if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) && (!pboPressed)) {
-        std::cout << "P key pressed. Press = " << pboPressed << std::endl;
         pboPressed = true;
-        std::cout << "Press = " << pboPressed << std::endl;
         Config::TogglePBO();
         pbo = Config::GetPBO();
+        std::cout << "P key pressed. Press = " << pboPressed << " Time: " << crntTime << std::endl;
         // std::cout << "P key pressed: " << !pbo << "->" << pbo << " Press: " << !pboPressed << "->" << pboPressed << " Time: " << crntTime << std::endl;
     }
     if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) && (pboPressed)) {
         pboPressed = false;
-        std::cout << "P key released: " << !pbo << "->" << pbo << " Press: " << !pboPressed << "->" << pboPressed << " Time: " << crntTime << std::endl;
+        std::cout << "P key released. Press = " << pboPressed << " Time: " << crntTime << std::endl;
     }
     // Flip Shader
     // -----------
@@ -1498,10 +1503,12 @@ void processInput(GLFWwindow *window) {
         flipPressed = true;
         Config::ToggleFlipShader();
         flip_shader = Config::GetFlipShader();
+        std::cout << "F key pressed. Press = " << flipPressed << " Time: " << crntTime << std::endl;
         // std::cout << "Toggled PBO: " << !pbo << "->" << pbo << std::endl;
     }
     if ((glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) && (flipPressed)) {
         flipPressed = false;
+        std::cout << "F key released. Press = " << flipPressed << " Time: " << crntTime << std::endl;
     }
     // VSYNC
     // -----
@@ -1510,10 +1517,12 @@ void processInput(GLFWwindow *window) {
         vsyncPressed = true;
         Config::ToggleVsync();
         vsync = Config::GetVsync();
+        std::cout << "V key pressed. Press = " << vsyncPressed << " Time: " << crntTime << std::endl;
         // std::cout << "Toggled Vsync: " << !vsync << "->" << vsync << std::endl;
     }
     if ((glfwGetKey(window, GLFW_KEY_V) == GLFW_RELEASE) && (vsyncPressed)) {
         vsyncPressed = false;
+        std::cout << "V key released. Press = " << vsyncPressed << " Time: " << crntTime << std::endl;
     }
 }
 
@@ -1537,8 +1546,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     // MAKE IT SO THE GAME PAUSES WHEN RESIZING WINDOW.
 
     // for debugging
-    std::cout << "viewportX: " << lowerLeftCornerOfViewportX << " "
-              << "viewportY: " << lowerLeftCornerOfViewportY << std::endl;
+    // std::cout << "viewportX: " << lowerLeftCornerOfViewportX << " "
+    //           << "viewportY: " << lowerLeftCornerOfViewportY << std::endl;
 
     // glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
     // glViewport(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, SCR_WIDTH, SCR_HEIGHT);
@@ -1635,7 +1644,7 @@ std::string GetFPSText(float fps, float ms) {
     // "FPS: %.1f | %.1f ms"
     // "AaBbCcDdEeFfGg1!2£4$"
     // "In the dream, they took me to the light. A beautiful lie."
-    snprintf(buffer, sizeof(buffer), "FPS: %u | %.3f ms | Time: %.1f s | mix=%.1f | FOV=%.1f | PBO(P)=%s | Flip Shader(F)=%s | Vsync(V)=%s | Fullscreen(F11)=%s | PRESS=%s | pos=%.1f,%.1f,%.1f | cam=%.1f,%.1f,%.1f | YAW= %.1f | PITCH=%.1f | %s", static_cast<int>(fps), ms, crntTime, mixValue, camera.Zoom, pbo ? "ON" : "OFF", flip_shader ? "ON" : "OFF", vsync ? "ON" : "OFF", fullscreen ? "ON" : "OFF", press ? "YES" : "NO", xOffset, yOffset, zOffset, camera.Position.x, camera.Position.y, camera.Position.z, camera.Yaw, camera.Pitch, paused ? "PAUSED" : "");
+    snprintf(buffer, sizeof(buffer), "FPS: %u | %.3f ms | Time: %.1f s | mix(Q/E)=%.1f | FOV=%.1f | PBO(P)=%s | Flip Shader(F)=%s | Vsync(V)=%s | Fullscreen(F11)=%s | PRESS=%s | pos=%.1f,%.1f,%.1f | cam=%.1f,%.1f,%.1f | YAW= %.1f | PITCH=%.1f | %s", static_cast<int>(fps), ms, crntTime, mixValue, camera.Zoom, pbo ? "ON" : "OFF", flip_shader ? "ON" : "OFF", vsync ? "ON" : "OFF", fullscreen ? "ON" : "OFF", press ? "YES" : "NO", xOffset, yOffset, zOffset, camera.Position.x, camera.Position.y, camera.Position.z, camera.Yaw, camera.Pitch, paused ? "PAUSED" : "");
     return std::string(buffer);
 }
 
