@@ -994,10 +994,27 @@ int main()
             // ---------------------------------------------------------------------
             #if IMGUI==1
             Timer::startTimer(t);
+            // Show the ImGui text window
+            ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_Once);
+            ImGui::SetNextWindowSize(ImVec2(285, 210), ImGuiCond_Once);
             ImGui::Begin("My name is window, ImGUI window");
-            ImGui::Text("Hello there adventurer!");
+            ImGui::PushTextWrapPos(); // wrap at window edge
+            ImGui::Text("Hello there adventurer! You can free "
+                        "the mouse cursor with the RIGHT SHIFT key, "
+                        "and zoom with the SCROLL wheel! "
+                        "Move the camera around with WASD and the mouse. "
+                        "Move the objects using the arrow keys, "
+                        "and change their opacity by holding Q/E. "
+                        "Click P to see the boost in FPS with "
+                        "multithreading and asynchronous read-back PBOs! "
+                        "Click V to toggle Vsync. Screen recording is ON "
+                        "by default, and stops when the program ends. " 
+                        "You can find the recordings in /build/output/."
+            );
             ImGui::End();
             // Show the ImPlot demo window
+            ImGui::SetNextWindowPos(ImVec2(956, 60), ImGuiCond_Once);
+            ImGui::SetNextWindowSize(ImVec2(600, 556), ImGuiCond_Once);
             if (ImGui::Begin("ImPlot Demo")) {
                 ImPlot::ShowDemoWindow();
             }
@@ -1556,7 +1573,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    ImGui::SetNextWindowPos(ImVec2(100, 100+lowerLeftCornerOfViewportY*2));
+    // ImGui::SetNextWindowPos(ImVec2(100, 100+lowerLeftCornerOfViewportY*2));
     // ImGui::SetNextWindowPos(ImVec2(lowerLeftCornerOfViewportX, 100+lowerLeftCornerOfViewportY));//, ImGuiCond_FirstUseEver);
     ImGui::Begin("My name is window, ImGUI window");
     ImGui::Text("Hello there adventurer!");

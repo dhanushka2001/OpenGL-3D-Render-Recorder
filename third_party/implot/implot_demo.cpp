@@ -2171,6 +2171,13 @@ void DemoHeader(const char* label, void(*demo)()) {
     }
 }
 
+void DemoHeaderAlwaysOpen(const char* label, void(*demo)()) {
+    if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen)) {
+        demo();
+        ImGui::TreePop();
+    }
+}
+
 void ShowDemoWindow(bool* p_open) {
     static bool show_implot_metrics      = false;
     static bool show_implot_style_editor = false;
@@ -2231,7 +2238,8 @@ void ShowDemoWindow(bool* p_open) {
             DemoHeader("Filled Line Plots", Demo_FilledLinePlots);
             DemoHeader("Shaded Plots##", Demo_ShadedPlots);
             DemoHeader("Scatter Plots", Demo_ScatterPlots);
-            DemoHeader("Realtime Plots", Demo_RealtimePlots);
+            // DemoHeader("Realtime Plots", Demo_RealtimePlots);
+            DemoHeaderAlwaysOpen("Realtime Plots", Demo_RealtimePlots);
             DemoHeader("Stairstep Plots", Demo_StairstepPlots);
             DemoHeader("Bar Plots", Demo_BarPlots);
             DemoHeader("Bar Groups", Demo_BarGroups);

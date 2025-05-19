@@ -3,7 +3,7 @@
 namespace {     // anonymous namespace (encapsulation)
     unsigned int        SCR_WIDTH       =  0;
     unsigned int        SCR_HEIGHT      =  0;
-    unsigned int        framerate       = 30;
+    unsigned int        framerate       = 60;
     bool                fullscreen      =  0;
     int                 vsync           =  0;   // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
     bool                pbo             =  0;
