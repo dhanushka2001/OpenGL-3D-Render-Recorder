@@ -4,6 +4,8 @@
 ## How to run
 ```console
 git clone https://github.com/dhanushka2001/LearnOpenGL
+```
+```console
 cd LearnOpenGL
 mkdir build
 cd build
