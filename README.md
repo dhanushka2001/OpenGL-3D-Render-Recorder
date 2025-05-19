@@ -286,6 +286,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 ## Progress update 4 - Off-screen recording - 18/10/24
 
 <details><summary> Progress update 4 - Off-screen recording - 18/10/24 </summary>
+  
   * I have finally figured out how to render an mp4 at runtime off-screen, as mentioned earlier this is much better than rendering an image sequence which is an I/O bottleneck. Previously it would render the PNGs at ~4 fps (which I would have to convert to an mp4 after runtime) but now the program encodes the video from the raw binary data using FFmpeg at runtime and outputs the mp4 after terminating instantly, so seemingly at 60+ fps, I know this since the rendered video is pretty much identical to the on-screen animation, compared to the image sequence→mp4 which skips frames. A 1-minute mp4 is just 3MB, assuming the same memory ratio as earlier, the image sequence equivalent would be 120MB, not to mention it would not look nearly as smooth.
   
   * Trying to decipher the code from [this Stack Overflow answer](https://stackoverflow.com/a/36488003) was too difficult, so I ended up resorting to using ChatGPT, which, after a few tweaks, gave me the code to encode videos in real-time. The code is very concise and does the job. The only requirement is that FFmpeg is installed and in your system's ``PATH``.
@@ -1450,7 +1451,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 ## Progress update 8 - 3D, Coordinate Systems, Camera, and Dear ImGUI - 19/01/25
 
 <details><summary> Progress update 8 - 3D, Coordinate Systems, Camera, and Dear ImGUI - 19/01/25 </summary>
-  
+
   * For some reason the program would display a white window for a brief second and immediately close with no error message, this happened when I increased the dimensions of the window. It turned out the issue was due to a segfault,[^54] I didn't allocate enough memory for the FFmpeg frame buffer, I was experimenting with it earlier as mentioned above noticing that I could allocate less than the number of pixels and it would work just fine, however just to be safe I put it back to normal and it works fine again.
   
   [^54]: swalog. "OpenGL GLFW window closes as soon as it opens" _Stack Overflow_, 26 Aug. 2014, [stackoverflow.com/a/25499922](https://stackoverflow.com/a/25499922).
