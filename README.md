@@ -24,7 +24,7 @@ Then build using either ``make`` or ``ninja``.
   ninja
   ```
   
-  Windows seems to default to building for ``ninja``, which is faster as it tries to compile files in parallel, however, this can cause out-of-memory errors for machines with low RAM, like my laptop, in which case you should use:
+  Windows seems to default to building for ``ninja``, which is faster as it tries to compile files in parallel, however, this can sometimes cause out-of-memory errors for machines with low RAM, like my laptop, in which case you should use:
 
   ```console
   ninja -j1
