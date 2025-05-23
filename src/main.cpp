@@ -3,29 +3,31 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
-//ImPlot
-//------
+// ImPlot
+//-------
 #include <implot/implot.h>
 // glad & GLFW
 // -----------
 #include <glad/glad.h>                  // glad
 #include <GLFW/glfw3.h>                 // GLFW (includes stdint.h)
-
+// Windows
+// -------
 #ifdef _WIN32
 #ifndef  NOMINMAX
 #define  NOMINMAX                       // disable Windows min/max macro (interferes with C++ std::min/max)
 #endif  /* NOMINMAX */
-#include <Windows.h>                    // For V-Sync (unfortunately tied to Windows :( )
-#include <wglext.h>                     // For V-Sync
+// #include <Windows.h>                    // For V-Sync (unfortunately tied to Windows :( )
+// #include <wglext.h>                     // For V-Sync
 #endif /* _WIN32 */
-
+// Custom headers
+// --------------
 #include <learnopengl/shader_s.h>       // Shader class
 #include <learnopengl/camera.h>         // Camera class
 #include <learnopengl/encoder.h>        // FFmpeg functions
 #include <learnopengl/fontmanager.h>    // Font Manager
 #include <learnopengl/textrenderer.h>   // Text Renderer
-#include <learnopengl/Config.h>         // Config
 #include <learnopengl/timer.h>          // Timer
+#include <learnopengl/Settings.h>       // Settings
 
 #include <iostream>                     // for std::cin/cout/cerr
 #include <filesystem>                   // for std::filesystem
@@ -61,30 +63,13 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 std::string GetFPSText(float fps, float ms);
 void UpdateFPS(float crntTime);
-#ifdef _WIN32
-bool WGLExtensionSupported(const char *extension_name);
-#endif
+// #ifdef _WIN32
+// bool WGLExtensionSupported(const char *extension_name);
+// #endif
 void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture);
 void RenderCrate(Shader &ourShader, glm::vec3 &trans);
 // FFmpeg
 void flipFrameVertically(unsigned char* frame);
-
-// settings
-// --------
-namespace {     // anonymous namespace (encapsulation)
-    unsigned int        SCR_WIDTH;
-    unsigned int        SCR_HEIGHT;
-    unsigned int        framerate;
-    bool                fullscreen;
-    int                 vsync;
-    bool                pbo;
-    bool                paused;
-    bool                msaa;
-    bool                recording;
-    const unsigned int  CHANNEL_COUNT   =  3;
-    unsigned int        PBO_COUNT;
-    bool                flip_shader;
-}
 
 #define             RENDER_3D           1   // make sure to change in the shaders too
 #define             RENDER_EBO          0   // only matters when RENDER_3D=1
@@ -202,21 +187,9 @@ int main()
     // Set window size (needs to be fixed when recording)
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-    // Config::SetScreenResolution(mode->width, mode->height);
-    Config::SetScreenResolution(1600, 900); // if the resolution is too low, FPS could get too high (~1000fps) and program will crash
-    // Config::SetScreenResolution(1920, 1080);
-
-    // Set our local cached values
-    SCR_WIDTH   = Config::GetScreenWidth();
-    SCR_HEIGHT  = Config::GetScreenHeight();
-    framerate   = Config::GetFramerate();
-    fullscreen  = Config::GetFullscreen();
-    pbo         = Config::GetPBO();
-    paused      = Config::GetPaused();
-    msaa        = Config::GetMSAA();
-    recording   = Config::GetRecording();
-    flip_shader = Config::GetFlipShader();
-    vsync       = Config::GetVsync();
+    using namespace Settings;
+    // SetScreenResolution(mode->width, mode->height);
+    SetScreenResolution(1600, 900); // if the resolution is too low, FPS could get too high (~1000fps) and program will crash
 
     lastX = SCR_WIDTH / 2;
     lastY = SCR_HEIGHT / 2;
@@ -228,7 +201,6 @@ int main()
     GLuint firstIndex = 0;
     GLuint nextIndex = 1;//(firstIndex + 1) % PBO_COUNT;
     unsigned int frameCounter = 0;
-    PBO_COUNT = Config::GetPBO_COUNT();
     GLuint pboIds[PBO_COUNT];
     GLsync pboFences[PBO_COUNT] = { nullptr };
     unsigned int DATA_SIZE;
@@ -236,7 +208,7 @@ int main()
     // glfw window creation
     // --------------------
     GLFWwindow* window;
-
+    std::cout << "[main] Creating window with size: " << SCR_WIDTH << "x" << SCR_HEIGHT << "\n";
     if (!fullscreen)
         window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL); // windowed
     else
@@ -244,7 +216,7 @@ int main()
     
     if (window == NULL)
     {
-        std::cout << "Failed to create GLFW window" << std::endl;
+        std::cout << "[main] ERROR: Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
@@ -266,30 +238,30 @@ int main()
     // ---------------------------------------
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
-        std::cout << "Failed to initialize GLAD" << std::endl;
+        std::cout << "[main] ERROR: Failed to initialize GLAD" << std::endl;
         return -1;
     }
 
     // V-SYNC: Initialize function pointers
     // ------------------------------------
     // https://stackoverflow.com/a/589232
-    #ifdef _WIN32
-    PFNWGLSWAPINTERVALEXTPROC       wglSwapIntervalEXT    = NULL;
-    PFNWGLGETSWAPINTERVALEXTPROC    wglGetSwapIntervalEXT = NULL;
+    // #ifdef _WIN32
+    // PFNWGLSWAPINTERVALEXTPROC       wglSwapIntervalEXT    = NULL;
+    // PFNWGLGETSWAPINTERVALEXTPROC    wglGetSwapIntervalEXT = NULL;
 
-    if (WGLExtensionSupported("WGL_EXT_swap_control"))
-    {
-        // Extension is supported, init pointers.
-        wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC) wglGetProcAddress("wglSwapIntervalEXT");
+    // if (WGLExtensionSupported("WGL_EXT_swap_control"))
+    // {
+    //     // Extension is supported, init pointers.
+    //     wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC) wglGetProcAddress("wglSwapIntervalEXT");
 
-        // this is another function from WGL_EXT_swap_control extension
-        wglGetSwapIntervalEXT = (PFNWGLGETSWAPINTERVALEXTPROC) wglGetProcAddress("wglGetSwapIntervalEXT");
-    }
-    // 0 = V-Sync Off, 1 = V-Sync On, -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz)
-    // https://www.khronos.org/opengl/wiki/Swap_Interval
-    // wglSwapIntervalEXT(vsync);
-    std::cout << "\nwglSwapIntervalEXT: " << wglGetSwapIntervalEXT() << std::endl;
-    #endif /* _WIN32 */
+    //     // this is another function from WGL_EXT_swap_control extension
+    //     wglGetSwapIntervalEXT = (PFNWGLGETSWAPINTERVALEXTPROC) wglGetProcAddress("wglGetSwapIntervalEXT");
+    // }
+    // // 0 = V-Sync Off, 1 = V-Sync On, -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz)
+    // // https://www.khronos.org/opengl/wiki/Swap_Interval
+    // // wglSwapIntervalEXT(vsync);
+    // std::cout << "wglSwapIntervalEXT: " << wglGetSwapIntervalEXT() << "\n";
+    // #endif /* _WIN32 */
 
     // build and compile our shader program to render the crates
     // ---------------------------------------------------------
@@ -481,16 +453,14 @@ int main()
     // load image, create texture and generate mipmaps
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-    // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
-    unsigned char *data = stbi_load("../assets/textures/container.jpg", &width, &height, &nrChannels, 0);
-    if (data)
-    {
+    namespace fs = std::filesystem;
+    const char* containerfilePath = "../assets/textures/container.jpg";
+    unsigned char *data = stbi_load(containerfilePath, &width, &height, &nrChannels, 0);
+    if (data) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
+    } else {
+        std::cout << "[main] WARNING: Failed to load texture: " << fs::path(containerfilePath).filename() << '\n';
     }
     stbi_image_free(data);
 
@@ -505,16 +475,14 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load image, create texture and generate mipmaps
-    data = stbi_load("../assets/textures/awesomeface.png", &width, &height, &nrChannels, 0);
-    if (data)
-    {
+    const char* awesomefacefilePath = "../assets/textures/awesomeface.png";
+    data = stbi_load(awesomefacefilePath, &width, &height, &nrChannels, 0);
+    if (data) {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
+    } else {
+        std::cout << "[main] WARNING: Failed to load texture: " << fs::path(awesomefacefilePath).filename() << '\n';
     }
     stbi_image_free(data);
 
@@ -600,7 +568,8 @@ int main()
 
         // Check if the MSAA FBO is complete
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            std::cout << "ERROR::FRAMEBUFFER:: Framebuffer fboMsaaId is not complete!\n" << std::endl;
+            std::cout << "[main] ERROR::FRAMEBUFFER:: Framebuffer fboMsaaId is not complete!\n" << std::endl;
+            return -1;
         }
 
 
@@ -646,7 +615,8 @@ int main()
 
         // Check if the FBO is complete
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            std::cout << "ERROR::FRAMEBUFFER:: Framebuffer fboId is not complete!\n" << std::endl;
+            std::cout << "[main] ERROR::FRAMEBUFFER:: Framebuffer fboId is not complete!\n" << std::endl;
+            return -1;
         }
     }
 
@@ -654,7 +624,7 @@ int main()
     // ------------
     Shader lightShader("light.vert", "light.frag");
     lightShader.use();
-    unsigned int lightVAO;
+    GLuint lightVAO;
     glGenVertexArrays(1, &lightVAO);
     glBindVertexArray(lightVAO);
     // we only need to bind to the VBO, the container's VBO's data already contains the data.
@@ -672,28 +642,24 @@ int main()
 
     // flip shader
     // -----------
+    Shader flipShader("flip.vert", "flip.frag");
     GLuint fboFlip, fboFlipTexture, quadVAO, quadVBO;
     glGenFramebuffers(1, &fboFlip);
     glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
-
     glGenVertexArrays(1, &quadVAO);
-
     // Create the texture to attach to fboFlip
     glGenTextures(1, &fboFlipTexture);
     glBindTexture(GL_TEXTURE_2D, fboFlipTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fboFlipTexture, 0);
-
     // Check framebuffer status
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cerr << "ERROR: fboFlip is not complete!\n";
-
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "[main] ERROR: fboFlip is not complete!\n";
+        return -1;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    Shader flipShader("flip.vert", "flip.frag");
 
     // IMGUI
     // -----
@@ -719,12 +685,10 @@ int main()
     float x = lowerLeftCornerOfViewportX;
     float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontSize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
     glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
-
     FontManager fontManager;
     fontManager.loadFont("Arial", 48);
-
     TextRenderer textRenderer(fontManager);
-    
+
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
 
@@ -749,7 +713,6 @@ int main()
     std::chrono::high_resolution_clock::time_point t;
 
     // create output directory
-    namespace fs = std::filesystem;
     fs::path outputDir = "../output";
     if (!fs::exists(outputDir)) {
         fs::create_directories(outputDir);
@@ -762,7 +725,7 @@ int main()
         try {
             // Step 1: Initialize encoder
             if (!Encoder::initializeEncoder("../output/output.mp4")) {
-                std::cerr << "Failed to initialize encoder in thread\n";
+                std::cerr << "[encoderThread] ERROR: Failed to initialize encoder in thread\n";
                 return;
             }
     
@@ -813,7 +776,7 @@ int main()
                                 glDeleteSync(pboFences[index]);
                                 pboFences[index] = nullptr;
                             } else {
-                                std::cerr << "[encoderThread] glClientWaitSync timeout or error\n";
+                                std::cerr << "[encoderThread] WARNING: glClientWaitSync timeout or error\n";
                                 continue;
                             }
                         }
@@ -860,7 +823,7 @@ int main()
                 Encoder::finalizeEncoder();
             }
         } catch (const std::exception& e) {
-            std::cerr << "Encoder thread crashed: " << e.what() << std::endl;
+            std::cerr << "[encoderThread] ERROR: Encoder thread crashed: " << e.what() << std::endl;
         }
     });
 
@@ -875,7 +838,7 @@ int main()
         processInput(window);
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
-            std::cerr << "OpenGL Error: " << error << std::endl;
+            std::cerr << "[main] OpenGL Error: " << error << std::endl;
             break;
         }
 
@@ -995,7 +958,12 @@ int main()
             #if IMGUI==1
             Timer::startTimer(t);
             // Show the ImGui text window
+            #ifdef _WIN32
             ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_Once);
+            #endif /* _WIN32 */
+            #ifdef __linux__
+            ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
+            #endif /* __linux__ */
             ImGui::SetNextWindowSize(ImVec2(285, 210), ImGuiCond_Once);
             ImGui::Begin("My name is window, ImGUI window");
             ImGui::PushTextWrapPos(); // wrap at window edge
@@ -1003,7 +971,7 @@ int main()
                         "the mouse cursor with the RIGHT SHIFT key, "
                         "and zoom with the SCROLL wheel! "
                         "Move the camera around with WASD and the mouse. "
-                        "Move the objects using the arrow keys, "
+                        "Move the objects using the arrow keys and Z/X, "
                         "and change their opacity by holding Q/E. "
                         "Click P to see the boost in FPS with "
                         "multithreading and asynchronous read-back PBOs! "
@@ -1013,7 +981,12 @@ int main()
             );
             ImGui::End();
             // Show the ImPlot demo window
+            #ifdef _WIN32
             ImGui::SetNextWindowPos(ImVec2(956, 60), ImGuiCond_Once);
+            #endif /* _WIN32 */
+            #ifdef __linux__
+            ImGui::SetNextWindowPos(ImVec2(956, 580), ImGuiCond_Once);
+            #endif /* __linux__ */
             ImGui::SetNextWindowSize(ImVec2(600, 556), ImGuiCond_Once);
             if (ImGui::Begin("ImPlot Demo")) {
                 ImPlot::ShowDemoWindow();
@@ -1025,7 +998,7 @@ int main()
                 std::lock_guard<std::mutex> lock(coutMutex);
                 Timer::endTimer(Timer::RENDER_GUI, t);
             }
-            #endif
+            #endif /* IMGUI==1 */
 
             // Step 3: Render the scene on-screen using Blitting: https://stackoverflow.com/a/31487085
             // ---------------------------------------------------------------------------------------
@@ -1071,10 +1044,6 @@ int main()
                     std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::GLREADPIXELS_PBO_OFF, t);
                 }
-                GLenum err = glGetError();
-                if (err != GL_NO_ERROR)
-                    std::cerr << "OpenGL error: " << std::hex << err << std::endl;
-
 
                 encodeDiff = crntTime - encodeTime;
                 if (encodeDiff >= 1.0 / framerate) {
@@ -1213,17 +1182,48 @@ int main()
             // IMGUI
             // -----
             #if IMGUI==1
+            Timer::startTimer(t);
+            // Show the ImGui text window
+            #ifdef _WIN32
+            ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_Once);
+            #endif /* _WIN32 */
+            #ifdef __linux__
+            ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
+            #endif /* __linux__ */
+            ImGui::SetNextWindowSize(ImVec2(285, 210), ImGuiCond_Once);
             ImGui::Begin("My name is window, ImGUI window");
-            ImGui::Text("Hello there adventurer!");
+            ImGui::PushTextWrapPos(); // wrap at window edge
+            ImGui::Text("Hello there adventurer! You can free "
+                        "the mouse cursor with the RIGHT SHIFT key, "
+                        "and zoom with the SCROLL wheel! "
+                        "Move the camera around with WASD and the mouse. "
+                        "Move the objects using the arrow keys and Z/X, "
+                        "and change their opacity by holding Q/E. "
+                        "Click P to see the boost in FPS with "
+                        "multithreading and asynchronous read-back PBOs! "
+                        "Click V to toggle Vsync. Screen recording is OFF. " 
+                        "You can find the recordings in /build/output/."
+            );
             ImGui::End();
             // Show the ImPlot demo window
+            #ifdef _WIN32
+            ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 600 - 60, 60), ImGuiCond_Once);
+            #endif /* _WIN32 */
+            #ifdef __linux__
+            ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 600 - 60, 580), ImGuiCond_Once);
+            #endif /* __linux__ */
+            ImGui::SetNextWindowSize(ImVec2(600, 556), ImGuiCond_Once);
             if (ImGui::Begin("ImPlot Demo")) {
                 ImPlot::ShowDemoWindow();
             }
             ImGui::End();
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-            #endif
+            {
+                std::lock_guard<std::mutex> lock(coutMutex);
+                Timer::endTimer(Timer::RENDER_GUI, t);
+            }
+            #endif /* IMGUI==1 */
         }
 
         // IMGUI (won't be visible in screen recording, but doesn't mess up when window is resized)
@@ -1295,6 +1295,7 @@ int main()
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window) {
+    using namespace Settings; // compile-time instruction (no runtime overhead)
     // Exit
     // ----
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -1504,48 +1505,46 @@ void processInput(GLFWwindow *window) {
     // ---
     if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) && (!pboPressed)) {
         pboPressed = true;
-        Config::TogglePBO();
-        pbo = Config::GetPBO();
-        std::cout << "P key pressed. Press = " << pboPressed << " Time: " << crntTime << std::endl;
-        // std::cout << "P key pressed: " << !pbo << "->" << pbo << " Press: " << !pboPressed << "->" << pboPressed << " Time: " << crntTime << std::endl;
+        TogglePBO();
+        std::cout << "[main] P key pressed. Press = " << pboPressed << " Time: " << crntTime << "\n";
+        // std::cout << "P key pressed: " << !pbo << "->" << pbo << " Press: " << !pboPressed << "->" << pboPressed << " Time: " << crntTime << "\n";
     }
     if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) && (pboPressed)) {
         pboPressed = false;
-        std::cout << "P key released. Press = " << pboPressed << " Time: " << crntTime << std::endl;
+        std::cout << "[main] P key released. Press = " << pboPressed << " Time: " << crntTime << "\n";
     }
     // Flip Shader
     // -----------
     if ((glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) && (!flipPressed))
     {
         flipPressed = true;
-        Config::ToggleFlipShader();
-        flip_shader = Config::GetFlipShader();
-        std::cout << "F key pressed. Press = " << flipPressed << " Time: " << crntTime << std::endl;
-        // std::cout << "Toggled PBO: " << !pbo << "->" << pbo << std::endl;
+        ToggleFlipShader();
+        std::cout << "[main] F key pressed. Press = " << flipPressed << " Time: " << crntTime << "\n";
+        // std::cout << "Toggled PBO: " << !pbo << "->" << pbo << "\n";
     }
     if ((glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) && (flipPressed)) {
         flipPressed = false;
-        std::cout << "F key released. Press = " << flipPressed << " Time: " << crntTime << std::endl;
+        std::cout << "[main] F key released. Press = " << flipPressed << " Time: " << crntTime << "\n";
     }
     // VSYNC
     // -----
     if ((glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) && (!vsyncPressed))
     {
         vsyncPressed = true;
-        Config::ToggleVsync();
-        vsync = Config::GetVsync();
-        std::cout << "V key pressed. Press = " << vsyncPressed << " Time: " << crntTime << std::endl;
-        // std::cout << "Toggled Vsync: " << !vsync << "->" << vsync << std::endl;
+        ToggleVsync();
+        std::cout << "[main] V key pressed. Press = " << vsyncPressed << " Time: " << crntTime << "\n";
+        // std::cout << "Toggled Vsync: " << !vsync << "->" << vsync << "\n";
     }
     if ((glfwGetKey(window, GLFW_KEY_V) == GLFW_RELEASE) && (vsyncPressed)) {
         vsyncPressed = false;
-        std::cout << "V key released. Press = " << vsyncPressed << " Time: " << crntTime << std::endl;
+        std::cout << "[main] V key released. Press = " << vsyncPressed << " Time: " << crntTime << "\n";
     }
 }
 
 // glfw: whenever window size changes (by OS or user) this callback function executes
 // ----------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    using namespace Settings;
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     
@@ -1564,7 +1563,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
     // for debugging
     // std::cout << "viewportX: " << lowerLeftCornerOfViewportX << " "
-    //           << "viewportY: " << lowerLeftCornerOfViewportY << std::endl;
+    //           << "viewportY: " << lowerLeftCornerOfViewportY << "\n";
 
     // glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
     // glViewport(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, SCR_WIDTH, SCR_HEIGHT);
@@ -1603,6 +1602,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
+    using namespace Settings;
     // only update when unpaused
     if (!paused)
     {
@@ -1634,6 +1634,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
 
 // Flip the frame vertically
 void flipFrameVertically(unsigned char* frame) {
+    using namespace Settings;
     // for (unsigned int y = 0; y < SCR_HEIGHT / 2; y++) {
     //     int oppositeY = SCR_HEIGHT - 1 - y;
     //     for (unsigned int x = 0; x < SCR_WIDTH * 3; x++) {
@@ -1656,6 +1657,7 @@ void flipFrameVertically(unsigned char* frame) {
 }
 
 std::string GetFPSText(float fps, float ms) {
+    using namespace Settings;
     char buffer[250];
     bool press = pboPressed || flipPressed || pausePressed || vsyncPressed;
     // "FPS: %.1f | %.1f ms"
@@ -1677,25 +1679,25 @@ void UpdateFPS(float crntTime) {
     }
 }
 
-#ifdef _WIN32
-bool WGLExtensionSupported(const char *extension_name)
-{
-    // this is pointer to function which returns pointer to string with list of all wgl extensions
-    PFNWGLGETEXTENSIONSSTRINGEXTPROC _wglGetExtensionsStringEXT = NULL;
+// #ifdef _WIN32
+// bool WGLExtensionSupported(const char *extension_name)
+// {
+//     // this is pointer to function which returns pointer to string with list of all wgl extensions
+//     PFNWGLGETEXTENSIONSSTRINGEXTPROC _wglGetExtensionsStringEXT = NULL;
 
-    // determine pointer to wglGetExtensionsStringEXT function
-    _wglGetExtensionsStringEXT = (PFNWGLGETEXTENSIONSSTRINGEXTPROC) wglGetProcAddress("wglGetExtensionsStringEXT");
+//     // determine pointer to wglGetExtensionsStringEXT function
+//     _wglGetExtensionsStringEXT = (PFNWGLGETEXTENSIONSSTRINGEXTPROC) wglGetProcAddress("wglGetExtensionsStringEXT");
 
-    if (strstr(_wglGetExtensionsStringEXT(), extension_name) == NULL)
-    {
-        // string was not found
-        return false;
-    }
+//     if (strstr(_wglGetExtensionsStringEXT(), extension_name) == NULL)
+//     {
+//         // string was not found
+//         return false;
+//     }
 
-    // extension is supported
-    return true;
-}
-#endif
+//     // extension is supported
+//     return true;
+// }
+// #endif
 
 void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture) {
     quadShader.use();
@@ -1719,6 +1721,7 @@ void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture) {
 }
 
 void RenderCrate(Shader &ourShader, glm::vec3 &trans) {
+    using namespace Settings;
     // set the texture mix value in the shader (this needs to be in the render loop)
     ourShader.use();
     ourShader.setFloat("mixValue", mixValue);
@@ -1759,7 +1762,7 @@ void RenderCrate(Shader &ourShader, glm::vec3 &trans) {
     // light
     // -----
     ourShader.setVec3("lightPos", lightPos);
-    ourShader.setVec3("viewPos", camera.Position);
+    ourShader.setVec3("viewPos", camera.Position); // for world-space, not needed for view-space
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);

@@ -1,3 +1,6 @@
+# If you get a "Re-checking globbed directories... Re-running CMake..."
+# infinite loop issue, just delete CMakeCache.txt
+
 # Minimum CMake version
 cmake_minimum_required(VERSION 3.31)
 
@@ -46,16 +49,16 @@ endif(UNIX)
 
 if(WIN32)
     # Set source and destination directories
-    set(ASSETS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/assets)
-    set(SHADERS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
-    set(ASSETS_DEST_DIR ${CMAKE_BINARY_DIR}/assets)
-    set(SHADERS_DEST_DIR ${CMAKE_BINARY_DIR}/shaders)
+    set(ASSETS_SOURCE_DIR   ${CMAKE_SOURCE_DIR}/assets)
+    set(ASSETS_DEST_DIR     ${CMAKE_BINARY_DIR}/assets)
+    set(SHADERS_SOURCE_DIR  ${CMAKE_SOURCE_DIR}/shaders)
+    set(SHADERS_DEST_DIR    ${CMAKE_BINARY_DIR}/shaders)
 
     # Convert paths to Windows native format
-    file(TO_NATIVE_PATH ${ASSETS_SOURCE_DIR} ASSETS_SRC_NATIVE)
-    file(TO_NATIVE_PATH ${ASSETS_DEST_DIR} ASSETS_DST_NATIVE)
-    file(TO_NATIVE_PATH ${SHADERS_SOURCE_DIR} SHADERS_SRC_NATIVE)
-    file(TO_NATIVE_PATH ${SHADERS_DEST_DIR} SHADERS_DST_NATIVE)
+    file(TO_NATIVE_PATH ${ASSETS_SOURCE_DIR}    ASSETS_SRC_NATIVE)
+    file(TO_NATIVE_PATH ${ASSETS_DEST_DIR}      ASSETS_DST_NATIVE)
+    file(TO_NATIVE_PATH ${SHADERS_SOURCE_DIR}   SHADERS_SRC_NATIVE)
+    file(TO_NATIVE_PATH ${SHADERS_DEST_DIR}     SHADERS_DST_NATIVE)
 
     # Recursively find all files to track for rebuilds
     file(GLOB_RECURSE ASSET_FILES CONFIGURE_DEPENDS RELATIVE ${ASSETS_SOURCE_DIR} "${ASSETS_SOURCE_DIR}/*")
@@ -65,33 +68,41 @@ if(WIN32)
     list(TRANSFORM ASSET_FILES PREPEND "${ASSETS_SOURCE_DIR}/")
     list(TRANSFORM SHADER_FILES PREPEND "${SHADERS_SOURCE_DIR}/")
 
-    # Create stamp file names
-    set(ASSETS_COPY_STAMP ${CMAKE_BINARY_DIR}/assets_robocopy.stamp)
-    set(SHADERS_COPY_STAMP ${CMAKE_BINARY_DIR}/shaders_robocopy.stamp)
+    # # Create stamp file names
+    # set(ASSETS_COPY_STAMP ${CMAKE_BINARY_DIR}/assets_robocopy.stamp)
+    # set(SHADERS_COPY_STAMP ${CMAKE_BINARY_DIR}/shaders_robocopy.stamp)
 
-    # Robocopy for assets
-    add_custom_command(
-        OUTPUT ${ASSETS_COPY_STAMP}
-        COMMAND cmd /c robocopy "${ASSETS_SRC_NATIVE}" "${ASSETS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
-        COMMAND ${CMAKE_COMMAND} -E touch "${ASSETS_COPY_STAMP}"
-        DEPENDS ${ASSET_FILES}
-        COMMENT "Syncing /assets/ with robocopy"
-        VERBATIM
-    )
+    # # Robocopy for assets
+    # add_custom_command(
+    #     OUTPUT ${ASSETS_COPY_STAMP}
+    #     COMMAND cmd /c robocopy "${ASSETS_SRC_NATIVE}" "${ASSETS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
+    #     COMMAND ${CMAKE_COMMAND} -E touch "${ASSETS_COPY_STAMP}"
+    #     DEPENDS ${ASSET_FILES}
+    #     COMMENT "Syncing /assets/ with robocopy"
+    #     VERBATIM
+    # )
 
-    # Robocopy for shaders
-    add_custom_command(
-        OUTPUT ${SHADERS_COPY_STAMP}
-        COMMAND cmd /c robocopy "${SHADERS_SRC_NATIVE}" "${SHADERS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
-        COMMAND ${CMAKE_COMMAND} -E touch "${SHADERS_COPY_STAMP}"
-        DEPENDS ${SHADER_FILES}
-        COMMENT "Syncing /shaders/ with robocopy"
-        VERBATIM
-    )
+    # # Robocopy for shaders
+    # add_custom_command(
+    #     OUTPUT ${SHADERS_COPY_STAMP}
+    #     COMMAND cmd /c robocopy "${SHADERS_SRC_NATIVE}" "${SHADERS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
+    #     COMMAND ${CMAKE_COMMAND} -E touch "${SHADERS_COPY_STAMP}"
+    #     DEPENDS ${SHADER_FILES}
+    #     COMMENT "Syncing /shaders/ with robocopy"
+    #     VERBATIM
+    # )
 
-    # Target that triggers both syncs
+    # # Target that triggers both syncs
+    # add_custom_target(sync_resources ALL
+    #     DEPENDS ${ASSETS_COPY_STAMP} ${SHADERS_COPY_STAMP}
+    # )
+
+    # Always-run resource copy target
     add_custom_target(sync_resources ALL
-        DEPENDS ${ASSETS_COPY_STAMP} ${SHADERS_COPY_STAMP}
+        COMMAND cmd /c robocopy "${ASSETS_SRC_NATIVE}" "${ASSETS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
+        COMMAND cmd /c robocopy "${SHADERS_SRC_NATIVE}" "${SHADERS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
+        COMMENT "Syncing assets/ and shaders/ with robocopy"
+        VERBATIM
     )
 endif(WIN32)
 
@@ -151,18 +162,6 @@ target_include_directories(implot PUBLIC
 # Link ImPlot to ImGui
 target_link_libraries(implot PUBLIC imgui)  # ImPlot depends on ImGui
 
-# Add the Config library
-add_library(config STATIC
-    src/Config.cpp
-)
-
-# Set the target properties for config (where libconfig.a will be created)
-set_target_properties(config PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
-
-# Link config into any target that needs it
-target_link_libraries(encoder PUBLIC config)
-target_link_libraries(text PUBLIC config)
-
 if(UNIX)
     find_package(OpenGL REQUIRED)
     find_package(glfw3 REQUIRED)
@@ -178,7 +177,6 @@ if(UNIX)
     )
     target_link_libraries(${PROJECT_NAME}
         timer
-        config # don't even need to link as config already linked to encoder and text, but no harm in including again
         imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
         implot # ImPlot static library from CMake
         encoder

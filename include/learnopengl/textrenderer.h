@@ -12,8 +12,6 @@ private:
     GLuint dummyVAO;
     Shader textShader;
     Shader atlasShader;
-    unsigned int SCR_WIDTH;
-    unsigned int SCR_HEIGHT;
 public:
     TextRenderer(FontManager& fm);
     ~TextRenderer();

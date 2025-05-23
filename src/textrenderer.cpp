@@ -1,7 +1,7 @@
 #include <glad/glad.h>
 #include <learnopengl/textrenderer.h>
 #include <learnopengl/shader_s.h>
-#include <learnopengl/Config.h>
+#include <learnopengl/Settings.h>
 #include <iostream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -28,9 +28,6 @@ TextRenderer::TextRenderer(FontManager &fm)
 
     // You must bind a VAO even if you don't use vertex attributes for full-screen atlas
     glGenVertexArrays(1, &dummyVAO);
-
-    SCR_WIDTH = Config::GetScreenWidth();
-    SCR_HEIGHT = Config::GetScreenHeight();
 }
 
 TextRenderer::~TextRenderer()
@@ -44,9 +41,11 @@ TextRenderer::~TextRenderer()
 
 // multiple draw calls for each character in text
 void TextRenderer::renderText(const std::string &text, float x, float y, float scale, glm::vec3 color, const std::string &fontName) {
+    using namespace Settings;
+
     Font *font = fontManager.getFont(fontName);
     if (!font) {
-        std::cerr << "Font " << fontName << " not found.\n";
+        std::cerr << "[TextRenderer] Font " << fontName << " not found.\n";
         return;
     }
 
@@ -122,9 +121,11 @@ void TextRenderer::renderText(const std::string &text, float x, float y, float s
 
 // single draw call (~10x faster)
 void TextRenderer::renderTextFast(const std::string &text, float x, float y, float scale, glm::vec3 color, const std::string &fontName) {
+    using namespace Settings;
+
     Font *font = fontManager.getFont(fontName);
     if (!font) {
-        std::cerr << "Font " << fontName << " not found.\n";
+        std::cerr << "[TextRenderer] ERROR: Font '" << fontName << "' not found!\n";
         return;
     }
 
@@ -213,7 +214,7 @@ void TextRenderer::renderTextFast(const std::string &text, float x, float y, flo
 void TextRenderer::renderAtlas(const std::string &fontName) {
     Font *font = fontManager.getFont(fontName);
     if (!font) {
-        std::cerr << "Font " << fontName << " not found.\n";
+        std::cerr << "[TextRenderer] ERROR: Font '" << fontName << "' not found!\n";
         return;
     }
 

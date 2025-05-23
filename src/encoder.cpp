@@ -1,5 +1,5 @@
 #include <learnopengl/encoder.h>
-#include <learnopengl/Config.h>
+#include <learnopengl/Settings.h>
 #include <iostream>                 // for std::cin/cout/cerr
 #include <mutex>
 
@@ -17,9 +17,9 @@ namespace Encoder {
     std::mutex encoderMutex;
 
     namespace {     // anonymous namespace (encapsulation)
-        unsigned int SCR_WIDTH;
-        unsigned int SCR_HEIGHT;
-        int framerate;
+        // unsigned int SCR_WIDTH;
+        // unsigned int SCR_HEIGHT;
+        // int framerate;
 
         // FFmpeg
         // ------
@@ -34,18 +34,17 @@ namespace Encoder {
 
     // Function to initialize FFmpeg encoder
     bool initializeEncoder(const char* filename) {
-        SCR_WIDTH = Config::GetScreenWidth();
-        SCR_HEIGHT = Config::GetScreenHeight();
-        framerate = static_cast<int>(Config::GetFramerate());
+        using namespace Settings;
         // Set up ffmpeg's log callback
         // av_log_set_callback(custom_ffmpeg_log_callback);
 
         // Optional: Set log level (AV_LOG_DEBUG=full logs, AV_LOG_INFO=default, AV_LOG_WARNING=only warnings, AV_LOG_ERROR=only errors)
+        std::cout << "[Encoder] ";
         av_log_set_level(AV_LOG_INFO);
 
         avformat_alloc_output_context2(&formatCtx, nullptr, "mp4", filename);
         if (!formatCtx) {
-            printf("Could not create output context\n");
+            printf("[Encoder] ERROR: Could not create output context\n");
             return false;
         }
 
@@ -61,24 +60,24 @@ namespace Encoder {
         // printf("Using encoder: %s\n", codec->name);
 
         if (!codec) {
-            printf("H.264 encoder not found\n");
+            printf("[Encoder] ERROR: H.264 encoder not found\n");
             return false;
         }
 
         // Create a new stream
         videoStream = avformat_new_stream(formatCtx, codec);
         if (!videoStream) {
-            printf("Could not create video stream\n");
+            printf("[Encoder] ERROR: Could not create video stream\n");
             return false;
         }
 
         // Set up the codec context
-        // int FPS = static_cast<int>(Config::GetFramerate());
         codecCtx = avcodec_alloc_context3(codec);
         codecCtx->width = SCR_WIDTH;
         codecCtx->height = SCR_HEIGHT;
-        codecCtx->time_base = (AVRational){1, framerate * 1000};  // Frame rate
-        codecCtx->framerate = (AVRational){framerate, 1};
+        int FPS = static_cast<int>(framerate);
+        codecCtx->time_base = (AVRational){1, FPS * 1000};  // Frame rate
+        codecCtx->framerate = (AVRational){FPS, 1};
         codecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
         // codecCtx->pix_fmt = AV_PIX_FMT_NV12;
         codecCtx->bit_rate = 30'000'000;  // 60 Mbps
@@ -105,7 +104,7 @@ namespace Encoder {
 
         // Open the encoder
         if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
-            printf("Could not open codec\n");
+            printf("[Encoder] ERROR: Could not open codec\n");
             return false;
         }
 
@@ -119,21 +118,21 @@ namespace Encoder {
         // Open output file
         if (!(formatCtx->oformat->flags & AVFMT_NOFILE)) {
             if (avio_open(&formatCtx->pb, filename, AVIO_FLAG_WRITE) < 0) {
-                printf("Could not open output file\n");
+                printf("[Encoder] ERROR: Could not open output file\n");
                 return false;
             }
         }
 
         // Write header
         if (avformat_write_header(formatCtx, nullptr) < 0) {
-            std::cerr << "Error writing header to output file!" << std::endl;
+            std::cerr << "[Encoder] ERROR: Error writing header to output file!" << std::endl;
             return false;  // Handle failure
         }
 
         // Allocate frame and conversion context
         frameX = av_frame_alloc();
         if (!frameX) {
-            std::cerr << "Could not allocate frame\n";
+            std::cerr << "[Encoder] ERROR: Could not allocate frame\n";
             return false;
         }
         frameX->format = AV_PIX_FMT_YUV420P;
@@ -143,11 +142,11 @@ namespace Encoder {
 
         // Allocate frame buffer
         if (av_frame_get_buffer(frameX, 32) < 0) {
-            std::cerr << "Failed to allocate frame buffer for frameX\n";
+            std::cerr << "[Encoder] ERROR: Failed to allocate frame buffer for frameX\n";
             return false;
         }
         if (!frameX->data[0]) {
-            std::cerr << "frameX->data[0] is still null after get_buffer!\n";
+            std::cerr << "[Encoder] ERROR: frameX->data[0] is still null after get_buffer!\n";
             return false;
         }
 
@@ -162,13 +161,11 @@ namespace Encoder {
     // Encode frame using FFmpeg
     bool encodeFrame(const uint8_t* rgbData, float crntTime) {
         // av_frame_unref(frameX);  // Unref previous frame
-        // unsigned int SCR_WIDTH = Config::GetScreenWidth();
-        // unsigned int SCR_HEIGHT = Config::GetScreenHeight();
-        // unsigned int framerate = Config::GetFramerate();
+        using namespace Settings;
 
         // Ensure frameX->data is valid
         if (!frameX->data[0]) {
-            std::cerr << "frameX->data[0] is null before sws_scale!\n";
+            std::cerr << "[Encoder] ERROR: frameX->data[0] is null before sws_scale!\n";
             return false;
         }
 
@@ -177,7 +174,7 @@ namespace Encoder {
         int inLinesize[1] = {3 * static_cast<int>(SCR_WIDTH)};          // Input stride
         
         if (!swsCtx) {
-            std::cerr << "swsCtx is null!\n";
+            std::cerr << "[Encoder] ERROR: swsCtx is null!\n";
             return false;
         }
         // Scale the image to YUV420P  
@@ -185,7 +182,7 @@ namespace Encoder {
         
         // Check if the frame was properly scaled
         if (frameX->data[0] == nullptr) {
-            std::cerr << "After sws_scale, frameX->data[0] is null!\n";
+            std::cerr << "[Encoder] ERROR: After sws_scale, frameX->data[0] is null!\n";
             return false;
         }
 
@@ -194,7 +191,7 @@ namespace Encoder {
         
         // Encode the frame
         if (avcodec_send_frame(codecCtx, frameX) < 0) {
-            printf("Error sending frame to encoder\n");
+            printf("[Encoder] ERROR: Error sending frame to encoder\n");
             return false;
         }
 

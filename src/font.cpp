@@ -27,34 +27,34 @@ Font::~Font() {
 
 void Font::loadFont(const std::string& name, int size) {
     std::cout << "[Font] Constructor called for " << name << ", size " << size << "\n";
-    std::cout << "Loading font...\n";
+    std::cout << "[Font] Loading font...\n";
 
     // LOAD FONT
     // ---------
     if (FT_Init_FreeType(&ft)) {
-        std::cerr << "Could not initialize FreeType Library" << std::endl;
+        std::cerr << "[Font] Could not initialize FreeType Library" << std::endl;
         return;
     }
     std::string fontPath = "../assets/fonts/" + name + ".ttf";
     if (FT_New_Face(ft, fontPath.c_str(), 0, &face)) {
-        std::cerr << "Failed to load font face from: " << fontPath << std::endl;
+        std::cerr << "[Font] Failed to load font face from: " << fontPath << std::endl;
         return;
     }
     if (!face) {
-        std::cerr << "Failed to load the font face. Ensure the file path is correct." << std::endl;
+        std::cerr << "[Font] Failed to load the font face. Ensure the file path is correct." << std::endl;
         return;
     }
     if (FT_Select_Charmap(face, FT_ENCODING_UNICODE)) {
-        std::cerr << "Failed to set Unicode character map." << std::endl;
+        std::cerr << "[Font] Failed to set Unicode character map." << std::endl;
         return;
     }
     // Set the pixel size for glyphs
     if (FT_Set_Pixel_Sizes(face, 0, size)) {
-        std::cerr << "ERROR::FREETYPE: Failed to set pixel size." << std::endl;
+        std::cerr << "[Font] ERROR::FREETYPE: Failed to set pixel size." << std::endl;
         return;
     }
     else {
-        std::cout << "FreeType successfully loaded font!" << std::endl;
+        std::cout << "[Font] FreeType successfully loaded font!" << std::endl;
         // disable byte-alignment restriction
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         return;
@@ -64,7 +64,7 @@ void Font::loadFont(const std::string& name, int size) {
 void Font::createTextureAtlas() {
     // CREATE TEXTURE ATLAS
     // --------------------
-    std::cout << "Creating texture atlas..." << std::endl;
+    std::cout << "[Font] Creating texture atlas...\n";
 
     // Calculate texture atlas size (simplified)
     atlasWidth = 512;
@@ -91,7 +91,7 @@ void Font::createTextureAtlas() {
     
     GLenum error = glGetError();
     if (error != GL_NO_ERROR) {
-        std::cerr << ":D OpenGL Error after glTexImage2D: " << error << std::endl;
+        std::cerr << "[Font] OpenGL Error after glTexImage2D: " << error << std::endl;
         return;
     }
     // Set texture filtering and wrapping
@@ -102,14 +102,14 @@ void Font::createTextureAtlas() {
     
     // Iterate over all printable ASCII characters
     for (unsigned char c = 32; c < 127; ++c) {
-        // std::cout << "Processing character: " << c << std::endl;
+        // std::cout << "[Font] Processing character: " << c << "\n";
         unsigned int glyphIndex = FT_Get_Char_Index(face, c);
         if (glyphIndex == 0) {
-            std::cerr << "Character not found in font: " << c << " (" << static_cast<int>(c) << ")" << std::endl;
+            std::cerr << "[Font] WARNING: Character not found in font: " << c << " (" << static_cast<int>(c) << ")" << std::endl;
             continue;
         }
         if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
-            std::cerr << "Failed to load character: " << c << " (" << static_cast<int>(c) << ")" << std::endl;
+            std::cerr << "[Font] WARNING: Failed to load character: " << c << " (" << static_cast<int>(c) << ")" << std::endl;
             continue;
         }
         FT_GlyphSlot g = face->glyph;
@@ -118,12 +118,12 @@ void Font::createTextureAtlas() {
             // continue; // Skip this character (comment out to allow for spaces)
         }
         if (glyphs.find(c) != glyphs.end()) {
-            std::cerr << "Error: Character " << c << " already exists in glyph map!" << std::endl;
+            std::cerr << "[Font] ERROR: Character " << c << " already exists in glyph map!" << std::endl;
             break;
         }
         // Check if character doesn't fit in the row
         if (offsetX + g->bitmap.width > atlasWidth) {
-            std::cerr << "REACHED ATLAS WIDTH LIMIT. STARTING NEW ROW. " << offsetX << " + " << g->bitmap.rows << " = " << offsetX + static_cast<int>(g->bitmap.width) << " >= " << atlasWidth << std::endl;
+            std::cerr << "[Font] Reached atlas width limit: " << offsetX << " + " << g->bitmap.width << " = " << offsetX + static_cast<int>(g->bitmap.width) << " > " << atlasWidth << ". Starting new row.\n";
             maxWidth = std::max(maxWidth, offsetX);
             offsetX = 0;
             offsetY += rowHeight + padding;
@@ -131,7 +131,7 @@ void Font::createTextureAtlas() {
         }
         // Check if character doesn't fit in the atlas
         if (offsetY + g->bitmap.rows > atlasHeight) {
-            std::cerr << "Texture atlas too small!" << std::endl;
+            std::cerr << "[Font] ERROR: Exceeded atlas height! " << offsetY << " + " << g->bitmap.rows << " = " << offsetY + static_cast<int>(g->bitmap.rows) << " > " << atlasHeight << ". Texture atlas too small!" << std::endl;
             break;
         }
 
@@ -181,11 +181,11 @@ void Font::createTextureAtlas() {
     wastedArea = atlasWidth * atlasHeight - totalglyphArea;
     minWastedArea = wastedArea - (atlasHeight*(atlasWidth-maxWidth)) - (maxWidth*(atlasHeight-offsetY));
     
-    std::cout << " | Texture atlas created: " << atlasWidth << "x" << atlasHeight
+    std::cout << "[Font] Texture atlas created: " << atlasWidth << "x" << atlasHeight
             << " | Wasted area: " << wastedArea*100/(atlasWidth*atlasHeight) << "%"
             << " | Minimum size: " << maxWidth << "x" << offsetY
-            << " | Minimum wasted area: " << minWastedArea*100/(maxWidth*offsetY) << "% |"
-            << std::endl;
+            << " | Minimum wasted area: " << minWastedArea*100/(maxWidth*offsetY) << "%"
+            << "\n";
 
     // Format output in columns: https://stackoverflow.com/a/49295288
     // for (const auto& [key, glyph] : glyphs) {
@@ -210,6 +210,6 @@ const Glyph& Font::getGlyph(char c) const {
     }
 
     static Glyph fallback {};  // a default zero glyph
-    std::cerr << "Warning: Glyph not found for character '" << c << "' (" << static_cast<int>(c) << ")" << std::endl;
+    std::cerr << "[Font] WARNING: Glyph not found for character '" << c << "' (" << static_cast<int>(c) << ")" << std::endl;
     return fallback;
 }
