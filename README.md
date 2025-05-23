@@ -3,7 +3,7 @@
 
 https://github.com/user-attachments/assets/9433d37d-95dc-4225-9618-409ade71b28c
 
-Real-time screen recording in OpenGL (GLFW) using [FFmpeg](https://github.com/FFmpeg/FFmpeg), multithreading, and [asynchronous read-back with 2 PBOs](https://www.songho.ca/opengl/gl_pbo.html#pack). Video heavily compressed to fit GitHub's 10MB filesize limit. Using [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot).
+Real-time screen recording in OpenGL (GLFW) with C++ using [FFmpeg](https://github.com/FFmpeg/FFmpeg), multithreading, and [asynchronous read-back with 2 PBOs](https://www.songho.ca/opengl/gl_pbo.html#pack). Video heavily compressed to fit GitHub's 10MB filesize limit. Using [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot).
 
 ## How to run
 ```console
