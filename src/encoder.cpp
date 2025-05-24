@@ -17,10 +17,6 @@ namespace Encoder {
     std::mutex encoderMutex;
 
     namespace {     // anonymous namespace (encapsulation)
-        // unsigned int SCR_WIDTH;
-        // unsigned int SCR_HEIGHT;
-        // int framerate;
-
         // FFmpeg
         // ------
         AVFormatContext* formatCtx = nullptr;

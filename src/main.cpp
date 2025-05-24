@@ -33,57 +33,51 @@
 #include <filesystem>                   // for std::filesystem
 #include <iomanip>                      // for std::precision(3)              
 #include <cstdio>                       // For sprintf
-#define  M_PI           3.14159265358979323846
-#include <cmath>
+// #define  M_PI           3.14159265358979323846
+// #include <cmath>
 #define  STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#define  STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb_image_write.h>
+// #define  STB_IMAGE_WRITE_IMPLEMENTATION
+// #include <stb_image_write.h>
 #define  GL_GLEXT_PROTOTYPES 1
-#include <array>
+// #include <array>
 #include <vector>
-#include <map>
+// #include <map>
+// Multithreading
+// --------------
 #include <thread>
 #include <chrono>
 #include <queue>
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <algorithm>
+// #include <algorithm>
 #ifndef  PATH_MAX
 #define  PATH_MAX 4096
 #endif  /* PATH_MAX */
 
-void processInput(GLFWwindow *window);
-void framebuffer_size_callback(GLFWwindow *window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-std::string GetFPSText(float fps, float ms);
-void UpdateFPS(float crntTime);
 // #ifdef _WIN32
 // bool WGLExtensionSupported(const char *extension_name);
 // #endif
-void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture);
-void RenderCrate(Shader &ourShader, glm::vec3 &trans);
-// FFmpeg
+void processInput(GLFWwindow *window, float timeDiff, float crntTime);
+void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+std::string GetFPSText(float fps, float ms, float crntTime);
+void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime, int &frameCountFPS);
+void RenderFullscreenQuad(Shader &quadShader, GLuint quadTexture);
+void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::vector<glm::vec3>& cubePositions, const glm::vec3 &lightPos);
 void flipFrameVertically(unsigned char* frame);
 
 #define             RENDER_3D           1   // make sure to change in the shaders too
+#if RENDER_3D==1
 #define             RENDER_EBO          0   // only matters when RENDER_3D=1
+#endif
 #define             IMGUI               1
-
-// fbo settings
-// ------------
-GLuint fboMsaaId, rboMsaaColorId, rboMsaaDepthId;
-GLuint fboId, rboId;
-GLuint fboTexture;
-
-// textures
-// --------
-GLuint crateTexture, awesomeTexture;
 
 // uniform variables
 // -----------------
@@ -105,21 +99,6 @@ double lastXpos     = 0;
 double lastYpos     = 0;
 bool    firstMouse  = true;
 
-// timing
-// ------
-float encodeDiff, encodeTime = 0.0f;
-float deltaTime, oldTime = 0.0f;
-float timeDiff, prevTime = 0.0f;
-float dt, old_t = 0.0f;
-float crntTime = 0.0f;
-// Keeps track of the amount of frames in timeDiff
-unsigned int counter = 0;
-// Variables for timing
-float lastTime = 0.0f;
-int frameCountFPS = 0;
-float fps = 0.0f;
-float msPerFrame = 0.0f;
-
 // button press
 // ------------
 bool pboPressed = false;
@@ -136,35 +115,6 @@ int left, top, right, bottom;
 // viewport
 // --------
 int lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY = 0;
-
-// IMGUI
-// -----
-// ImVec2 imgui_pos;
-
-// light source
-// ------------
-glm::vec3 lightPos(3.2f, 5.0f, 2.0f);
-glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
-glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
-
-GLuint VAO, VBO, EBO;
-
-unsigned char* frame = NULL;
-unsigned char* frame_old = NULL;
-unsigned char* buffer = NULL;
-
-glm::vec3 cubePositions[] = {
-    glm::vec3( 0.0f,  0.0f,  -2.0f), 
-    glm::vec3( 2.0f,  5.0f, -15.0f), 
-    glm::vec3(-1.5f, -2.2f, -2.5f),  
-    glm::vec3(-3.8f, -2.0f, -12.3f),  
-    glm::vec3( 2.4f, -0.4f, -3.5f),  
-    glm::vec3(-1.7f,  3.0f, -7.5f),  
-    glm::vec3( 1.3f, -2.0f, -2.5f),  
-    glm::vec3( 1.5f,  2.0f, -2.5f), 
-    glm::vec3( 1.5f,  0.2f, -1.5f), 
-    glm::vec3(-1.3f,  1.0f, -1.5f)  
-};
 
 int main()
 {
@@ -381,7 +331,7 @@ int main()
     #endif  /* RENDER_EBO==1 */
     #endif  /* RENDER_3D==1 */
 
-    // unsigned int VBO, VAO, EBO;
+    GLuint VAO, VBO, EBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     #if RENDER_EBO==1 || RENDER_3D==0
@@ -437,8 +387,9 @@ int main()
     // uncomment this call to draw in wireframe polygons.
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    // load and create a texture 
-    // -------------------------
+    // load and create textures 
+    // ------------------------
+    GLuint crateTexture, awesomeTexture;
 
     // texture 1
     // ---------
@@ -502,10 +453,13 @@ int main()
     ourShader.setMat4("view", view);
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH/(float)SCR_HEIGHT, 0.1f, 100.0f);
     // glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
+    glm::vec3 lightPos(3.2f, 5.0f, 2.0f);
+    glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+    glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
     ourShader.setMat4("projection", projection);
     ourShader.setVec3("lightColor", lightColor);
-    ourShader.setVec3("objectColor", objectColor);
     ourShader.setVec3("lightPos", lightPos);
+    ourShader.setVec3("objectColor", objectColor);
     ourShader.setVec3("viewPos", camera.Position);
 
     // bind Texture
@@ -513,7 +467,29 @@ int main()
     glBindTexture(GL_TEXTURE_2D, crateTexture);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, awesomeTexture);
-    
+
+    std::vector<glm::vec3> cubePositions = {
+        { 0.0f,  0.0f,  -2.0f }, 
+        { 2.0f,  5.0f, -15.0f }, 
+        { -1.5f, -2.2f, -2.5f },  
+        { -3.8f, -2.0f, -12.3f },  
+        {  2.4f, -0.4f, -3.5f },  
+        { -1.7f,  3.0f, -7.5f },  
+        {  1.3f, -2.0f, -2.5f },  
+        {  1.5f,  2.0f, -2.5f }, 
+        {  1.5f,  0.2f, -1.5f }, 
+        { -1.3f,  1.0f, -1.5f }  
+    };
+
+
+    // fbo settings
+    // ------------
+    GLuint fboMsaaId, rboMsaaColorId, rboMsaaDepthId;
+    GLuint fboId, rboId;
+    GLuint fboTexture;
+
+    unsigned char* frame = NULL;
+
     if (recording)
     {
         // PBO OFF
@@ -689,8 +665,6 @@ int main()
     fontManager.loadFont("Arial", 48);
     TextRenderer textRenderer(fontManager);
 
-    glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-
 
     // FrameData holds a copy of the frame and its timestamp
     struct FrameData {
@@ -827,31 +801,42 @@ int main()
         }
     });
 
+    // timings
+    // -------
+    unsigned int counter = 0;               // tracks amount of frames for window title
+    int frameCountFPS = 0;                  // tracks amount of frames for FPS text
+    float fps, ms = 0.0f;                   // for FPS text
+    float timeDiff, prevTime = 0.0f;        // for movement (time between frames)
+    float deltaTime, oldTime = 0.0f;        // for window title FPS counter
+    float lastTime = 0.0f;                  // for FPS text
+    float encodeDiff, encodeTime = 0.0f;    // for encoding frames
+    float crntTime = 0.0f;                  // current time (used by all)
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
     {
         glfwMakeContextCurrent(window);
+		crntTime = static_cast<float>(glfwGetTime()); // Updates counter and times
+        timeDiff = crntTime - prevTime; // for movement (time between frames)
+        prevTime = crntTime;
         // input
         // -----
         // glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-        processInput(window);
+        processInput(window, timeDiff, crntTime);
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
             std::cerr << "[main] OpenGL Error: " << error << std::endl;
             break;
         }
 
-        // render
-        // ------
-        // Set the clear color to black
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        // Clear the current framebuffer
-        // At this point the entire framebuffer is black
-        glClear(GL_COLOR_BUFFER_BIT);
+        // clear buffer
+        // ------------
         // Set the clear color to the background color of choice
-        // glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // background color
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // background color
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // black
+        // glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // cyan
+        // Clear the current framebuffer
+        glClear(GL_COLOR_BUFFER_BIT);
         
         // IMGUI
         // -----
@@ -862,36 +847,24 @@ int main()
         #endif
 
         // FPS Counter: https://www.youtube.com/watch?v=BA6aR_5C_BM
-        // Updates counter and times
-		crntTime = static_cast<float>(glfwGetTime());
-
-        // for movement (time between frames)
-        timeDiff = crntTime - prevTime;
-        prevTime = crntTime;
-
         deltaTime = crntTime - oldTime;
 		counter++;
 		if (deltaTime >= 60.0 / 60.0)
 		{
 			// Creates new title
 			std::string FPS = std::to_string((1.0 / deltaTime) * counter);
-            // float FPSs = (1.0 / timeDiff) * counter;
 			std::string ms = std::to_string((deltaTime / counter) * 1000);
-            // float mss = (timeDiff / counter) * 1000;
 			std::string newTitle = "LearnOpenGL - " + FPS + "FPS / " + ms + "ms";
 			glfwSetWindowTitle(window, newTitle.c_str());
 
 			// Resets times and counter
 			oldTime = crntTime;
             counter = 0;
-
-			// Use this if you have disabled VSync
-			//camera.Inputs(window);
 		}
 
-        // Update timing info
-        UpdateFPS(crntTime);
-        std::string fpsText = GetFPSText(fps, msPerFrame);
+        // Update timing info for FPS text
+        UpdateFPS(fps, ms, crntTime, lastTime, frameCountFPS);
+        std::string fpsText = GetFPSText(fps, ms, crntTime);
 
         // recording ON
         if (recording)
@@ -908,11 +881,11 @@ int main()
             // static crate
             Timer::startTimer(t);
             glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
-            RenderCrate(ourShader, translatenew);
+            RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture, cubePositions, lightPos);
 
             // controllable crate
             glm::vec3 translate = glm::vec3(xOffset, yOffset, zOffset);
-            RenderCrate(ourShader, translate);
+            RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos);
 
             // draw the light cube object
             // also draw the lamp object
@@ -1155,11 +1128,11 @@ int main()
 
             // static crate
             glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
-            RenderCrate(ourShader, translatenew);
+            RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture, cubePositions, lightPos);
 
             // controllable crate
             glm::vec3 translate = glm::vec3(xOffset, yOffset, zOffset);
-            RenderCrate(ourShader, translate);
+            RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos);
 
             // draw the light cube object
             // also draw the lamp object
@@ -1294,7 +1267,7 @@ int main()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window) {
+void processInput(GLFWwindow *window, float timeDiff, float crntTime) {
     using namespace Settings; // compile-time instruction (no runtime overhead)
     // Exit
     // ----
@@ -1656,9 +1629,9 @@ void flipFrameVertically(unsigned char* frame) {
     }
 }
 
-std::string GetFPSText(float fps, float ms) {
+std::string GetFPSText(float fps, float ms, float crntTime) {
     using namespace Settings;
-    char buffer[250];
+    char buffer[250];   // small stack-allocated array (extremely fast, in CPU cache)
     bool press = pboPressed || flipPressed || pausePressed || vsyncPressed;
     // "FPS: %.1f | %.1f ms"
     // "AaBbCcDdEeFfGg1!2£4$"
@@ -1667,13 +1640,13 @@ std::string GetFPSText(float fps, float ms) {
     return std::string(buffer);
 }
 
-void UpdateFPS(float crntTime) {
+void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime, int &frameCountFPS) {
     frameCountFPS++;
 
     // Calculate FPS every second
     if (crntTime - lastTime >= 1.0f / 1.0f) {
         fps = frameCountFPS / (crntTime - lastTime);
-        msPerFrame = 1000.0f / fps; // Convert to milliseconds
+        ms = 1000.0f / fps; // Convert to milliseconds
         frameCountFPS = 0;
         lastTime = crntTime;
     }
@@ -1699,7 +1672,7 @@ void UpdateFPS(float crntTime) {
 // }
 // #endif
 
-void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture) {
+void RenderFullscreenQuad(Shader &quadShader, GLuint quadTexture) {
     quadShader.use();
     // Enable 2D rendering
     glEnable(GL_BLEND);
@@ -1720,13 +1693,15 @@ void RenderFullscreenQuad(Shader &quadShader, GLuint &quadTexture) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void RenderCrate(Shader &ourShader, glm::vec3 &trans) {
+void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::vector<glm::vec3>& cubePositions, const glm::vec3 &lightPos) {
     using namespace Settings;
-    // set the texture mix value in the shader (this needs to be in the render loop)
+    
     ourShader.use();
     ourShader.setFloat("mixValue", mixValue);
 
     // bind Texture
+    // ------------
+    // need to rebind every time in render loop
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, crateTexture);
     ourShader.setInt("texture1", 0);
@@ -1748,15 +1723,16 @@ void RenderCrate(Shader &ourShader, glm::vec3 &trans) {
     model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));  
     ourShader.setMat4("model", model);
 
+    // view
+    // ----
     // moveable camera + swivel
     glm::mat4 view = camera.GetViewMatrix();
-    
     ourShader.setMat4("view", view);
 
     // projection
     // ----------
     // pass projection matrix to shader (note that in this case it could change every frame)
-    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f);
     ourShader.setMat4("projection", projection);
 
     // light
@@ -1765,7 +1741,7 @@ void RenderCrate(Shader &ourShader, glm::vec3 &trans) {
     ourShader.setVec3("viewPos", camera.Position); // for world-space, not needed for view-space
 
     glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    // glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
     // render the crate
     // ----------------

@@ -68,42 +68,42 @@ if(WIN32)
     list(TRANSFORM ASSET_FILES PREPEND "${ASSETS_SOURCE_DIR}/")
     list(TRANSFORM SHADER_FILES PREPEND "${SHADERS_SOURCE_DIR}/")
 
-    # # Create stamp file names
-    # set(ASSETS_COPY_STAMP ${CMAKE_BINARY_DIR}/assets_robocopy.stamp)
-    # set(SHADERS_COPY_STAMP ${CMAKE_BINARY_DIR}/shaders_robocopy.stamp)
+    # Create stamp file names
+    set(ASSETS_COPY_STAMP ${CMAKE_BINARY_DIR}/assets_robocopy.stamp)
+    set(SHADERS_COPY_STAMP ${CMAKE_BINARY_DIR}/shaders_robocopy.stamp)
 
-    # # Robocopy for assets
-    # add_custom_command(
-    #     OUTPUT ${ASSETS_COPY_STAMP}
-    #     COMMAND cmd /c robocopy "${ASSETS_SRC_NATIVE}" "${ASSETS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
-    #     COMMAND ${CMAKE_COMMAND} -E touch "${ASSETS_COPY_STAMP}"
-    #     DEPENDS ${ASSET_FILES}
-    #     COMMENT "Syncing /assets/ with robocopy"
-    #     VERBATIM
-    # )
-
-    # # Robocopy for shaders
-    # add_custom_command(
-    #     OUTPUT ${SHADERS_COPY_STAMP}
-    #     COMMAND cmd /c robocopy "${SHADERS_SRC_NATIVE}" "${SHADERS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
-    #     COMMAND ${CMAKE_COMMAND} -E touch "${SHADERS_COPY_STAMP}"
-    #     DEPENDS ${SHADER_FILES}
-    #     COMMENT "Syncing /shaders/ with robocopy"
-    #     VERBATIM
-    # )
-
-    # # Target that triggers both syncs
-    # add_custom_target(sync_resources ALL
-    #     DEPENDS ${ASSETS_COPY_STAMP} ${SHADERS_COPY_STAMP}
-    # )
-
-    # Always-run resource copy target
-    add_custom_target(sync_resources ALL
+    # Robocopy for assets
+    add_custom_command(
+        OUTPUT ${ASSETS_COPY_STAMP}
         COMMAND cmd /c robocopy "${ASSETS_SRC_NATIVE}" "${ASSETS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
-        COMMAND cmd /c robocopy "${SHADERS_SRC_NATIVE}" "${SHADERS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
-        COMMENT "Syncing assets/ and shaders/ with robocopy"
+        COMMAND ${CMAKE_COMMAND} -E touch "${ASSETS_COPY_STAMP}"
+        DEPENDS ${ASSET_FILES}
+        COMMENT "Syncing /assets/ with robocopy"
         VERBATIM
     )
+
+    # Robocopy for shaders
+    add_custom_command(
+        OUTPUT ${SHADERS_COPY_STAMP}
+        COMMAND cmd /c robocopy "${SHADERS_SRC_NATIVE}" "${SHADERS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
+        COMMAND ${CMAKE_COMMAND} -E touch "${SHADERS_COPY_STAMP}"
+        DEPENDS ${SHADER_FILES}
+        COMMENT "Syncing /shaders/ with robocopy"
+        VERBATIM
+    )
+
+    # Target that triggers both syncs
+    add_custom_target(sync_resources ALL
+        DEPENDS ${ASSETS_COPY_STAMP} ${SHADERS_COPY_STAMP}
+    )
+
+    # # Always-run resource copy target
+    # add_custom_target(sync_resources ALL
+    #     COMMAND cmd /c robocopy "${ASSETS_SRC_NATIVE}" "${ASSETS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
+    #     COMMAND cmd /c robocopy "${SHADERS_SRC_NATIVE}" "${SHADERS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
+    #     COMMENT "Syncing assets/ and shaders/ with robocopy"
+    #     VERBATIM
+    # )
 endif(WIN32)
 
 # Add the custom timer function library
@@ -111,7 +111,7 @@ add_library(timer STATIC
     src/timer.cpp
 )
 # Set the target properties for text (where libtext.a will be created)
-set_target_properties(timer PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
+set_target_properties(timer PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
 
 # Add the custom text function library
 add_library(text STATIC
@@ -120,14 +120,14 @@ add_library(text STATIC
     src/textrenderer.cpp
 )
 # Set the target properties for text (where libtext.a will be created)
-set_target_properties(text PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
+set_target_properties(text PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
 
 # Add the FFmpeg function library
 add_library(encoder STATIC
     src/encoder.cpp
 )
 # Set the target properties for encoder (where libencoder.a will be created)
-set_target_properties(encoder PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
+set_target_properties(encoder PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
 
 # Add the ImGui library
 add_library(imgui STATIC
@@ -162,6 +162,18 @@ target_include_directories(implot PUBLIC
 # Link ImPlot to ImGui
 target_link_libraries(implot PUBLIC imgui)  # ImPlot depends on ImGui
 
+# Add the Config library
+add_library(settings STATIC
+    src/Settings.cpp
+)
+
+# Set the target properties for config (where libconfig.a will be created)
+set_target_properties(settings PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
+
+# Link config into any target that needs it
+target_link_libraries(encoder PUBLIC settings)
+target_link_libraries(text PUBLIC settings)
+
 if(UNIX)
     find_package(OpenGL REQUIRED)
     find_package(glfw3 REQUIRED)
@@ -177,8 +189,9 @@ if(UNIX)
     )
     target_link_libraries(${PROJECT_NAME}
         timer
-        imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
-        implot # ImPlot static library from CMake
+        settings # don't even need to link as settings already linked to encoder and text, but no harm in including again
+        imgui    # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
+        implot   # ImPlot static library from CMake
         encoder
         text
         OpenGL::GL
@@ -190,8 +203,9 @@ endif(UNIX)
 
 if(WIN32)
     target_link_libraries(${PROJECT_NAME}
-        imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
-        implot # ImPlot static library from CMake
+        settings # don't even need to link as settings already linked to encoder and text, but no harm in including again
+        imgui    # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
+        implot   # ImPlot static library from CMake
         encoder
         text
         timer
@@ -199,7 +213,7 @@ if(WIN32)
         #glfw  # GLFW target from CMake (alternative to libglfw3.a)
         #OpenGL::GL  # OpenGL target from CMake
         ${CMAKE_SOURCE_DIR}/lib/GLFW/libglfw3.a
-        ${CMAKE_SOURCE_DIR}/lib/libopengl32.a  # OpenGL
+        ${CMAKE_SOURCE_DIR}/lib/OpenGL/libopengl32.a  # OpenGL
 
         # FFmpeg
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavformat.a
