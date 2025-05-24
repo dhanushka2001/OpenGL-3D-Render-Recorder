@@ -64,17 +64,16 @@ void Font::loadFont(const std::string& name, int size) {
 void Font::createTextureAtlas() {
     // CREATE TEXTURE ATLAS
     // --------------------
-    std::cout << "[Font] Creating texture atlas...\n";
-
     // Calculate texture atlas size (simplified)
     atlasWidth = 512;
     atlasHeight = 512;
+    std::cout << "[Font] Creating texture atlas with size: " << atlasWidth << "x" << atlasHeight << "\n";
 
     // Variables for positioning glyphs in the atlas
     int offsetX         = 0;
     int offsetY         = 0;
     int padding         = 1;
-    int rowHeight       = 0;
+    int maxRowHeight    = 0;
     // Variables for calculating area used/wasted
     int maxWidth        = 0;
     int totalglyphArea  = 0;
@@ -123,11 +122,11 @@ void Font::createTextureAtlas() {
         }
         // Check if character doesn't fit in the row
         if (offsetX + g->bitmap.width > atlasWidth) {
-            std::cerr << "[Font] Reached atlas width limit: " << offsetX << " + " << g->bitmap.width << " = " << offsetX + static_cast<int>(g->bitmap.width) << " > " << atlasWidth << ". Starting new row.\n";
             maxWidth = std::max(maxWidth, offsetX);
-            offsetX = 0;
-            offsetY += rowHeight + padding;
-            rowHeight = 0;
+            offsetY += maxRowHeight + padding; // next row + padding
+            std::cout << "[Font] Reached atlas width limit: " << offsetX << " + " << g->bitmap.width << " = " << offsetX + static_cast<int>(g->bitmap.width) << " > " << atlasWidth << ". Starting new row. Height: " << offsetY << "/" << atlasHeight << "\n";
+            offsetX = 0;        // reset
+            maxRowHeight = 0;   // reset
         }
         // Check if character doesn't fit in the atlas
         if (offsetY + g->bitmap.rows > atlasHeight) {
@@ -170,7 +169,7 @@ void Font::createTextureAtlas() {
         // maxDescent = int(abs(face->descender * (face->size->metrics.y_scale / 65536.0))) >> 6;
         totalglyphArea += static_cast<int>(g->bitmap.width) * static_cast<int>(g->bitmap.rows);
         offsetX += g->bitmap.width + padding;
-        rowHeight = std::max(rowHeight, static_cast<int>(g->bitmap.rows));
+        maxRowHeight = std::max(maxRowHeight, static_cast<int>(g->bitmap.rows));
 
         // std::cout << "Loaded character: " << c << " (" << static_cast<int>(c) << ") Asc: " << ascenderPx << " Desc: " << descenderPx << std::endl;
         // std::cout << "Successfully loaded glyph: " << c << std::endl;

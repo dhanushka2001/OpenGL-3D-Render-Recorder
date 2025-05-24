@@ -68,10 +68,11 @@ namespace Timer {
     }
     
     void printAverages() {
+        std::cout << "[Timer] Printing timings...\n";
         for (int i = 0; i < NUM_TIMERS; ++i) {
             if (counts[i] > 0) {
                 #ifdef _WIN32
-                SetConsoleOutputCP(CP_UTF8);
+                SetConsoleOutputCP(CP_UTF8); // needed for ± symbol
                 #endif /* _WIN32 */
                 if (i == ENCODE) {
                     std::cout << names[i] << " max: " << maxTimes[i] << "ms (" << maxTimeCount[i] << ") min: " << minTimes[i] << "ms (" << minTimeCount[i] << ") (" << counts[i] << " samples)\n";

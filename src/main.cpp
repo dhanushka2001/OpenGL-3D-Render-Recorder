@@ -647,6 +647,18 @@ int main()
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 430");
+    static const char helpText[] = 
+        "Hello there adventurer! You can free "
+        "the mouse cursor with the RIGHT SHIFT key, "
+        "and zoom with the SCROLL wheel! "
+        "Move the camera around with WASD and the mouse. "
+        "Move the objects using the arrow keys and Z/X, "
+        "and change their opacity by holding Q/E. "
+        "Click P to see the boost in FPS with "
+        "multithreading and asynchronous read-back PBOs! "
+        "Click V to toggle Vsync. Screen recording is OFF. " 
+        "You can find the recordings in /build/output/."
+        "\n\nPress ESC to exit.";
     #endif
     
     glEnable(GL_BLEND); // enable transparency
@@ -937,21 +949,10 @@ int main()
             #ifdef __linux__
             ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
             #endif /* __linux__ */
-            ImGui::SetNextWindowSize(ImVec2(285, 210), ImGuiCond_Once);
+            ImGui::SetNextWindowSize(ImVec2(285, 220), ImGuiCond_Once);
             ImGui::Begin("My name is window, ImGUI window");
             ImGui::PushTextWrapPos(); // wrap at window edge
-            ImGui::Text("Hello there adventurer! You can free "
-                        "the mouse cursor with the RIGHT SHIFT key, "
-                        "and zoom with the SCROLL wheel! "
-                        "Move the camera around with WASD and the mouse. "
-                        "Move the objects using the arrow keys and Z/X, "
-                        "and change their opacity by holding Q/E. "
-                        "Click P to see the boost in FPS with "
-                        "multithreading and asynchronous read-back PBOs! "
-                        "Click V to toggle Vsync. Screen recording is ON "
-                        "by default, and stops when the program ends. " 
-                        "You can find the recordings in /build/output/."
-            );
+            ImGui::Text("%s", helpText); // need %s to be safe as ImGui::Text() is a printf-style function, treats first argument as format string. Not safe when text includes '%' without using "%s".
             ImGui::End();
             // Show the ImPlot demo window
             #ifdef _WIN32
@@ -1163,20 +1164,10 @@ int main()
             #ifdef __linux__
             ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
             #endif /* __linux__ */
-            ImGui::SetNextWindowSize(ImVec2(285, 210), ImGuiCond_Once);
+            ImGui::SetNextWindowSize(ImVec2(285, 220), ImGuiCond_Once);
             ImGui::Begin("My name is window, ImGUI window");
             ImGui::PushTextWrapPos(); // wrap at window edge
-            ImGui::Text("Hello there adventurer! You can free "
-                        "the mouse cursor with the RIGHT SHIFT key, "
-                        "and zoom with the SCROLL wheel! "
-                        "Move the camera around with WASD and the mouse. "
-                        "Move the objects using the arrow keys and Z/X, "
-                        "and change their opacity by holding Q/E. "
-                        "Click P to see the boost in FPS with "
-                        "multithreading and asynchronous read-back PBOs! "
-                        "Click V to toggle Vsync. Screen recording is OFF. " 
-                        "You can find the recordings in /build/output/."
-            );
+            ImGui::Text("%s", helpText); // need %s to be safe as ImGui::Text() is a printf-style function, treats first argument as format string. Not safe when text includes '%' without using "%s".
             ImGui::End();
             // Show the ImPlot demo window
             #ifdef _WIN32
@@ -1262,6 +1253,10 @@ int main()
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
+
+    // std::cout << "Press ENTER to exit...";
+    // std::cin.get(); // waits for the user to press Enter
+
     return 0;
 }
 
