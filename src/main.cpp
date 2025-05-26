@@ -40,7 +40,7 @@
 // #define  STB_IMAGE_WRITE_IMPLEMENTATION
 // #include <stb_image_write.h>
 #define  GL_GLEXT_PROTOTYPES 1
-// #include <array>
+#include <array>
 #include <vector>
 // #include <map>
 // Multithreading
@@ -70,7 +70,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 std::string GetFPSText(float fps, float ms, float crntTime);
 void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime, int &frameCountFPS);
 void RenderFullscreenQuad(Shader &quadShader, GLuint quadTexture);
-void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::vector<glm::vec3>& cubePositions, const glm::vec3 &lightPos);
+void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::array<glm::vec3, 10>& cubePositions, glm::vec3 &lightPos, float crntTime);
 void flipFrameVertically(unsigned char* frame);
 
 #define             RENDER_3D           1   // make sure to change in the shaders too
@@ -92,7 +92,7 @@ float   camZ        =  -4.5f;
 
 // camera
 // ------
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 10.0f));
 float   lastX       = 0;
 float   lastY       = 0;
 double lastXpos     = 0;
@@ -135,9 +135,9 @@ int main()
 #endif
 
     // Set window size (needs to be fixed when recording)
-    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
     using namespace Settings;
+    // GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    // const GLFWvidmode* mode = glfwGetVideoMode(monitor);
     // SetScreenResolution(mode->width, mode->height);
     SetScreenResolution(1600, 900); // if the resolution is too low, FPS could get too high (~1000fps) and program will crash
 
@@ -150,7 +150,7 @@ int main()
     // ------------
     GLuint firstIndex = 0;
     GLuint nextIndex = 1;//(firstIndex + 1) % PBO_COUNT;
-    unsigned int frameCounter = 0;
+    // unsigned int frameCounter = 0;
     GLuint pboIds[PBO_COUNT];
     GLsync pboFences[PBO_COUNT] = { nullptr };
     unsigned int DATA_SIZE;
@@ -331,10 +331,11 @@ int main()
     #endif  /* RENDER_EBO==1 */
     #endif  /* RENDER_3D==1 */
 
-    GLuint VAO, VBO, EBO;
+    GLuint VAO, VBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     #if RENDER_EBO==1 || RENDER_3D==0
+    glUint EBO;
     glGenBuffers(1, &EBO);
     #endif
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
@@ -453,7 +454,7 @@ int main()
     ourShader.setMat4("view", view);
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH/(float)SCR_HEIGHT, 0.1f, 100.0f);
     // glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
-    glm::vec3 lightPos(3.2f, 5.0f, 2.0f);
+    glm::vec3 lightPos(8.0f, 0.0f, 0.0f);
     glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
     glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
     ourShader.setMat4("projection", projection);
@@ -468,24 +469,25 @@ int main()
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, awesomeTexture);
 
-    std::vector<glm::vec3> cubePositions = {
-        { 0.0f,  0.0f,  -2.0f }, 
-        { 2.0f,  5.0f, -15.0f }, 
-        { -1.5f, -2.2f, -2.5f },  
+    std::array<glm::vec3, 10> cubePositions = {{
+        {  0.0f,  0.0f,  -2.0f }, 
+        {  2.0f,  5.0f, -15.0f }, 
+        { -1.5f, -2.2f,  -2.5f },  
         { -3.8f, -2.0f, -12.3f },  
-        {  2.4f, -0.4f, -3.5f },  
-        { -1.7f,  3.0f, -7.5f },  
-        {  1.3f, -2.0f, -2.5f },  
-        {  1.5f,  2.0f, -2.5f }, 
-        {  1.5f,  0.2f, -1.5f }, 
-        { -1.3f,  1.0f, -1.5f }  
-    };
+        {  2.4f, -0.4f,  -3.5f },  
+        { -1.7f,  3.0f,  -7.5f },  
+        {  1.3f, -2.0f,  -2.5f },  
+        {  1.5f,  2.0f,  -2.5f }, 
+        {  1.5f,  0.2f,  -1.5f }, 
+        { -1.3f,  1.0f,  -1.5f }  
+    }};
 
 
     // fbo settings
     // ------------
     GLuint fboMsaaId, rboMsaaColorId, rboMsaaDepthId;
-    GLuint fboId, rboId;
+    GLuint fboId;
+    // GLuint rboId;
     GLuint fboTexture;
 
     unsigned char* frame = NULL;
@@ -502,7 +504,7 @@ int main()
         // glBufferData() with NULL pointer reserves only memory space.
         DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
         glGenBuffers(PBO_COUNT, pboIds);
-        for (int i = 0; i < PBO_COUNT; ++i) {
+        for (int i = 0; i < static_cast<int>(PBO_COUNT); ++i) {
             glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[i]);
             glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, nullptr, GL_STREAM_READ); // STREAM_READ is better here
         }
@@ -619,7 +621,7 @@ int main()
     // flip shader
     // -----------
     Shader flipShader("flip.vert", "flip.frag");
-    GLuint fboFlip, fboFlipTexture, quadVAO, quadVBO;
+    GLuint fboFlip, fboFlipTexture, quadVAO;// quadVBO;
     glGenFramebuffers(1, &fboFlip);
     glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
     glGenVertexArrays(1, &quadVAO);
@@ -647,18 +649,64 @@ int main()
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 430");
-    static const char helpText[] = 
+
+    static std::string helpBody = 
         "Hello there adventurer! You can free "
         "the mouse cursor with the RIGHT SHIFT key, "
         "and zoom with the SCROLL wheel! "
         "Move the camera around with WASD and the mouse. "
         "Move the objects using the arrow keys and Z/X, "
         "and change their opacity by holding Q/E. "
-        "Click P to see the boost in FPS with "
+        "\n\nClick P to see the boost in FPS with "
         "multithreading and asynchronous read-back PBOs! "
-        "Click V to toggle Vsync. Screen recording is OFF. " 
-        "You can find the recordings in /build/output/."
-        "\n\nPress ESC to exit.";
+        "Click V to toggle Vsync. Screen recording is ";
+    static std::string isRecording = recording ?
+        "ON. You can find the recordings in /build/output/." :
+        "OFF. "; 
+    std::string encoder;
+    std::ostringstream oss;
+    
+    if(libx264) {
+        oss << "\n\nEncoder selected:\n"
+            << "libx264 [x]   h264_mf [ ]\n\n"
+            << "libx264 settings:\n"
+            << "preset: " + g_preset + "\n"     // example preset value
+            << "crf: " + g_crf;                 // example crf value
+        encoder = oss.str();
+    } else {
+        oss << "\n\nEncoder selected:\n"
+            << "libx264 [ ]   h264_mf [x]\n\n"
+            << "h264_mf settings:\n"
+            << "bit_rate: " << static_cast<int>(g_bit_rate / 1'000'000) << " Mbps\n"
+            << "gop_size: " << g_gop_size << "\n"
+            << "max_b_frames: " << g_max_b_frames;
+        encoder = oss.str();
+    }
+    static std::string encoderInfo = "\nlibx264 is a software encoder optimized for size and quality (can produce same quality as h264_mf for half the size).\nh264_mf is a hardware encoder designed for speed and low CPU use.";
+    static std::string exitText = "\nPress ESC to exit.";
+    static std::string helpBodyFinal = helpBody + isRecording;// + encoder + encoderInfo + exitText;
+    const char* helpText = helpBodyFinal.c_str(); // // Expose as a const char* for legacy interface
+    // int helpText_width = 289;
+    // int helpText_height = libx264 ? 400 : 414;
+
+    std::string bulletHeader = "\nEncoder selected:\n";
+    const char* bulletHeaderPtr = bulletHeader.c_str();
+    std::ostringstream oss2, oss3, oss4;
+    std::string bulletText1 = "preset: " + g_preset + "\n";
+    std::string bulletText2 = "crf: " + g_crf;
+    oss2 << "bit_rate: " << static_cast<int>(g_bit_rate / 1'000'000) << " Mbps\n";
+    oss3 << "gop_size: " << g_gop_size << "\n";
+    oss4 << "max_b_frames: " << g_max_b_frames;
+    std::string bulletText3 = oss2.str();
+    std::string bulletText4 = oss3.str();
+    std::string bulletText5 = oss4.str();
+    const char* bulletText1Ptr = bulletText1.c_str();
+    const char* bulletText2Ptr = bulletText2.c_str();
+    const char* bulletText3Ptr = bulletText3.c_str();
+    const char* bulletText4Ptr = bulletText4.c_str();
+    const char* bulletText5Ptr = bulletText5.c_str();
+    int helpText_width = 352;
+    int helpText_height = libx264 ? 418 : 434;
     #endif
     
     glEnable(GL_BLEND); // enable transparency
@@ -718,38 +766,39 @@ int main()
             // Step 2: Process frame queue
             while (recordingNew || !frameQueue.empty()) {
                 std::unique_lock<std::mutex> lock(queueMutex);
-                queueCond.wait(lock, [&]() {
-                    return !frameQueue.empty() || !recordingNew;
-                });
+                // queueCond.wait(lock, [&]() {
+                //     return !frameQueue.empty() || !recordingNew;
+                // });
     
                 while (!frameQueue.empty()) {
                     FrameData frame = std::move(frameQueue.front());
                     frameQueue.pop();
+                    // std::cout << "[encoder] Popped frame from queue\n";
                     
-                    if (!pbo) {
-                        lock.unlock();  // unlock while processing
-                        if (!flip_shader) {
-                            Timer::startTimer(t);
-                            flipFrameVertically(frame.frame);
-                            {
-                                std::lock_guard<std::mutex> lock(coutMutex);
-                                Timer::endTimer(Timer::FLIP_FUNCTION, t);
-                            }
-                        }
-                        // lock.lock(); // relock for logging
-                        {
-                            std::lock_guard<std::mutex> encoderLock(Encoder::encoderMutex);
-                            Timer::startTimer(t);
-                            // Encoder::encodeFrame(frame.pixels.data(), frame.pts);
-                            Encoder::encodeFrame(frame.frame, frame.pts);
-                            {
-                                std::lock_guard<std::mutex> lock(coutMutex);
-                                Timer::endTimer(Timer::ENCODE, t);
-                            }
-                        }
-                        // lock.unlock();  // unlock
-                        lock.lock(); // relock for queue
-                    }
+                    // if (!pbo) {
+                    //     lock.unlock();  // unlock while processing
+                    //     if (!flip_shader) {
+                    //         Timer::startTimer(t);
+                    //         flipFrameVertically(frame.frame);
+                    //         {
+                    //             std::lock_guard<std::mutex> lock(coutMutex);
+                    //             Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                    //         }
+                    //     }
+                    //     // lock.lock(); // relock for logging
+                    //     {
+                    //         // std::lock_guard<std::mutex> encoderLock(Encoder::encoderMutex);
+                    //         Timer::startTimer(t);
+                    //         // Encoder::encodeFrame(frame.pixels.data(), frame.pts);
+                    //         Encoder::encodeFrame(frame.frame, frame.pts);
+                    //         {
+                    //             std::lock_guard<std::mutex> lock(coutMutex);
+                    //             Timer::endTimer(Timer::ENCODE, t);
+                    //         }
+                    //     }
+                    //     // lock.unlock();  // unlock
+                    //     lock.lock(); // relock for queue
+                    // }
 
                     if (pbo) {
                         lock.unlock();  // unlock while processing
@@ -788,9 +837,10 @@ int main()
                             }
                             // lock.lock(); // relock for logging
                             {
-                                std::lock_guard<std::mutex> encoderLock(Encoder::encoderMutex);
+                                // std::lock_guard<std::mutex> encoderLock(Encoder::encoderMutex);
                                 Timer::startTimer(t);
                                 // Encoder::encodeFrame(frame.pixels.data(), frame.pts);
+                                // std::cout << "[encoder] About to encode frame "  << frameQueue.size() << "/" << MAX_QUEUE_SIZE << "\n";
                                 Encoder::encodeFrame(ptr, frame.pts);
                                 {
                                     std::lock_guard<std::mutex> lock(coutMutex);
@@ -817,7 +867,8 @@ int main()
     // -------
     unsigned int counter = 0;               // tracks amount of frames for window title
     int frameCountFPS = 0;                  // tracks amount of frames for FPS text
-    float fps, ms = 0.0f;                   // for FPS text
+    float fps = 0.0f;
+    float ms = 0.0f;                   // for FPS text
     float timeDiff, prevTime = 0.0f;        // for movement (time between frames)
     float deltaTime, oldTime = 0.0f;        // for window title FPS counter
     float lastTime = 0.0f;                  // for FPS text
@@ -893,11 +944,11 @@ int main()
             // static crate
             Timer::startTimer(t);
             glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
-            RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture, cubePositions, lightPos);
+            RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
 
             // controllable crate
             glm::vec3 translate = glm::vec3(xOffset, yOffset, zOffset);
-            RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos);
+            RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
 
             // draw the light cube object
             // also draw the lamp object
@@ -912,7 +963,7 @@ int main()
             glBindVertexArray(lightVAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
             {
-                std::lock_guard<std::mutex> lock(coutMutex);
+                // std::lock_guard<std::mutex> lock(coutMutex);
                 Timer::endTimer(Timer::RENDER_SCENE, t);
             }
             
@@ -925,7 +976,7 @@ int main()
                                       GL_COLOR_BUFFER_BIT,           // buffer mask
                                                GL_LINEAR);           // scale filter
             {
-                std::lock_guard<std::mutex> lock(coutMutex);
+                // std::lock_guard<std::mutex> lock(coutMutex);
                 Timer::endTimer(Timer::BLIT_MSAA, t);
             }
 
@@ -934,7 +985,7 @@ int main()
             textRenderer.renderTextFast(fpsText, x, y, scale, color, "Arial");
             textRenderer.renderAtlas("Arial");
             {
-                std::lock_guard<std::mutex> lock(coutMutex);
+                // std::lock_guard<std::mutex> lock(coutMutex);
                 Timer::endTimer(Timer::RENDER_TEXT, t);
             }
         
@@ -949,19 +1000,42 @@ int main()
             #ifdef __linux__
             ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
             #endif /* __linux__ */
-            ImGui::SetNextWindowSize(ImVec2(285, 220), ImGuiCond_Once);
+            ImGui::SetNextWindowSize(ImVec2(helpText_width, helpText_height), ImGuiCond_Once);
             ImGui::Begin("My name is window, ImGUI window");
             ImGui::PushTextWrapPos(); // wrap at window edge
             ImGui::Text("%s", helpText); // need %s to be safe as ImGui::Text() is a printf-style function, treats first argument as format string. Not safe when text includes '%' without using "%s".
+            ImGui::Text("%s", bulletHeaderPtr);
+            bool checked1 = !libx264;
+            bool checked2 = libx264;
+            ImGui::BeginDisabled();           // start disabled block (gray out & disable interaction)
+            ImGui::Bullet();
+            ImGui::SameLine();
+            ImGui::Checkbox("h264_mf", &checked1);
+            ImGui::Bullet();
+            ImGui::SameLine();
+            ImGui::Checkbox("libx264", &checked2);
+            ImGui::EndDisabled();             // end disabled block
+            if (libx264) {
+                ImGui::Text("libx264 settings:");
+                ImGui::BulletText("%s", bulletText1Ptr);
+                ImGui::BulletText("%s", bulletText2Ptr);
+            } else {
+                ImGui::Text("h264_mf settings:");
+                ImGui::BulletText("%s", bulletText3Ptr);
+                ImGui::BulletText("%s", bulletText4Ptr);
+                ImGui::BulletText("%s", bulletText5Ptr);
+            }
+            ImGui::Text("%s", encoderInfo.c_str());
+            ImGui::Text("%s", exitText.c_str());
             ImGui::End();
             // Show the ImPlot demo window
             #ifdef _WIN32
-            ImGui::SetNextWindowPos(ImVec2(956, 60), ImGuiCond_Once);
+            ImGui::SetNextWindowPos(ImVec2(1056, 28), ImGuiCond_Once);
             #endif /* _WIN32 */
             #ifdef __linux__
             ImGui::SetNextWindowPos(ImVec2(956, 580), ImGuiCond_Once);
             #endif /* __linux__ */
-            ImGui::SetNextWindowSize(ImVec2(600, 556), ImGuiCond_Once);
+            ImGui::SetNextWindowSize(ImVec2(544, 556), ImGuiCond_Once);
             if (ImGui::Begin("ImPlot Demo")) {
                 ImPlot::ShowDemoWindow();
             }
@@ -969,7 +1043,7 @@ int main()
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             {
-                std::lock_guard<std::mutex> lock(coutMutex);
+                // std::lock_guard<std::mutex> lock(coutMutex);
                 Timer::endTimer(Timer::RENDER_GUI, t);
             }
             #endif /* IMGUI==1 */
@@ -985,7 +1059,7 @@ int main()
                                       GL_COLOR_BUFFER_BIT,           // buffer mask
                                               GL_NEAREST);           // scale filter
             {
-                std::lock_guard<std::mutex> lock(coutMutex);
+                // std::lock_guard<std::mutex> lock(coutMutex);
                 Timer::endTimer(Timer::BLIT_TO_SCREEN, t);
             }
 
@@ -1001,7 +1075,7 @@ int main()
                 glBindVertexArray(0);
                 glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
                 {
-                    std::lock_guard<std::mutex> lock(coutMutex);
+                    // std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::FLIP_SHADER, t);
                 }
             }
@@ -1015,7 +1089,7 @@ int main()
                 Timer::startTimer(t);
                 glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
                 {
-                    std::lock_guard<std::mutex> lock(coutMutex);
+                    // std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::GLREADPIXELS_PBO_OFF, t);
                 }
 
@@ -1049,10 +1123,10 @@ int main()
                     if (!flip_shader) {
                         flipFrameVertically(frame);
                     }
-                    // {
-                    //     std::lock_guard<std::mutex> lock(coutMutex);
-                    //     Timer::endTimer(Timer::FLIP_FUNCTION, t);
-                    // }
+                    {
+                        // std::lock_guard<std::mutex> lock(coutMutex);
+                        Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                    }
                     Encoder::encodeFrame(frame, crntTime);
                     // Resets times and counter
 			        encodeTime = crntTime;
@@ -1072,7 +1146,7 @@ int main()
                     glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, 0);
                     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
                     {
-                        std::lock_guard<std::mutex> lock(coutMutex);
+                        // std::lock_guard<std::mutex> lock(coutMutex);
                         Timer::endTimer(Timer::GLREADPIXELS_PBO_ON, t);
                     }
                     
@@ -1093,15 +1167,15 @@ int main()
                         if (frameQueue.size() < MAX_QUEUE_SIZE) {
                             Timer::startTimer(t);
                             frameQueue.push(data);
-                            queueCond.notify_one();
+                            // queueCond.notify_one();
                             {
-                                std::lock_guard<std::mutex> lock(coutMutex);
-                                // std::cout << "[main] Queue size during push+wait: " << frameQueue.size() - 1 << "/" << MAX_QUEUE_SIZE << "\n";
+                                // std::lock_guard<std::mutex> lock(coutMutex);
+                                // std::cout << "[main] Queue size before push+wait: " << frameQueue.size() - 1 << "/" << MAX_QUEUE_SIZE << "\n";
                                 Timer::endTimer(Timer::QUEUE_PUSH_WAIT_PBO_ON, t);
                             }
                         } else {
                             {
-                                std::lock_guard<std::mutex> lock(coutMutex);
+                                // std::lock_guard<std::mutex> lock(coutMutex);
                                 // std::cout << "[main] Skipping frame due to full queue: " << frameQueue.size() << "/" << MAX_QUEUE_SIZE << "\n";
                             }
                         }
@@ -1129,11 +1203,11 @@ int main()
 
             // static crate
             glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
-            RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture, cubePositions, lightPos);
+            RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
 
             // controllable crate
             glm::vec3 translate = glm::vec3(xOffset, yOffset, zOffset);
-            RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos);
+            RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
 
             // draw the light cube object
             // also draw the lamp object
@@ -1164,19 +1238,42 @@ int main()
             #ifdef __linux__
             ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
             #endif /* __linux__ */
-            ImGui::SetNextWindowSize(ImVec2(285, 220), ImGuiCond_Once);
+            ImGui::SetNextWindowSize(ImVec2(helpText_width, helpText_height), ImGuiCond_Once);
             ImGui::Begin("My name is window, ImGUI window");
             ImGui::PushTextWrapPos(); // wrap at window edge
             ImGui::Text("%s", helpText); // need %s to be safe as ImGui::Text() is a printf-style function, treats first argument as format string. Not safe when text includes '%' without using "%s".
+            ImGui::Text("%s", bulletHeaderPtr);
+            bool checked1 = !libx264;
+            bool checked2 = libx264;
+            ImGui::BeginDisabled();           // start disabled block (gray out & disable interaction)
+            ImGui::Bullet();
+            ImGui::SameLine();
+            ImGui::Checkbox("h264_mf", &checked1);
+            ImGui::Bullet();
+            ImGui::SameLine();
+            ImGui::Checkbox("libx264", &checked2);
+            ImGui::EndDisabled();             // end disabled block
+            if (libx264) {
+                ImGui::Text("libx264 settings:");
+                ImGui::BulletText("%s", bulletText1Ptr);
+                ImGui::BulletText("%s", bulletText2Ptr);
+            } else {
+                ImGui::Text("h264_mf settings:");
+                ImGui::BulletText("%s", bulletText3Ptr);
+                ImGui::BulletText("%s", bulletText4Ptr);
+                ImGui::BulletText("%s", bulletText5Ptr);
+            }
+            ImGui::Text("%s", encoderInfo.c_str());
+            ImGui::Text("%s", exitText.c_str());
             ImGui::End();
             // Show the ImPlot demo window
             #ifdef _WIN32
-            ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 600 - 60, 60), ImGuiCond_Once);
+            ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 544 - 60, 60), ImGuiCond_Once);
             #endif /* _WIN32 */
             #ifdef __linux__
-            ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 600 - 60, 580), ImGuiCond_Once);
+            ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 544 - 60, 580), ImGuiCond_Once);
             #endif /* __linux__ */
-            ImGui::SetNextWindowSize(ImVec2(600, 556), ImGuiCond_Once);
+            ImGui::SetNextWindowSize(ImVec2(544, 556), ImGuiCond_Once);
             if (ImGui::Begin("ImPlot Demo")) {
                 ImPlot::ShowDemoWindow();
             }
@@ -1184,7 +1281,7 @@ int main()
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             {
-                std::lock_guard<std::mutex> lock(coutMutex);
+                // std::lock_guard<std::mutex> lock(coutMutex);
                 Timer::endTimer(Timer::RENDER_GUI, t);
             }
             #endif /* IMGUI==1 */
@@ -1400,8 +1497,8 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime) {
         // fullscreen->windowed
         if (fullscreen)
         {
-            int adjusted_width  = window_width;
-            int adjusted_height = window_height + top;
+            // int adjusted_width  = window_width;
+            // int adjusted_height = window_height + top;
             glfwSetWindowMonitor(window,
                                  NULL,
                                  window_xPos, window_yPos,
@@ -1418,8 +1515,8 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime) {
             glfwGetWindowPos(window, &window_xPos, &window_yPos);
             glfwGetWindowSize(window, &window_width, &window_height);
             glfwGetWindowFrameSize(window, &left, &top, &right, &bottom);
-            GLFWmonitor *monitor = glfwGetPrimaryMonitor();
-            const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+            // GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+            // const GLFWvidmode *mode = glfwGetVideoMode(monitor);
             glfwSetWindowMonitor(window,
                                  glfwGetPrimaryMonitor(),
                                  0, 0,
@@ -1688,7 +1785,7 @@ void RenderFullscreenQuad(Shader &quadShader, GLuint quadTexture) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::vector<glm::vec3>& cubePositions, const glm::vec3 &lightPos) {
+void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::array<glm::vec3, 10>& cubePositions, glm::vec3 &lightPos, float crntTime) {
     using namespace Settings;
     
     ourShader.use();
@@ -1732,6 +1829,20 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint c
 
     // light
     // -----
+    float radius = 8.0f;
+    float theta = crntTime * 0.5f; // slower rotation (Y-axis)
+    float phi = glm::radians(90.0f + sin(crntTime * 0.6f) * 90.0f); // varies between 0° and 180°
+
+    lightPos.x = radius * sin(phi) * cos(theta);
+    // lightPos.y = radius * cos(phi);
+    lightPos.y = 1.5f + glm::sin(crntTime * 0.7f) * 2.0f; // modulate the height
+    lightPos.z = radius * sin(phi) * sin(theta);
+
+    // simple circle in XZ plane
+    // lightPos.x = glm::cos(crntTime) * 8.0f;
+    // lightPos.y = 1.5f;
+    // lightPos.z = glm::sin(crntTime) * 8.0f;
+
     ourShader.setVec3("lightPos", lightPos);
     ourShader.setVec3("viewPos", camera.Position); // for world-space, not needed for view-space
 
@@ -1749,7 +1860,7 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint c
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, cubePositions[i]);
         float angle = 20.0f * i; 
-        model = glm::rotate(model, (float)glfwGetTime() * glm::radians(angle), cubePositions[i]); //glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::rotate(model, crntTime * glm::radians(angle), cubePositions[i]); //glm::vec3(1.0f, 0.0f, 0.0f));
         ourShader.setMat4("model", model);
 
         #if RENDER_EBO==0

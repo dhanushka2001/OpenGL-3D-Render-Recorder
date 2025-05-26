@@ -2,6 +2,7 @@
 #include <learnopengl/Settings.h>
 #include <iostream>                 // for std::cin/cout/cerr
 #include <mutex>
+#include <cstdint>                  // C++-friendly version of stdint.h
 
 // FFmpeg
 // ------
@@ -11,6 +12,7 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
 #include <libavutil/log.h>
+#include <x264/x264.h>
 }
 
 namespace Encoder {
@@ -35,7 +37,7 @@ namespace Encoder {
         // av_log_set_callback(custom_ffmpeg_log_callback);
 
         // Optional: Set log level (AV_LOG_DEBUG=full logs, AV_LOG_INFO=default, AV_LOG_WARNING=only warnings, AV_LOG_ERROR=only errors)
-        std::cout << "[Encoder] ";
+        // std::cout << "[Encoder] ";
         av_log_set_level(AV_LOG_INFO);
 
         avformat_alloc_output_context2(&formatCtx, nullptr, "mp4", filename);
@@ -45,7 +47,31 @@ namespace Encoder {
         }
 
         // Find the H.264 encoder
-        const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+        // void* it = nullptr;
+        const AVCodec* codec = nullptr;
+        // while ((codec = av_codec_iterate(&it))) {
+        //     if (av_codec_is_encoder(codec))
+        //         printf("[Encoder] Encoder available: %s (%s)\n", codec->name, codec->long_name ? codec->long_name : "no description");
+        // }
+        // codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+        if (libx264) {
+            codec = avcodec_find_encoder_by_name("libx264");
+            if (!codec) {
+                std::cerr << "[Encoder] ERROR: libx264 encoder not found\n";
+                return -1;
+            }
+        } else {
+            codec = avcodec_find_encoder_by_name("h264_mf");
+            if (!codec) {
+                std::cerr << "[Encoder] ERROR: h264_mf encoder not found\n";
+                std::cout << "[Encoder] Checking for libx264 instead...\n";
+                codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+                if (!codec) {
+                    std::cerr << "[Encoder] ERROR: libx264 encoder not found\n";
+                    return -1;
+                }
+            }
+        }
         // const AVCodec* codec = avcodec_find_encoder_by_name("h264_qsv");
         // const char* preferred_encoders[] = { "h264_qsv", "h264_nvenc", "h264_mf", "libx264" };
         // const AVCodec* codec = nullptr;
@@ -54,11 +80,6 @@ namespace Encoder {
         //     if (codec) break;
         // }
         // printf("Using encoder: %s\n", codec->name);
-
-        if (!codec) {
-            printf("[Encoder] ERROR: H.264 encoder not found\n");
-            return false;
-        }
 
         // Create a new stream
         videoStream = avformat_new_stream(formatCtx, codec);
@@ -71,35 +92,36 @@ namespace Encoder {
         codecCtx = avcodec_alloc_context3(codec);
         codecCtx->width = SCR_WIDTH;
         codecCtx->height = SCR_HEIGHT;
+        // printf("Encoder init: width=%d, height=%d\n", codecCtx->width, codecCtx->height);
         int FPS = static_cast<int>(framerate);
         codecCtx->time_base = (AVRational){1, FPS * 1000};  // Frame rate
         codecCtx->framerate = (AVRational){FPS, 1};
-        codecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
-        // codecCtx->pix_fmt = AV_PIX_FMT_NV12;
-        codecCtx->bit_rate = 30'000'000;  // 60 Mbps
-        codecCtx->gop_size = 5;
-        codecCtx->max_b_frames = 3;
-        codecCtx-> thread_count = 8;
-        codecCtx->thread_type = FF_THREAD_SLICE;
-        // codecCtx->rc_max_rate = codecCtx->bit_rate;  // Set maximum bitrate limit
-        // codecCtx->rc_buffer_size = codecCtx->bit_rate;  // Set buffer size to match bitrate
-
-        // Set H.264 options
-        // av_opt_set(codecCtx->priv_data, "preset", "ultrafast", 0);
-        // av_opt_set(codecCtx->priv_data, "crf", "23", 0);
-        // // av_opt_set(codecCtx->priv_data, "bitrate", "30000k", 0);   // Set bitrate to 5000 kbps
-        // // av_opt_set(codecCtx->priv_data, "maxrate", "30000k", 0);   // Max bitrate
-        // // av_opt_set(codecCtx->priv_data, "bufsize", "30000k", 0);   // Buffer size
-        // // av_opt_set(codecCtx->priv_data, "profile", "high", 0);     // Set profile to "high" for better quality
-        // av_opt_set(codecCtx->priv_data, "pix_fmt", "yuv420p", 0);  // Try using yuv422p or yuv444p for better quality
-        if (strcmp(codec->name, "h264_mf") == 0) { // libx264
-            av_opt_set(codecCtx->priv_data, "preset", "ultrafast", 0);
-            av_opt_set(codecCtx->priv_data, "crf", "23", 0);
-            av_opt_set(codecCtx->priv_data, "async_depth", "1", 0);
+        codecCtx->pix_fmt = AV_PIX_FMT_YUV420P; // good for libx264 (software encoder)
+        // codecCtx->pix_fmt = AV_PIX_FMT_NV12; // good for h264_mf (hardware encoder)
+        
+        AVDictionary* opts = nullptr;
+        
+        // libx264: software encoder (optimized for size and quality)
+        if (strcmp(codec->name, "libx264") == 0) {
+            codecCtx->bit_rate = 0; // Ignore bitrate, use CRF instead
+            av_dict_set(&opts, "preset", g_preset.c_str(), 0);
+            av_dict_set(&opts, "crf", g_crf.c_str(), 0);
+            av_dict_set(&opts, "tune", "zerolatency", 0);
+            // Other libx264-specific options here
         }
 
-        // Open the encoder
-        if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
+        // h264_mf: hardware encoder (optimized for speed and low CPU use)
+        else if (strcmp(codec->name, "h264_mf") == 0) {
+            codecCtx->bit_rate = g_bit_rate;  // 30 Mbps fixed bitrate
+            codecCtx->gop_size = g_gop_size;
+            codecCtx->max_b_frames = g_max_b_frames;
+            // For hardware encoder, CRF is usually unsupported or ignored
+            // You can set buffer sizes if needed:
+            // codecCtx->rc_max_rate = codecCtx->bit_rate;
+            // codecCtx->rc_buffer_size = codecCtx->bit_rate;
+        }
+
+        if (avcodec_open2(codecCtx, codec, &opts) < 0) {
             printf("[Encoder] ERROR: Could not open codec\n");
             return false;
         }

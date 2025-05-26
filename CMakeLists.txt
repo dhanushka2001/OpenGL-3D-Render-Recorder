@@ -218,9 +218,11 @@ if(WIN32)
         # FFmpeg
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavformat.a
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavcodec.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswscale.a     # must be before libavutil.a (swscale depends on avutil)
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavutil.a
-        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswscale.a
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswresample.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavdevice.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavfilter.a
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libpthread.a
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libm.a
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libws2_32.a
@@ -230,6 +232,10 @@ if(WIN32)
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libbcrypt.a
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libuuid.a
         ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libstrmiids.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libsecur32.a     # needed for h264_mf
+        
+        # x264
+        ${CMAKE_SOURCE_DIR}/lib/x264/libx264.a
 
         # Freetype
         ${CMAKE_SOURCE_DIR}/lib/freetype/libfreetype.a

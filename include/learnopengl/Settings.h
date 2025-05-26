@@ -1,6 +1,9 @@
 #ifndef SETTINGS_H    // #include guard
 #define SETTINGS_H
 
+#include <cstdint>
+#include <string>
+
 namespace Settings {
     // possibly add sub-namespaces like Screen, Camera, etc.
 
@@ -16,6 +19,14 @@ namespace Settings {
     extern bool                     msaa;           // | 0 = no anti-aliasing | 1 = 4xMSAA |
     extern bool                     recording;
     extern bool                     flip_shader;
+    extern const bool               libx264;
+    // h264_mf
+    extern const int64_t g_bit_rate;
+    extern const int g_gop_size;
+    extern const int g_max_b_frames;
+    // libx264
+    extern const std::string g_preset;
+    extern const std::string g_crf;
 
     inline void TogglePBO() { pbo = !pbo; }
     inline void ToggleFlipShader() { flip_shader = !flip_shader; }
