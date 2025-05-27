@@ -9,3 +9,6 @@
 
 # Ignore CMake artifacts
 **/cmake_install.cmake
+
+# Ignore VSCode config
+/.vscode/
