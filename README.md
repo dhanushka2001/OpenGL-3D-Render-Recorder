@@ -6,6 +6,31 @@ https://github.com/user-attachments/assets/fc8763bd-dcda-4dbf-9c60-3e322aa1a2ce
 Real-time screen recording in OpenGL (GLFW) with C++ using [FFmpeg](https://github.com/FFmpeg/FFmpeg), [x264](https://www.videolan.org/developers/x264.html) encoder, multithreading, and [asynchronous read-back with 2 PBOs](https://www.songho.ca/opengl/gl_pbo.html#pack). Video heavily compressed to fit GitHub's 10MB filesize limit. Using [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot).
 
 ## How to run
+
+<details><summary>Beginner tutorial</summary>
+
+* Install [MSYS2](https://www.msys2.org/) (install it directly to ``C:\msys64``)
+* Run the MSYS2 <ins>**MINGW64**</ins> shell and install the required packages (``git``, ``gcc``, ``cmake``, ``ninja``):
+
+  ```console
+  pacman -S --needed git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja
+  ```
+* Just to be safe, check that the packages are up to date, run this twice:
+
+  ```console
+  pacman -Syu
+  ```
+
+* Add this to your [System PATH](https://www.eukhost.com/kb/how-to-add-to-the-path-on-windows-10-and-windows-11/) (I highly recommend moving it up to the top of the list):
+
+  ```console
+  C:\msys64\mingw64\bin
+  ```
+
+* Now, continue with the rest of the steps inside any terminal (MINGW64, cmd, PowerShell, VSCode's terminal, etc.). If, for whatever reason, when you run ``cmake ..``, it builds for ``make`` instead of ``Ninja``, run this: ``cmake -G Ninja ..``
+
+</details>
+
 ```console
 git clone https://github.com/dhanushka2001/LearnOpenGL
 ```
@@ -42,6 +67,12 @@ Then build using either ``make`` or ``ninja``.
   ```
 
 The executable will be inside ``/build/bin/``, and screen recordings will be inside ``/build/output/``.
+
+Ensure your version of GCC is up to date; see `lib_build_info.txt` for details about the GCC version and environment used to build the static libraries. Check your GCC version by running:
+
+```console
+g++ --version
+```
 
 ## Introduction
 * Learning to use OpenGL (GLFW) so I can do high-performance scientific computing and modelling on the GPU.
