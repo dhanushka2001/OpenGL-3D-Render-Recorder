@@ -74,6 +74,8 @@ Ensure your version of GCC is up to date; see `lib_build_info.txt` for details a
 g++ --version
 ```
 
+If, when running ``ninja``, it gets stuck in an infinite loop "Rechecking globbed directories...", just press <kbd>Ctrl</kbd>+<kbd>C</kbd> to stop the loop, delete ``CMakeCache.txt`` in /build/, and rerun ``ninja``.
+
 ## Introduction
 * Learning to use OpenGL (GLFW) so I can do high-performance scientific computing and modelling on the GPU.
 * You may come across things like GLFW, GLUT, GLAD, GLEW, ..., a lot of 4-letter names beginning with "GL", or heard about other OpenGL APIs like SFML, I'll give sources explaining what they are below.
