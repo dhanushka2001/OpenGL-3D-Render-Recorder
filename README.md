@@ -1,9 +1,9 @@
 *Coding Project*
 # LearnOpenGL
 
-https://github.com/user-attachments/assets/9433d37d-95dc-4225-9618-409ade71b28c
+https://github.com/user-attachments/assets/fc8763bd-dcda-4dbf-9c60-3e322aa1a2ce
 
-Real-time screen recording in OpenGL (GLFW) with C++ using [FFmpeg](https://github.com/FFmpeg/FFmpeg), multithreading, and [asynchronous read-back with 2 PBOs](https://www.songho.ca/opengl/gl_pbo.html#pack). Video heavily compressed to fit GitHub's 10MB filesize limit. Using [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot).
+Real-time screen recording in OpenGL (GLFW) with C++ using [FFmpeg](https://github.com/FFmpeg/FFmpeg), [x264](https://www.videolan.org/developers/x264.html) encoder, multithreading, and [asynchronous read-back with 2 PBOs](https://www.songho.ca/opengl/gl_pbo.html#pack). Video heavily compressed to fit GitHub's 10MB filesize limit. Using [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot).
 
 ## How to run
 ```console
