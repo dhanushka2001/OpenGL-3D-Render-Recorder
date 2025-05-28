@@ -12,8 +12,14 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
 #include <libavutil/log.h>
+#ifdef _WIN32
 #include <x264/x264.h>
+#endif
+#ifdef __linux
+#include <x264.h>
+#endif
 }
+
 
 namespace Encoder {
     std::mutex encoderMutex;
@@ -69,6 +75,8 @@ namespace Encoder {
                 if (!codec) {
                     std::cerr << "[Encoder] ERROR: libx264 encoder not found\n";
                     return -1;
+                } else {
+                    Togglex264();
                 }
             }
         }
@@ -92,7 +100,7 @@ namespace Encoder {
         codecCtx = avcodec_alloc_context3(codec);
         codecCtx->width = SCR_WIDTH;
         codecCtx->height = SCR_HEIGHT;
-        // printf("Encoder init: width=%d, height=%d\n", codecCtx->width, codecCtx->height);
+        printf("1. Encoder init: width=%d, height=%d\n", codecCtx->width, codecCtx->height);
         int FPS = static_cast<int>(framerate);
         codecCtx->time_base = (AVRational){1, FPS * 1000};  // Frame rate
         codecCtx->framerate = (AVRational){FPS, 1};
@@ -121,6 +129,7 @@ namespace Encoder {
             // codecCtx->rc_buffer_size = codecCtx->bit_rate;
         }
 
+        printf("2. Encoder init: width=%d, height=%d\n", codecCtx->width, codecCtx->height);
         if (avcodec_open2(codecCtx, codec, &opts) < 0) {
             printf("[Encoder] ERROR: Could not open codec\n");
             return false;

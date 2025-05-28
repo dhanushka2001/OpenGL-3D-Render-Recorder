@@ -105,6 +105,7 @@ bool pboPressed = false;
 bool flipPressed = false;
 bool pausePressed = false;
 bool vsyncPressed = false;
+bool f11Pressed = false;
 
 // window
 // ------
@@ -691,22 +692,27 @@ int main()
 
     std::string bulletHeader = "\nEncoder selected:\n";
     const char* bulletHeaderPtr = bulletHeader.c_str();
-    std::ostringstream oss2, oss3, oss4;
     std::string bulletText1 = "preset: " + g_preset + "\n";
     std::string bulletText2 = "crf: " + g_crf;
-    oss2 << "bit_rate: " << static_cast<int>(g_bit_rate / 1'000'000) << " Mbps\n";
-    oss3 << "gop_size: " << g_gop_size << "\n";
-    oss4 << "max_b_frames: " << g_max_b_frames;
-    std::string bulletText3 = oss2.str();
-    std::string bulletText4 = oss3.str();
-    std::string bulletText5 = oss4.str();
+    
+    std::ostringstream oss3, oss4, oss5, oss6;
+    oss3 << "bit_rate: " << static_cast<int>(g_bit_rate / 1'000'000) << " Mbps\n";
+    oss4 << "gop_size: " << g_gop_size << "\n";
+    oss5 << "max_b_frames: " << g_max_b_frames;
+    oss6 << "framerate: " << framerate;
+    std::string bulletText3 = oss3.str();
+    std::string bulletText4 = oss4.str();
+    std::string bulletText5 = oss5.str();
+    std::string bulletText6 = oss6.str();
     const char* bulletText1Ptr = bulletText1.c_str();
     const char* bulletText2Ptr = bulletText2.c_str();
     const char* bulletText3Ptr = bulletText3.c_str();
     const char* bulletText4Ptr = bulletText4.c_str();
     const char* bulletText5Ptr = bulletText5.c_str();
+    const char* bulletText6Ptr = bulletText6.c_str();
+    
     int helpText_width = 352;
-    int helpText_height = libx264 ? 418 : 434;
+    int helpText_height = libx264 ? 438 : 454; // new line = +20 height;
     #endif
     
     glEnable(GL_BLEND); // enable transparency
@@ -1019,11 +1025,13 @@ int main()
                 ImGui::Text("libx264 settings:");
                 ImGui::BulletText("%s", bulletText1Ptr);
                 ImGui::BulletText("%s", bulletText2Ptr);
+                ImGui::BulletText("%s", bulletText6Ptr);
             } else {
                 ImGui::Text("h264_mf settings:");
                 ImGui::BulletText("%s", bulletText3Ptr);
                 ImGui::BulletText("%s", bulletText4Ptr);
                 ImGui::BulletText("%s", bulletText5Ptr);
+                ImGui::BulletText("%s", bulletText6Ptr);
             }
             ImGui::Text("%s", encoderInfo.c_str());
             ImGui::Text("%s", exitText.c_str());
@@ -1257,11 +1265,13 @@ int main()
                 ImGui::Text("libx264 settings:");
                 ImGui::BulletText("%s", bulletText1Ptr);
                 ImGui::BulletText("%s", bulletText2Ptr);
+                ImGui::BulletText("%s", bulletText6Ptr);
             } else {
                 ImGui::Text("h264_mf settings:");
                 ImGui::BulletText("%s", bulletText3Ptr);
                 ImGui::BulletText("%s", bulletText4Ptr);
                 ImGui::BulletText("%s", bulletText5Ptr);
+                ImGui::BulletText("%s", bulletText6Ptr);
             }
             ImGui::Text("%s", encoderInfo.c_str());
             ImGui::Text("%s", exitText.c_str());
@@ -1478,8 +1488,9 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime) {
     }
     // Fullscreen
     // ----------
-    if (glfwGetKey(window, GLFW_KEY_F11) == GLFW_PRESS)
+    if ((glfwGetKey(window, GLFW_KEY_F11) == GLFW_PRESS) && !(f11Pressed))
     {
+        f11Pressed = true;
         bool last_pause_state = paused;
         float lastYaw = camera.Yaw;
         float lastPitch = camera.Pitch;
@@ -1537,6 +1548,9 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime) {
             camera.Yaw = lastYaw;
             camera.Pitch = lastPitch;
         }
+    }
+    if ((glfwGetKey(window, GLFW_KEY_F11) == GLFW_RELEASE) && (f11Pressed)) {
+        f11Pressed = false;
     }
     // Pause
     // -----

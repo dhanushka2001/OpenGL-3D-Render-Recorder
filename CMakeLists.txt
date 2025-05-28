@@ -26,6 +26,11 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/freetype2
 )
+if(WIN32)
+include_directories(
+   ${CMAKE_SOURCE_DIR}/include/windows_ffmpeg
+)
+endif(WIN32)
 
 # Executable target
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -184,9 +189,19 @@ if(UNIX)
         libavutil
         libswscale
     )
+    pkg_check_modules(X264 REQUIRED IMPORTED_TARGET
+        x264
+    )
     pkg_check_modules(FREETYPE2 REQUIRED IMPORTED_TARGET
         freetype2
     )
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${X264_INCLUDE_DIRS}
+        ${FFMPEG_INCLUDE_DIRS}
+        ${FREETYPE2_INCLUDE_DIRS}
+    )
+    message(STATUS "FFMPEG include dirs: ${FFMPEG_INCLUDE_DIRS}")
+    message(STATUS "X264 include dirs: ${X264_INCLUDE_DIRS}")
     target_link_libraries(${PROJECT_NAME}
         timer
         settings # don't even need to link as settings already linked to encoder and text, but no harm in including again
@@ -197,6 +212,7 @@ if(UNIX)
         OpenGL::GL
         glfw
         PkgConfig::FFMPEG
+        PkgConfig::X264
         PkgConfig::FREETYPE2
     )
 endif(UNIX)

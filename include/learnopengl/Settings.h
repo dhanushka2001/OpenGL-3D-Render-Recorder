@@ -19,7 +19,7 @@ namespace Settings {
     extern bool                     msaa;           // | 0 = no anti-aliasing | 1 = 4xMSAA |
     extern bool                     recording;
     extern bool                     flip_shader;
-    extern const bool               libx264;
+    extern bool                     libx264;
     // h264_mf
     extern const int64_t g_bit_rate;
     extern const int g_gop_size;
@@ -31,6 +31,7 @@ namespace Settings {
     inline void TogglePBO() { pbo = !pbo; }
     inline void ToggleFlipShader() { flip_shader = !flip_shader; }
     inline void ToggleVsync() { vsync = vsync ? 0 : 1; }
+    inline void Togglex264() { libx264 = !libx264; }
     inline void SetScreenResolution(unsigned int width, unsigned int height) {
         SCR_WIDTH = width;
         SCR_HEIGHT = height;
