@@ -1,5 +1,4 @@
-# If you get a "Re-checking globbed directories... Re-running CMake..."
-# infinite loop issue, just delete CMakeCache.txt
+# If you get a "Re-checking globbed directories... Re-running CMake..." infinite loop when running "ninja", press Ctrl+C and just delete CMakeCache.txt in /build/, then rerun "ninja".
 
 # Minimum CMake version
 cmake_minimum_required(VERSION 3.31)
@@ -18,7 +17,7 @@ set(CMAKE_BUILD_TYPE Release)
 # Specify the source files
 set(SOURCES
     src/main.cpp
-    src/glad.c
+    src/third_party/glad.c
 )
 
 # Include headers for FFmpeg and others
@@ -136,22 +135,22 @@ set_target_properties(encoder PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE
 
 # Add the ImGui library
 add_library(imgui STATIC
-    third_party/imgui/imgui.cpp 
-    third_party/imgui/imgui_draw.cpp 
-    third_party/imgui/imgui_tables.cpp 
-    third_party/imgui/imgui_widgets.cpp
-    third_party/imgui/imgui_impl_opengl3.cpp
-    third_party/imgui/imgui_impl_glfw.cpp
-    third_party/imgui/imgui_demo.cpp
+    src/third_party/imgui/imgui.cpp 
+    src/third_party/imgui/imgui_draw.cpp 
+    src/third_party/imgui/imgui_tables.cpp 
+    src/third_party/imgui/imgui_widgets.cpp
+    src/third_party/imgui/imgui_impl_opengl3.cpp
+    src/third_party/imgui/imgui_impl_glfw.cpp
+    src/third_party/imgui/imgui_demo.cpp
 )
 # Set the target properties for imgui (where libimgui.a will be created)
 set_target_properties(imgui PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/imgui)
 
 # Add the ImPlot library
 add_library(implot STATIC 
-    third_party/implot/implot.cpp
-    third_party/implot/implot_items.cpp
-    third_party/implot/implot_demo.cpp
+    src/third_party/implot/implot.cpp
+    src/third_party/implot/implot_items.cpp
+    src/third_party/implot/implot_demo.cpp
 )
 # Set the target properties for implot (where libimplot.a will be created)
 set_target_properties(implot PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/implot)

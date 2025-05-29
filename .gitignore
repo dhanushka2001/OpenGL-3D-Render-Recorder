@@ -12,3 +12,8 @@
 
 # Ignore VSCode config
 /.vscode/
+
+# Ignore user-made binaries
+/lib/imgui/
+/lib/implot/
+/lib/learnopengl/
