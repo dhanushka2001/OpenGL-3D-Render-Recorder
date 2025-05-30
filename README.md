@@ -1,4 +1,4 @@
-*Coding Project*
+*Learning OpenGL for High Performance Scientific Computing and Modelling on the GPU*
 # LearnOpenGL
 
 https://github.com/user-attachments/assets/fc8763bd-dcda-4dbf-9c60-3e322aa1a2ce
