@@ -53,13 +53,7 @@ namespace Encoder {
         }
 
         // Find the H.264 encoder
-        // void* it = nullptr;
         const AVCodec* codec = nullptr;
-        // while ((codec = av_codec_iterate(&it))) {
-        //     if (av_codec_is_encoder(codec))
-        //         printf("[Encoder] Encoder available: %s (%s)\n", codec->name, codec->long_name ? codec->long_name : "no description");
-        // }
-        // codec = avcodec_find_encoder(AV_CODEC_ID_H264);
         if (libx264) {
             codec = avcodec_find_encoder_by_name("libx264");
             if (!codec) {
@@ -76,18 +70,10 @@ namespace Encoder {
                     std::cerr << "[Encoder] ERROR: libx264 encoder not found\n";
                     return -1;
                 } else {
-                    Togglex264();
+                    libx264 = 1;
                 }
             }
         }
-        // const AVCodec* codec = avcodec_find_encoder_by_name("h264_qsv");
-        // const char* preferred_encoders[] = { "h264_qsv", "h264_nvenc", "h264_mf", "libx264" };
-        // const AVCodec* codec = nullptr;
-        // for (const char* encName : preferred_encoders) {
-        //     codec = avcodec_find_encoder_by_name(encName);
-        //     if (codec) break;
-        // }
-        // printf("Using encoder: %s\n", codec->name);
 
         // Create a new stream
         videoStream = avformat_new_stream(formatCtx, codec);
@@ -100,7 +86,6 @@ namespace Encoder {
         codecCtx = avcodec_alloc_context3(codec);
         codecCtx->width = SCR_WIDTH;
         codecCtx->height = SCR_HEIGHT;
-        printf("1. Encoder init: width=%d, height=%d\n", codecCtx->width, codecCtx->height);
         int FPS = static_cast<int>(framerate);
         codecCtx->time_base = (AVRational){1, FPS * 1000};  // Frame rate
         codecCtx->framerate = (AVRational){FPS, 1};
@@ -129,7 +114,6 @@ namespace Encoder {
             // codecCtx->rc_buffer_size = codecCtx->bit_rate;
         }
 
-        printf("2. Encoder init: width=%d, height=%d\n", codecCtx->width, codecCtx->height);
         if (avcodec_open2(codecCtx, codec, &opts) < 0) {
             printf("[Encoder] ERROR: Could not open codec\n");
             return false;
@@ -187,7 +171,6 @@ namespace Encoder {
 
     // Encode frame using FFmpeg
     bool encodeFrame(const uint8_t* rgbData, float crntTime) {
-        // av_frame_unref(frameX);  // Unref previous frame
         using namespace Settings;
 
         // Ensure frameX->data is valid

@@ -5,5 +5,3 @@ GCC: 15.1.0 (x86_64-w64-mingw32)
 
 # Built on: Windows 10 / MSYS2 / MinGW64
 # Use: g++ --version to verify you're using a compatible compiler.
-
-

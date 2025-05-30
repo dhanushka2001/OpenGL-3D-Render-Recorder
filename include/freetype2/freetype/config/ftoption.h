@@ -123,7 +123,7 @@ FT_BEGIN_HEADER
    * When this macro is not defined, FreeType offers alternative LCD
    * rendering technology that produces excellent output.
    */
-#define FT_CONFIG_OPTION_SUBPIXEL_RENDERING
+/* #define FT_CONFIG_OPTION_SUBPIXEL_RENDERING */
 
 
   /**************************************************************************
@@ -224,7 +224,7 @@ FT_BEGIN_HEADER
    *   `configure` script) and you define this macro, you also have to pass
    *   `SYSTEM_ZLIB=yes` as an argument to make.
    */
-#define FT_CONFIG_OPTION_SYSTEM_ZLIB
+/* #undef FT_CONFIG_OPTION_SYSTEM_ZLIB */
 
 
   /**************************************************************************
@@ -244,7 +244,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#define FT_CONFIG_OPTION_USE_BZIP2
+/* #undef FT_CONFIG_OPTION_USE_BZIP2 */
 
 
   /**************************************************************************
@@ -273,7 +273,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#define FT_CONFIG_OPTION_USE_PNG
+/* #undef FT_CONFIG_OPTION_USE_PNG */
 
 
   /**************************************************************************
@@ -290,7 +290,32 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#define FT_CONFIG_OPTION_USE_HARFBUZZ
+/* #undef FT_CONFIG_OPTION_USE_HARFBUZZ */
+
+
+  /**************************************************************************
+   *
+   * HarfBuzz dynamic support.
+   *
+   *   Define this macro if you want the HarfBuzz library to be loaded at
+   *   runtime instead of being linked to FreeType.
+   *
+   *   This option has no effect if `FT_CONFIG_OPTION_USE_HARFBUZZ` is not
+   *   defined.
+   *
+   *   When this option is enabled, FreeType will try to load the HarfBuzz
+   *   library at runtime, using `dlopen` or `LoadLibrary`, depending on the
+   *   platform.  On Microsoft platforms, the library name looked up is
+   *   `libharfbuzz-0.dll`.  On Apple platforms, the library name looked up
+   *   is `libharfbuzz.0.dylib`.  On all other platforms, the library name
+   *   looked up is `libharfbuzz.so.0`.  This name can be overridden by
+   *   defining the macro `FT_LIBHARFBUZZ` at FreeType compilation time.
+   *
+   *   If you use a build system like cmake or the `configure` script,
+   *   options set by those programs have precedence, overwriting the value
+   *   here with the configured one.
+   */
+/* #undef FT_CONFIG_OPTION_USE_HARFBUZZ_DYNAMIC */
 
 
   /**************************************************************************
@@ -306,7 +331,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#define FT_CONFIG_OPTION_USE_BROTLI
+/* #undef FT_CONFIG_OPTION_USE_BROTLI */
 
 
   /**************************************************************************

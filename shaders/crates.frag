@@ -1,17 +1,10 @@
 #version 430 core
-#define RENDER_3D	1
 
-#if RENDER_3D==0
-in vec3 ourColor;
-#endif
-
-#if RENDER_3D==1
 in vec3 FragPos;
 in vec3 Normal;
-// in vec3 LightPos;   // extra in variable, since we need the light position in view space we calculate this in the vertex shader
-#endif
-
 in vec2 TexCoord;
+// in vec3 LightPos;   // extra in variable, since we need the light position in view space we calculate this in the vertex shader
+
 
 out vec4 FragColor;
 

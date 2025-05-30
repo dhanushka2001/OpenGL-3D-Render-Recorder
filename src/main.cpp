@@ -16,8 +16,6 @@
 #ifndef  NOMINMAX
 #define  NOMINMAX                       // disable Windows min/max macro (interferes with C++ std::min/max)
 #endif  /* NOMINMAX */
-// #include <Windows.h>                    // For V-Sync (unfortunately tied to Windows :( )
-// #include <wglext.h>                     // For V-Sync
 #endif /* _WIN32 */
 // Custom headers
 // --------------
@@ -36,13 +34,12 @@
 // #define  M_PI           3.14159265358979323846
 // #include <cmath>
 #define  STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+#include <stb/stb_image.h>
 // #define  STB_IMAGE_WRITE_IMPLEMENTATION
-// #include <stb_image_write.h>
+// #include <stb/stb_image_write.h>
 #define  GL_GLEXT_PROTOTYPES 1
 #include <array>
 #include <vector>
-// #include <map>
 // Multithreading
 // --------------
 #include <thread>
@@ -55,28 +52,19 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-// #include <algorithm>
 #ifndef  PATH_MAX
 #define  PATH_MAX 4096
 #endif  /* PATH_MAX */
 
-// #ifdef _WIN32
-// bool WGLExtensionSupported(const char *extension_name);
-// #endif
 void processInput(GLFWwindow *window, float timeDiff, float crntTime);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 std::string GetFPSText(float fps, float ms, float crntTime);
 void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime, int &frameCountFPS);
-void RenderFullscreenQuad(Shader &quadShader, GLuint quadTexture);
 void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::array<glm::vec3, 10>& cubePositions, glm::vec3 &lightPos, float crntTime);
 void flipFrameVertically(unsigned char* frame);
 
-#define             RENDER_3D           1   // make sure to change in the shaders too
-#if RENDER_3D==1
-#define             RENDER_EBO          0   // only matters when RENDER_3D=1
-#endif
 #define             IMGUI               1
 
 // uniform variables
@@ -101,11 +89,14 @@ bool    firstMouse  = true;
 
 // button press
 // ------------
-bool pboPressed = false;
-bool flipPressed = false;
-bool pausePressed = false;
-bool vsyncPressed = false;
-bool f11Pressed = false;
+bool pboPressed         = false;
+bool flipPressed        = false;
+bool pausePressed       = false;
+bool vsyncPressed       = false;
+bool f11Pressed         = false;
+bool wireframePressed   = false;
+bool imguiPressed       = false;
+bool atlasPressed       = false;
 
 // window
 // ------
@@ -193,50 +184,19 @@ int main()
         return -1;
     }
 
-    // V-SYNC: Initialize function pointers
-    // ------------------------------------
-    // https://stackoverflow.com/a/589232
-    // #ifdef _WIN32
-    // PFNWGLSWAPINTERVALEXTPROC       wglSwapIntervalEXT    = NULL;
-    // PFNWGLGETSWAPINTERVALEXTPROC    wglGetSwapIntervalEXT = NULL;
-
-    // if (WGLExtensionSupported("WGL_EXT_swap_control"))
-    // {
-    //     // Extension is supported, init pointers.
-    //     wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC) wglGetProcAddress("wglSwapIntervalEXT");
-
-    //     // this is another function from WGL_EXT_swap_control extension
-    //     wglGetSwapIntervalEXT = (PFNWGLGETSWAPINTERVALEXTPROC) wglGetProcAddress("wglGetSwapIntervalEXT");
-    // }
-    // // 0 = V-Sync Off, 1 = V-Sync On, -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz)
-    // // https://www.khronos.org/opengl/wiki/Swap_Interval
-    // // wglSwapIntervalEXT(vsync);
-    // std::cout << "wglSwapIntervalEXT: " << wglGetSwapIntervalEXT() << "\n";
-    // #endif /* _WIN32 */
-
     // build and compile our shader program to render the crates
     // ---------------------------------------------------------
     Shader ourShader("crates.vert", "crates.frag"); // you can name your shader files however you like
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
-    #if RENDER_3D==0
-    float vertices[] = {
-    // positions          // colors           // texture coords
-     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
-     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
-    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
-    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
-    };
-    unsigned int indices[] = {  
-        0, 1, 3, // first triangle
-        1, 2, 3  // second triangle
-    };
-    #endif  /* RENDER_3D==0 */
-    
-    #if RENDER_3D==1
     // 3D cube without EBO (6 faces * 2 triangles * 3 vertices each = 36 vertices. 8 unique vertices. 78% redundancy) (each face has its own unique texture coords)
-    #if RENDER_EBO==0
+    //      3------2
+    //     /|  Y  /|
+    //    7------6 | X
+    //    | 0----|-1
+    //    |/ Z   |/
+    //    4------5
     float vertices[] = {
       // positions            normal             texture coords
         // -Z face
@@ -287,58 +247,10 @@ int main()
         -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f,   // (-,+,+) 7
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f    // (-,+,-) 3
     };
-    #endif  /* RENDER_EBO==0 */
-    // 3D cube with EBO (8 unique vertices. Each vertex is shared by 3 faces. One vertex's texture coords for one face are being shared for the two other neighboring faces, rather than them having their own unique texture)
-    #if RENDER_EBO==1
-    float vertices[] = {
-        // positions          // texture coords
-        // -Z face
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,   // (-,-,-) 0
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,   // (+,-,-) 1
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,   // (+,+,-) 2
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,   // (-,+,-) 3
-
-        // +Z face
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,   // (-,-,+) 4
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,   // (+,-,+) 5
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,   // (+,+,+) 6
-        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,   // (-,+,+) 7
-    };
-    unsigned int indices[] = {  
-        // -Z face
-        0, 1, 2,
-        2, 3, 0,
-        
-        // +Z face
-        4, 5, 6,
-        6, 7, 4,
-
-        // -X face
-        7, 3, 0,
-        0, 4, 7,
-
-        // +X face
-        6, 2, 1,
-        1, 5, 6,
-
-        // -Y face
-        0, 1, 5,
-        5, 4, 0,
-
-        // +Y face
-        3, 2, 6,
-        6, 7, 3
-    };
-    #endif  /* RENDER_EBO==1 */
-    #endif  /* RENDER_3D==1 */
 
     GLuint VAO, VBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-    #if RENDER_EBO==1 || RENDER_3D==0
-    glUint EBO;
-    glGenBuffers(1, &EBO);
-    #endif
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
     // once a VAO is bound, any subsequent vertex attribute calls will be stored inside that VAO. (only have to make the calls once)
     glBindVertexArray(VAO);
@@ -347,30 +259,6 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // The last element buffer object (EBO) that gets bound while a VAO is bound is stored as that VAO's EBO.
-    // Binding to a VAO then also automatically binds that EBO.
-    #if RENDER_EBO==1 || RENDER_3D==0
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    #endif
-
-    #if RENDER_3D==0
-    // 2D
-    // --
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    // texture coord attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-    #endif /* RENDER_3D==0 */
-
-    #if RENDER_3D==1
-    // 3D
-    // --
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -380,7 +268,6 @@ int main()
     // texture coord attribute
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
-    #endif /* RENDER_3D==1 */
 
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
@@ -652,13 +539,16 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 430");
 
     static std::string helpBody = 
-        "Hello there adventurer! You can free "
-        "the mouse cursor with the RIGHT SHIFT key, "
-        "and zoom with the SCROLL wheel! "
-        "Move the camera around with WASD and the mouse. "
-        "Move the objects using the arrow keys and Z/X, "
-        "and change their opacity by holding Q/E. "
-        "\n\nClick P to see the boost in FPS with "
+        "Hello there adventurer!\n"
+        "Click the RIGHT SHIFT key to free the mouse cursor.\n"
+        "Use WASD and the mouse to move the camera.\n"
+        "Use the SCROLL wheel to zoom in and out.\n"
+        "Use the arrow keys and Z/X to move the objects.\n"
+        "Hold Q/E to change the opacity of the objects.\n"
+        "Click M to toggle wireframe mode.\n"
+        "Click N to toggle ImGui/ImPlot.\n"
+        "Click B to cycle between fullscreen font texture atlas and text, text only, or all OFF.\n"
+        "\nClick P to see the boost in FPS with "
         "multithreading and asynchronous read-back PBOs! "
         "Click V to toggle Vsync. Screen recording is ";
     static std::string isRecording = recording ?
@@ -711,8 +601,10 @@ int main()
     const char* bulletText5Ptr = bulletText5.c_str();
     const char* bulletText6Ptr = bulletText6.c_str();
     
-    int helpText_width = 352;
-    int helpText_height = libx264 ? 438 : 454; // new line = +20 height;
+    int helpText_width = 354;
+    int helpText_height = libx264 ? 503 : 519; // new line = +20 height. libx264 height = h264_mf height - 16.
+    int imgui_xpos = 30;
+    int imgui_ypos = 30;
     #endif
     
     glEnable(GL_BLEND); // enable transparency
@@ -727,6 +619,7 @@ int main()
     float x = lowerLeftCornerOfViewportX;
     float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) - 35.0f * scale * fontSize/48.0f; // Invert Y-axis since OpenGL origin is bottom-left
     glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
+    std::string font = "Arial";
     FontManager fontManager;
     fontManager.loadFont("Arial", 48);
     TextRenderer textRenderer(fontManager);
@@ -910,9 +803,11 @@ int main()
         // IMGUI
         // -----
         #if IMGUI==1
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+        if (imgui) {
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+        }
         #endif
 
         // FPS Counter: https://www.youtube.com/watch?v=BA6aR_5C_BM
@@ -987,9 +882,11 @@ int main()
             }
 
             Timer::startTimer(t);
-            // textRenderer.renderText(fpsText, x, y, scale, color, "Arial");
-            textRenderer.renderTextFast(fpsText, x, y, scale, color, "Arial");
-            textRenderer.renderAtlas("Arial");
+            if (currentTextMode == TextTriState::TextAndAtlasON || currentTextMode == TextTriState::TextONAtlasOFF)
+                // textRenderer.renderText(fpsText, x, y, scale, color, font);
+                textRenderer.renderTextFast(fpsText, x, y, scale, color, font);
+            if (currentTextMode == TextTriState::TextAndAtlasON)
+                textRenderer.renderAtlas(font);
             {
                 // std::lock_guard<std::mutex> lock(coutMutex);
                 Timer::endTimer(Timer::RENDER_TEXT, t);
@@ -998,61 +895,63 @@ int main()
             // IMGUI (visible in screen recording, messes up when window is resized)
             // ---------------------------------------------------------------------
             #if IMGUI==1
-            Timer::startTimer(t);
-            // Show the ImGui text window
-            #ifdef _WIN32
-            ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_Once);
-            #endif /* _WIN32 */
-            #ifdef __linux__
-            ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
-            #endif /* __linux__ */
-            ImGui::SetNextWindowSize(ImVec2(helpText_width, helpText_height), ImGuiCond_Once);
-            ImGui::Begin("My name is window, ImGUI window");
-            ImGui::PushTextWrapPos(); // wrap at window edge
-            ImGui::Text("%s", helpText); // need %s to be safe as ImGui::Text() is a printf-style function, treats first argument as format string. Not safe when text includes '%' without using "%s".
-            ImGui::Text("%s", bulletHeaderPtr);
-            bool checked1 = !libx264;
-            bool checked2 = libx264;
-            ImGui::BeginDisabled();           // start disabled block (gray out & disable interaction)
-            ImGui::Bullet();
-            ImGui::SameLine();
-            ImGui::Checkbox("h264_mf", &checked1);
-            ImGui::Bullet();
-            ImGui::SameLine();
-            ImGui::Checkbox("libx264", &checked2);
-            ImGui::EndDisabled();             // end disabled block
-            if (libx264) {
-                ImGui::Text("libx264 settings:");
-                ImGui::BulletText("%s", bulletText1Ptr);
-                ImGui::BulletText("%s", bulletText2Ptr);
-                ImGui::BulletText("%s", bulletText6Ptr);
-            } else {
-                ImGui::Text("h264_mf settings:");
-                ImGui::BulletText("%s", bulletText3Ptr);
-                ImGui::BulletText("%s", bulletText4Ptr);
-                ImGui::BulletText("%s", bulletText5Ptr);
-                ImGui::BulletText("%s", bulletText6Ptr);
-            }
-            ImGui::Text("%s", encoderInfo.c_str());
-            ImGui::Text("%s", exitText.c_str());
-            ImGui::End();
-            // Show the ImPlot demo window
-            #ifdef _WIN32
-            ImGui::SetNextWindowPos(ImVec2(1056, 28), ImGuiCond_Once);
-            #endif /* _WIN32 */
-            #ifdef __linux__
-            ImGui::SetNextWindowPos(ImVec2(956, 580), ImGuiCond_Once);
-            #endif /* __linux__ */
-            ImGui::SetNextWindowSize(ImVec2(544, 556), ImGuiCond_Once);
-            if (ImGui::Begin("ImPlot Demo")) {
-                ImPlot::ShowDemoWindow();
-            }
-            ImGui::End();
-            ImGui::Render();
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-            {
-                // std::lock_guard<std::mutex> lock(coutMutex);
-                Timer::endTimer(Timer::RENDER_GUI, t);
+            if (imgui) {
+                Timer::startTimer(t);
+                // Show the ImGui text window
+                #ifdef _WIN32
+                ImGui::SetNextWindowPos(ImVec2(imgui_xpos, imgui_ypos), ImGuiCond_Once);
+                #endif /* _WIN32 */
+                #ifdef __linux__
+                ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
+                #endif /* __linux__ */
+                ImGui::SetNextWindowSize(ImVec2(helpText_width, helpText_height), ImGuiCond_Once);
+                ImGui::Begin("My name is window, ImGUI window");
+                ImGui::PushTextWrapPos(); // wrap at window edge
+                ImGui::Text("%s", helpText); // need %s to be safe as ImGui::Text() is a printf-style function, treats first argument as format string. Not safe when text includes '%' without using "%s".
+                ImGui::Text("%s", bulletHeaderPtr);
+                bool checked1 = !libx264;
+                bool checked2 = libx264;
+                ImGui::BeginDisabled();           // start disabled block (gray out & disable interaction)
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::Checkbox("h264_mf", &checked1);
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::Checkbox("libx264", &checked2);
+                ImGui::EndDisabled();             // end disabled block
+                if (libx264) {
+                    ImGui::Text("libx264 settings:");
+                    ImGui::BulletText("%s", bulletText1Ptr);
+                    ImGui::BulletText("%s", bulletText2Ptr);
+                    ImGui::BulletText("%s", bulletText6Ptr);
+                } else {
+                    ImGui::Text("h264_mf settings:");
+                    ImGui::BulletText("%s", bulletText3Ptr);
+                    ImGui::BulletText("%s", bulletText4Ptr);
+                    ImGui::BulletText("%s", bulletText5Ptr);
+                    ImGui::BulletText("%s", bulletText6Ptr);
+                }
+                ImGui::Text("%s", encoderInfo.c_str());
+                ImGui::Text("%s", exitText.c_str());
+                ImGui::End();
+                // Show the ImPlot demo window
+                #ifdef _WIN32
+                ImGui::SetNextWindowPos(ImVec2(1056, 28), ImGuiCond_Once);
+                #endif /* _WIN32 */
+                #ifdef __linux__
+                ImGui::SetNextWindowPos(ImVec2(956, 580), ImGuiCond_Once);
+                #endif /* __linux__ */
+                ImGui::SetNextWindowSize(ImVec2(544, 556), ImGuiCond_Once);
+                if (ImGui::Begin("ImPlot Demo")) {
+                    ImPlot::ShowDemoWindow();
+                }
+                ImGui::End();
+                ImGui::Render();
+                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+                {
+                    // std::lock_guard<std::mutex> lock(coutMutex);
+                    Timer::endTimer(Timer::RENDER_GUI, t);
+                }
             }
             #endif /* IMGUI==1 */
 
@@ -1232,67 +1131,72 @@ int main()
 
             // Render text in front: https://stackoverflow.com/a/5527249
             // glClear(GL_DEPTH_BUFFER_BIT);
-            textRenderer.renderText(fpsText, x, y, scale, color, "Arial");
-            textRenderer.renderAtlas("Arial");
+            if (currentTextMode == TextTriState::TextAndAtlasON || currentTextMode == TextTriState::TextONAtlasOFF)
+                // textRenderer.renderText(fpsText, x, y, scale, color, font);
+                textRenderer.renderTextFast(fpsText, x, y, scale, color, font);
+            if (currentTextMode == TextTriState::TextAndAtlasON)
+                textRenderer.renderAtlas(font);
 
             // IMGUI
             // -----
-            #if IMGUI==1
-            Timer::startTimer(t);
-            // Show the ImGui text window
-            #ifdef _WIN32
-            ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_Once);
-            #endif /* _WIN32 */
-            #ifdef __linux__
-            ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
-            #endif /* __linux__ */
-            ImGui::SetNextWindowSize(ImVec2(helpText_width, helpText_height), ImGuiCond_Once);
-            ImGui::Begin("My name is window, ImGUI window");
-            ImGui::PushTextWrapPos(); // wrap at window edge
-            ImGui::Text("%s", helpText); // need %s to be safe as ImGui::Text() is a printf-style function, treats first argument as format string. Not safe when text includes '%' without using "%s".
-            ImGui::Text("%s", bulletHeaderPtr);
-            bool checked1 = !libx264;
-            bool checked2 = libx264;
-            ImGui::BeginDisabled();           // start disabled block (gray out & disable interaction)
-            ImGui::Bullet();
-            ImGui::SameLine();
-            ImGui::Checkbox("h264_mf", &checked1);
-            ImGui::Bullet();
-            ImGui::SameLine();
-            ImGui::Checkbox("libx264", &checked2);
-            ImGui::EndDisabled();             // end disabled block
-            if (libx264) {
-                ImGui::Text("libx264 settings:");
-                ImGui::BulletText("%s", bulletText1Ptr);
-                ImGui::BulletText("%s", bulletText2Ptr);
-                ImGui::BulletText("%s", bulletText6Ptr);
-            } else {
-                ImGui::Text("h264_mf settings:");
-                ImGui::BulletText("%s", bulletText3Ptr);
-                ImGui::BulletText("%s", bulletText4Ptr);
-                ImGui::BulletText("%s", bulletText5Ptr);
-                ImGui::BulletText("%s", bulletText6Ptr);
-            }
-            ImGui::Text("%s", encoderInfo.c_str());
-            ImGui::Text("%s", exitText.c_str());
-            ImGui::End();
-            // Show the ImPlot demo window
-            #ifdef _WIN32
-            ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 544 - 60, 60), ImGuiCond_Once);
-            #endif /* _WIN32 */
-            #ifdef __linux__
-            ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 544 - 60, 580), ImGuiCond_Once);
-            #endif /* __linux__ */
-            ImGui::SetNextWindowSize(ImVec2(544, 556), ImGuiCond_Once);
-            if (ImGui::Begin("ImPlot Demo")) {
-                ImPlot::ShowDemoWindow();
-            }
-            ImGui::End();
-            ImGui::Render();
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-            {
-                // std::lock_guard<std::mutex> lock(coutMutex);
-                Timer::endTimer(Timer::RENDER_GUI, t);
+            if (imgui) {
+                #if IMGUI==1
+                Timer::startTimer(t);
+                // Show the ImGui text window
+                #ifdef _WIN32
+                ImGui::SetNextWindowPos(ImVec2(imgui_xpos, imgui_ypos), ImGuiCond_Once);
+                #endif /* _WIN32 */
+                #ifdef __linux__
+                ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
+                #endif /* __linux__ */
+                ImGui::SetNextWindowSize(ImVec2(helpText_width, helpText_height), ImGuiCond_Once);
+                ImGui::Begin("My name is window, ImGUI window");
+                ImGui::PushTextWrapPos(); // wrap at window edge
+                ImGui::Text("%s", helpText); // need %s to be safe as ImGui::Text() is a printf-style function, treats first argument as format string. Not safe when text includes '%' without using "%s".
+                ImGui::Text("%s", bulletHeaderPtr);
+                bool checked1 = !libx264;
+                bool checked2 = libx264;
+                ImGui::BeginDisabled();           // start disabled block (gray out & disable interaction)
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::Checkbox("h264_mf", &checked1);
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::Checkbox("libx264", &checked2);
+                ImGui::EndDisabled();             // end disabled block
+                if (libx264) {
+                    ImGui::Text("libx264 settings:");
+                    ImGui::BulletText("%s", bulletText1Ptr);
+                    ImGui::BulletText("%s", bulletText2Ptr);
+                    ImGui::BulletText("%s", bulletText6Ptr);
+                } else {
+                    ImGui::Text("h264_mf settings:");
+                    ImGui::BulletText("%s", bulletText3Ptr);
+                    ImGui::BulletText("%s", bulletText4Ptr);
+                    ImGui::BulletText("%s", bulletText5Ptr);
+                    ImGui::BulletText("%s", bulletText6Ptr);
+                }
+                ImGui::Text("%s", encoderInfo.c_str());
+                ImGui::Text("%s", exitText.c_str());
+                ImGui::End();
+                // Show the ImPlot demo window
+                #ifdef _WIN32
+                ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 544 - 60, 60), ImGuiCond_Once);
+                #endif /* _WIN32 */
+                #ifdef __linux__
+                ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 544 - 60, 580), ImGuiCond_Once);
+                #endif /* __linux__ */
+                ImGui::SetNextWindowSize(ImVec2(544, 556), ImGuiCond_Once);
+                if (ImGui::Begin("ImPlot Demo")) {
+                    ImPlot::ShowDemoWindow();
+                }
+                ImGui::End();
+                ImGui::Render();
+                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+                {
+                    // std::lock_guard<std::mutex> lock(coutMutex);
+                    Timer::endTimer(Timer::RENDER_GUI, t);
+                }
             }
             #endif /* IMGUI==1 */
         }
@@ -1318,9 +1222,6 @@ int main()
     glDeleteVertexArrays(1, &VAO);
     glDeleteVertexArrays(1, &lightVAO);
     glDeleteBuffers(1, &VBO);
-    #if RENDER_EBO==1 || RENDER_3D==0
-    glDeleteBuffers(1, &EBO);
-    #endif
     // De-allocate frame buffer (deletes all items in the array)
     delete[] frame;
     // Delete all the shader programs we've created
@@ -1618,6 +1519,46 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime) {
         vsyncPressed = false;
         std::cout << "[main] V key released. Press = " << vsyncPressed << " Time: " << crntTime << "\n";
     }
+    // Wireframe
+    // ---------
+    if ((glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS) && (!wireframePressed))
+    {
+        wireframePressed = true;
+        ToggleWireframe();
+        if (wireframe)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        else
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        std::cout << "[main] M key pressed. Press = " << wireframePressed << " Time: " << crntTime << "\n";
+    }
+    if ((glfwGetKey(window, GLFW_KEY_M) == GLFW_RELEASE) && (wireframePressed)) {
+        wireframePressed = false;
+        std::cout << "[main] M key released. Press = " << wireframePressed << " Time: " << crntTime << "\n";
+    }
+    // ImGui
+    // -----
+    if ((glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) && (!imguiPressed))
+    {
+        imguiPressed = true;
+        ToggleImGui();
+        std::cout << "[main] N key pressed. Press = " << imguiPressed << " Time: " << crntTime << "\n";
+    }
+    if ((glfwGetKey(window, GLFW_KEY_N) == GLFW_RELEASE) && (imguiPressed)) {
+        imguiPressed = false;
+        std::cout << "[main] N key released. Press = " << imguiPressed << " Time: " << crntTime << "\n";
+    }
+    // Atlas
+    // -----
+    if ((glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS) && (!atlasPressed))
+    {
+        atlasPressed = true;
+        cycleTriState(currentTextMode);
+        std::cout << "[main] B key pressed. Press = " << atlasPressed << " Time: " << crntTime << "\n";
+    }
+    if ((glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE) && (atlasPressed)) {
+        atlasPressed = false;
+        std::cout << "[main] B key released. Press = " << atlasPressed << " Time: " << crntTime << "\n";
+    }
 }
 
 // glfw: whenever window size changes (by OS or user) this callback function executes
@@ -1637,28 +1578,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     window_width = width;
     window_height = height;
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-
-    // MAKE IT SO THE GAME PAUSES WHEN RESIZING WINDOW.
-
-    // for debugging
-    // std::cout << "viewportX: " << lowerLeftCornerOfViewportX << " "
-    //           << "viewportY: " << lowerLeftCornerOfViewportY << "\n";
-
-    // glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-    // glViewport(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, SCR_WIDTH, SCR_HEIGHT);
-
-    #if IMGUI==1
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    // ImGui::SetNextWindowPos(ImVec2(100, 100+lowerLeftCornerOfViewportY*2));
-    // ImGui::SetNextWindowPos(ImVec2(lowerLeftCornerOfViewportX, 100+lowerLeftCornerOfViewportY));//, ImGuiCond_FirstUseEver);
-    ImGui::Begin("My name is window, ImGUI window");
-    ImGui::Text("Hello there adventurer!");
-    ImGui::End();
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    #endif
 
     // Update ImGui's projection and screen space alignment
     // UpdateImGuiProjection(lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY, SCR_WIDTH, SCR_HEIGHT);
@@ -1738,7 +1657,7 @@ void flipFrameVertically(unsigned char* frame) {
 std::string GetFPSText(float fps, float ms, float crntTime) {
     using namespace Settings;
     char buffer[250];   // small stack-allocated array (extremely fast, in CPU cache)
-    bool press = pboPressed || flipPressed || pausePressed || vsyncPressed;
+    bool press = pboPressed || flipPressed || pausePressed || vsyncPressed || wireframePressed || imguiPressed || atlasPressed;
     // "FPS: %.1f | %.1f ms"
     // "AaBbCcDdEeFfGg1!2£4$"
     // "In the dream, they took me to the light. A beautiful lie."
@@ -1756,47 +1675,6 @@ void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime, int &fram
         frameCountFPS = 0;
         lastTime = crntTime;
     }
-}
-
-// #ifdef _WIN32
-// bool WGLExtensionSupported(const char *extension_name)
-// {
-//     // this is pointer to function which returns pointer to string with list of all wgl extensions
-//     PFNWGLGETEXTENSIONSSTRINGEXTPROC _wglGetExtensionsStringEXT = NULL;
-
-//     // determine pointer to wglGetExtensionsStringEXT function
-//     _wglGetExtensionsStringEXT = (PFNWGLGETEXTENSIONSSTRINGEXTPROC) wglGetProcAddress("wglGetExtensionsStringEXT");
-
-//     if (strstr(_wglGetExtensionsStringEXT(), extension_name) == NULL)
-//     {
-//         // string was not found
-//         return false;
-//     }
-
-//     // extension is supported
-//     return true;
-// }
-// #endif
-
-void RenderFullscreenQuad(Shader &quadShader, GLuint quadTexture) {
-    quadShader.use();
-    // Enable 2D rendering
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // bind VAO
-    // glBindVertexArray(quadVAO);
-    // glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-
-    // Bind the texture (the texture atlas in this case)
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, quadTexture); // atlasTextureId is the texture containing the atlas
-    quadShader.setInt("screenTexture", 0);
-    // Draw the quad
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    // Cleanup
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::array<glm::vec3, 10>& cubePositions, glm::vec3 &lightPos, float crntTime) {
@@ -1865,10 +1743,6 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint c
 
     // render the crate
     // ----------------
-    #if RENDER_3D==0
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    #endif
-    #if RENDER_3D==1
     for(unsigned int i = 0; i < 10; i++)
     {
         glm::mat4 model = glm::mat4(1.0f);
@@ -1877,14 +1751,8 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint c
         model = glm::rotate(model, crntTime * glm::radians(angle), cubePositions[i]); //glm::vec3(1.0f, 0.0f, 0.0f));
         ourShader.setMat4("model", model);
 
-        #if RENDER_EBO==0
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        #endif
-        #if RENDER_EBO==1
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-        #endif
     }
-    #endif
 
     // Cleanup
     glBindVertexArray(0);

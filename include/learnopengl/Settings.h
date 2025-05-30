@@ -19,6 +19,8 @@ namespace Settings {
     extern bool                     msaa;           // | 0 = no anti-aliasing | 1 = 4xMSAA |
     extern bool                     recording;
     extern bool                     flip_shader;
+    extern bool                     wireframe;
+    extern bool                     imgui;
     extern bool                     libx264;
     // h264_mf
     extern const int64_t g_bit_rate;
@@ -32,10 +34,22 @@ namespace Settings {
     inline void ToggleFlipShader() { flip_shader = !flip_shader; }
     inline void ToggleVsync() { vsync = vsync ? 0 : 1; }
     inline void Togglex264() { libx264 = !libx264; }
+    inline void ToggleWireframe() { wireframe = !wireframe; }
+    inline void ToggleImGui() { imgui = !imgui; }
     inline void SetScreenResolution(unsigned int width, unsigned int height) {
         SCR_WIDTH = width;
         SCR_HEIGHT = height;
     }
+
+    enum class TextTriState : uint8_t {
+        TextAndAtlasOFF    = 0,
+        TextAndAtlasON     = 1,
+        TextONAtlasOFF     = 2
+    };
+    inline void cycleTriState(TextTriState& state) {
+        state = static_cast<TextTriState>((static_cast<uint8_t>(state) + 1) % 3);
+    }
+    extern TextTriState currentTextMode;
 }
 
 #endif /* SETTINGS_H */
