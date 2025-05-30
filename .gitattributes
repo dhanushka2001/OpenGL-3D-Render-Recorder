@@ -1,0 +1,14 @@
+# Tag GLSL shaders correctly
+shaders/*.vert linguist-language=GLSL
+shaders/*.frag linguist-language=GLSL
+# shaders/*.geom linguist-language=GLSL  # Optional: for geometry shaders
+# shaders/*.comp linguist-language=GLSL  # Optional: for compute shaders
+
+# Ensure CMakeLists.txt is counted
+CMakeLists.txt linguist-language=CMake
+
+# Treat binary/assets as generated (excluded from stats)
+*.a linguist-generated=true
+*.ttf linguist-generated=true
+*.png linguist-generated=true
+*.jpg linguist-generated=true
