@@ -4,8 +4,8 @@
 https://github.com/user-attachments/assets/fc8763bd-dcda-4dbf-9c60-3e322aa1a2ce
 
 Real-time 3D renderer in C++ with OpenGL (GLFW).
-* Phong lighting
-* Custom text tendering using rasterized vector fonts on a texture atlas
+* [Phong lighting](https://en.m.wikipedia.org/wiki/Phong_reflection_model)
+* Custom text tendering using [FreeType](https://freetype.org/index.html) to rasterize TrueType (.ttf) vector fonts onto a texture atlas
 * GUI and real-time plots using [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot)
 * Screen recording using [FFmpeg](https://github.com/FFmpeg/FFmpeg), [x264](https://www.videolan.org/developers/x264.html) encoder, multithreading, and [asynchronous read-back with 2 PBOs](https://www.songho.ca/opengl/gl_pbo.html#pack). (Video heavily compressed to fit GitHub's 10MB filesize limit.)
 
