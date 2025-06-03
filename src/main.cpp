@@ -25,6 +25,7 @@
 #include <learnopengl/fontmanager.h>    // Font Manager
 #include <learnopengl/textrenderer.h>   // Text Renderer
 #include <learnopengl/timer.h>          // Timer
+#include <learnopengl/gui.h>            // GUI
 #include <learnopengl/Settings.h>       // Settings
 
 #include <iostream>                     // for std::cin/cout/cerr
@@ -56,7 +57,7 @@
 #define  PATH_MAX 4096
 #endif  /* PATH_MAX */
 
-void processInput(GLFWwindow *window, float timeDiff, float crntTime);
+void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::condition_variable &queueCond);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -64,6 +65,7 @@ std::string GetFPSText(float fps, float ms, float crntTime);
 void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime, int &frameCountFPS);
 void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::array<glm::vec3, 10>& cubePositions, glm::vec3 &lightPos, float crntTime);
 void flipFrameVertically(unsigned char* frame);
+std::string getTimestampedFilename();
 
 #define             IMGUI               1
 
@@ -97,6 +99,7 @@ bool f11Pressed         = false;
 bool wireframePressed   = false;
 bool imguiPressed       = false;
 bool atlasPressed       = false;
+bool recordPressed      = false;
 
 // window
 // ------
@@ -273,9 +276,6 @@ int main()
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
     glBindVertexArray(0);
 
-    // uncomment this call to draw in wireframe polygons.
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
     // load and create textures 
     // ------------------------
     GLuint crateTexture, awesomeTexture;
@@ -380,7 +380,7 @@ int main()
 
     unsigned char* frame = NULL;
 
-    if (recording)
+    // if (recording)
     {
         // PBO OFF
         // -------
@@ -530,81 +530,7 @@ int main()
     // IMGUI
     // -----
     #if IMGUI==1
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImPlot::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 430");
-
-    static std::string helpBody = 
-        "Hello there adventurer!\n"
-        "Click the RIGHT SHIFT key to free the mouse cursor.\n"
-        "Use WASD and the mouse to move the camera.\n"
-        "Use the SCROLL wheel to zoom in and out.\n"
-        "Use the arrow keys and Z/X to move the objects.\n"
-        "Hold Q/E to change the opacity of the objects.\n"
-        "Click M to toggle wireframe mode.\n"
-        "Click N to toggle ImGui/ImPlot.\n"
-        "Click B to cycle between fullscreen font texture atlas and text, text only, or all OFF.\n"
-        "\nClick P to see the boost in FPS with "
-        "multithreading and asynchronous read-back PBOs! "
-        "Click V to toggle Vsync. Screen recording is ";
-    static std::string isRecording = recording ?
-        "ON. You can find the recordings in /build/output/." :
-        "OFF. "; 
-    std::string encoder;
-    std::ostringstream oss;
-    
-    if(libx264) {
-        oss << "\n\nEncoder selected:\n"
-            << "libx264 [x]   h264_mf [ ]\n\n"
-            << "libx264 settings:\n"
-            << "preset: " + g_preset + "\n"     // example preset value
-            << "crf: " + g_crf;                 // example crf value
-        encoder = oss.str();
-    } else {
-        oss << "\n\nEncoder selected:\n"
-            << "libx264 [ ]   h264_mf [x]\n\n"
-            << "h264_mf settings:\n"
-            << "bit_rate: " << static_cast<int>(g_bit_rate / 1'000'000) << " Mbps\n"
-            << "gop_size: " << g_gop_size << "\n"
-            << "max_b_frames: " << g_max_b_frames;
-        encoder = oss.str();
-    }
-    static std::string encoderInfo = "\nlibx264 is a software encoder optimized for size and quality (can produce same quality as h264_mf for half the size).\nh264_mf is a hardware encoder designed for speed and low CPU use.";
-    static std::string exitText = "\nPress ESC to exit.";
-    static std::string helpBodyFinal = helpBody + isRecording;// + encoder + encoderInfo + exitText;
-    const char* helpText = helpBodyFinal.c_str(); // // Expose as a const char* for legacy interface
-    // int helpText_width = 289;
-    // int helpText_height = libx264 ? 400 : 414;
-
-    std::string bulletHeader = "\nEncoder selected:\n";
-    const char* bulletHeaderPtr = bulletHeader.c_str();
-    std::string bulletText1 = "preset: " + g_preset + "\n";
-    std::string bulletText2 = "crf: " + g_crf;
-    
-    std::ostringstream oss3, oss4, oss5, oss6;
-    oss3 << "bit_rate: " << static_cast<int>(g_bit_rate / 1'000'000) << " Mbps\n";
-    oss4 << "gop_size: " << g_gop_size << "\n";
-    oss5 << "max_b_frames: " << g_max_b_frames;
-    oss6 << "framerate: " << framerate;
-    std::string bulletText3 = oss3.str();
-    std::string bulletText4 = oss4.str();
-    std::string bulletText5 = oss5.str();
-    std::string bulletText6 = oss6.str();
-    const char* bulletText1Ptr = bulletText1.c_str();
-    const char* bulletText2Ptr = bulletText2.c_str();
-    const char* bulletText3Ptr = bulletText3.c_str();
-    const char* bulletText4Ptr = bulletText4.c_str();
-    const char* bulletText5Ptr = bulletText5.c_str();
-    const char* bulletText6Ptr = bulletText6.c_str();
-    
-    int helpText_width = 354;
-    int helpText_height = libx264 ? 503 : 519; // new line = +20 height. libx264 height = h264_mf height - 16.
-    int imgui_xpos = 30;
-    int imgui_ypos = 30;
+    GUI::Init(window);
     #endif
     
     glEnable(GL_BLEND); // enable transparency
@@ -627,18 +553,22 @@ int main()
 
     // FrameData holds a copy of the frame and its timestamp
     struct FrameData {
-        // std::vector<uint8_t> pixels;  // Make a deep copy of PBO data
-        unsigned char *frame;
+        unsigned char *frame;           // only used if pbo is OFF
+        GLuint pboIndex;                // only used if pbo is ON
         double pts;
-        GLuint pboIndex;
+        bool usingPBO = pbo;            // was PBO ON/OFF when the frame was rendered?
+        bool flipped = flip_shader;     // has the frame already been flipped with flip shader?
     };
 
     // A lock-free queue is overkill here — simple mutex + condition_variable works well
     std::queue<FrameData> frameQueue;
     std::mutex queueMutex;
     std::condition_variable queueCond;
-    std::atomic<bool> recordingNew = true;
+    std::atomic<bool> shuttingDown = false;  // To stop the thread on app exit
+    bool isEncoding = false;
+    // std::atomic<bool> recording = false;
     const size_t MAX_QUEUE_SIZE = 8;
+    FFmpegEncoder encoder;
 
     // std::mutex encoderMutex;
     std::mutex coutMutex;
@@ -654,113 +584,119 @@ int main()
     // encoder thread
     std::thread encoderThread([&]() {
         glfwMakeContextCurrent(sharedContextWindow);  // Make encoder's context current here
-        gladLoadGL(); // Needed again in this thread!
+        gladLoadGL();  // Needed again in this thread!
+
         try {
-            // Step 1: Initialize encoder
-            if (!Encoder::initializeEncoder("../output/output.mp4")) {
-                std::cerr << "[encoderThread] ERROR: Failed to initialize encoder in thread\n";
-                return;
-            }
-    
-            // Step 2: Process frame queue
-            while (recordingNew || !frameQueue.empty()) {
+            while (!shuttingDown || !frameQueue.empty()) {
                 std::unique_lock<std::mutex> lock(queueMutex);
-                // queueCond.wait(lock, [&]() {
-                //     return !frameQueue.empty() || !recordingNew;
-                // });
-    
-                while (!frameQueue.empty()) {
-                    FrameData frame = std::move(frameQueue.front());
-                    frameQueue.pop();
-                    // std::cout << "[encoder] Popped frame from queue\n";
-                    
-                    // if (!pbo) {
-                    //     lock.unlock();  // unlock while processing
-                    //     if (!flip_shader) {
-                    //         Timer::startTimer(t);
-                    //         flipFrameVertically(frame.frame);
-                    //         {
-                    //             std::lock_guard<std::mutex> lock(coutMutex);
-                    //             Timer::endTimer(Timer::FLIP_FUNCTION, t);
-                    //         }
-                    //     }
-                    //     // lock.lock(); // relock for logging
-                    //     {
-                    //         // std::lock_guard<std::mutex> encoderLock(Encoder::encoderMutex);
-                    //         Timer::startTimer(t);
-                    //         // Encoder::encodeFrame(frame.pixels.data(), frame.pts);
-                    //         Encoder::encodeFrame(frame.frame, frame.pts);
-                    //         {
-                    //             std::lock_guard<std::mutex> lock(coutMutex);
-                    //             Timer::endTimer(Timer::ENCODE, t);
-                    //         }
-                    //     }
-                    //     // lock.unlock();  // unlock
-                    //     lock.lock(); // relock for queue
-                    // }
 
-                    if (pbo) {
-                        lock.unlock();  // unlock while processing
-                        // Wait for sync to be ready
-                        int index = frame.pboIndex;
-                        if (pboFences[index]) {
-                            // GLenum waitReturn = glClientWaitSync(pboFences[index], 0, GL_TIMEOUT_IGNORED);
-                            GLenum waitReturn = glClientWaitSync(pboFences[index], GL_SYNC_FLUSH_COMMANDS_BIT, 1'000'000'000); // 1s timeout
-                            if (waitReturn == GL_ALREADY_SIGNALED || waitReturn == GL_CONDITION_SATISFIED) {
-                                glDeleteSync(pboFences[index]);
-                                pboFences[index] = nullptr;
-                            } else {
-                                std::cerr << "[encoderThread] WARNING: glClientWaitSync timeout or error\n";
-                                continue;
-                            }
-                        }
+                // Wait for relevant signal
+                queueCond.wait(lock, [&]() {
+                    return recording || !frameQueue.empty() || shuttingDown;
+                });
 
-                        // Map and copy pixels from PBO
-                        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[index]);
-                        GLubyte* ptr = (GLubyte*)glMapBufferRange(
-                            GL_PIXEL_PACK_BUFFER, 0, DATA_SIZE,
-                            GL_MAP_READ_BIT
-                        );
+                // exit cleanly only if recording stopped and queue empty
+                if (shuttingDown && !recording && frameQueue.empty()) break;
 
-                        if (ptr) {
-                            glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-                            glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+                if (!recording && frameQueue.empty()) continue;
 
-                            if (!flip_shader) {
-                                Timer::startTimer(t);
-                                flipFrameVertically(ptr);
-                                {
-                                    std::lock_guard<std::mutex> lock(coutMutex);
-                                    Timer::endTimer(Timer::FLIP_FUNCTION, t);
-                                }
-                            }
-                            // lock.lock(); // relock for logging
-                            {
-                                // std::lock_guard<std::mutex> encoderLock(Encoder::encoderMutex);
-                                Timer::startTimer(t);
-                                // Encoder::encodeFrame(frame.pixels.data(), frame.pts);
-                                // std::cout << "[encoder] About to encode frame "  << frameQueue.size() << "/" << MAX_QUEUE_SIZE << "\n";
-                                Encoder::encodeFrame(ptr, frame.pts);
-                                {
-                                    std::lock_guard<std::mutex> lock(coutMutex);
-                                    Timer::endTimer(Timer::ENCODE, t);
-                                }
-                            }
-                            // lock.unlock();  // unlock
-                        }
-                        lock.lock(); // relock for queue
+                // Step 1: If recording is ON and not currently encoding, then start encoding
+                if (recording && !isEncoding) {
+                    std::string filename = getTimestampedFilename();
+
+                    while (!frameQueue.empty()) frameQueue.pop();  // Clear any old frames from previous instance
+
+                    // Local instance for this session only
+                    auto encoder = std::make_unique<FFmpegEncoder>();
+                    if (!encoder->initialize(filename.c_str(), glfwGetTime())) {
+                        std::cerr << "[encoderThread] ERROR: Failed to initialize encoder\n";
+                        continue;
                     }
-                }
-            }
 
-            {
-                std::lock_guard<std::mutex> encoderLock(Encoder::encoderMutex);
-                Encoder::finalizeEncoder();
+                    isEncoding = true;
+
+                    // Step 2: While recording or queue still has frames, encode frames
+                    while (recording || !frameQueue.empty()) {
+                        lock.unlock();  // Unlock while processing
+                        if (!frameQueue.empty()) {
+                            FrameData frame;
+                            {
+                                std::lock_guard<std::mutex> qlock(queueMutex);
+                                frame = std::move(frameQueue.front());
+                                frameQueue.pop();
+                            }
+                            // PBO ON
+                            if (frame.usingPBO) {
+                                int index = frame.pboIndex;
+                                // if (pboFences[index]) {
+                                //     GLenum waitReturn = glClientWaitSync(pboFences[index], GL_SYNC_FLUSH_COMMANDS_BIT, 1'000'000'000);
+                                //     if (waitReturn == GL_ALREADY_SIGNALED || waitReturn == GL_CONDITION_SATISFIED) {
+                                //         glDeleteSync(pboFences[index]);
+                                //         pboFences[index] = nullptr;
+                                //     } else {
+                                //         std::cerr << "[encoderThread] WARNING: glClientWaitSync timeout or error\n";
+                                //         lock.lock();  // Relock before looping
+                                //         continue;
+                                //     }
+                                // }
+
+                                glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[index]);
+                                GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, DATA_SIZE, GL_MAP_READ_BIT);
+
+                                if (ptr) {
+                                    glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+                                    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
+                                    if (!frame.flipped) {
+                                        Timer::startTimer(t);
+                                        flipFrameVertically(ptr);
+                                        {
+                                            std::lock_guard<std::mutex> coutLock(coutMutex);
+                                            Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                                        }
+                                    }
+
+                                    Timer::startTimer(t);
+                                    encoder->encodeFrame(ptr, frame.pts);
+                                    {
+                                        std::lock_guard<std::mutex> coutLock(coutMutex);
+                                        Timer::endTimer(Timer::ENCODE, t);
+                                    }
+                                }
+                            } else {
+                                // NON-PBO logic
+                                if (frame.frame) {
+                                    if (!flip_shader) {
+                                        Timer::startTimer(t);
+                                        flipFrameVertically(frame.frame);
+                                        {
+                                            std::lock_guard<std::mutex> coutLock(coutMutex);
+                                            Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                                        }
+                                    }
+
+                                    Timer::startTimer(t);
+                                    encoder->encodeFrame(frame.frame, frame.pts);
+                                    {
+                                        std::lock_guard<std::mutex> coutLock(coutMutex);
+                                        Timer::endTimer(Timer::ENCODE, t);
+                                    }
+                                }
+                            }
+                        }
+                        lock.lock();  // Relock for condition checks
+                    }
+
+                    // Step 3: Finalize when done recording
+                    encoder->finalize();
+                    isEncoding = false;
+                }
             }
         } catch (const std::exception& e) {
             std::cerr << "[encoderThread] ERROR: Encoder thread crashed: " << e.what() << std::endl;
         }
     });
+
 
     // timings
     // -------
@@ -774,6 +710,7 @@ int main()
     float encodeDiff, encodeTime = 0.0f;    // for encoding frames
     float crntTime = 0.0f;                  // current time (used by all)
 
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -785,7 +722,7 @@ int main()
         // input
         // -----
         // glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-        processInput(window, timeDiff, crntTime);
+        processInput(window, timeDiff, crntTime, queueCond);
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
             std::cerr << "[main] OpenGL Error: " << error << std::endl;
@@ -897,57 +834,7 @@ int main()
             #if IMGUI==1
             if (imgui) {
                 Timer::startTimer(t);
-                // Show the ImGui text window
-                #ifdef _WIN32
-                ImGui::SetNextWindowPos(ImVec2(imgui_xpos, imgui_ypos), ImGuiCond_Once);
-                #endif /* _WIN32 */
-                #ifdef __linux__
-                ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
-                #endif /* __linux__ */
-                ImGui::SetNextWindowSize(ImVec2(helpText_width, helpText_height), ImGuiCond_Once);
-                ImGui::Begin("My name is window, ImGUI window");
-                ImGui::PushTextWrapPos(); // wrap at window edge
-                ImGui::Text("%s", helpText); // need %s to be safe as ImGui::Text() is a printf-style function, treats first argument as format string. Not safe when text includes '%' without using "%s".
-                ImGui::Text("%s", bulletHeaderPtr);
-                bool checked1 = !libx264;
-                bool checked2 = libx264;
-                ImGui::BeginDisabled();           // start disabled block (gray out & disable interaction)
-                ImGui::Bullet();
-                ImGui::SameLine();
-                ImGui::Checkbox("h264_mf", &checked1);
-                ImGui::Bullet();
-                ImGui::SameLine();
-                ImGui::Checkbox("libx264", &checked2);
-                ImGui::EndDisabled();             // end disabled block
-                if (libx264) {
-                    ImGui::Text("libx264 settings:");
-                    ImGui::BulletText("%s", bulletText1Ptr);
-                    ImGui::BulletText("%s", bulletText2Ptr);
-                    ImGui::BulletText("%s", bulletText6Ptr);
-                } else {
-                    ImGui::Text("h264_mf settings:");
-                    ImGui::BulletText("%s", bulletText3Ptr);
-                    ImGui::BulletText("%s", bulletText4Ptr);
-                    ImGui::BulletText("%s", bulletText5Ptr);
-                    ImGui::BulletText("%s", bulletText6Ptr);
-                }
-                ImGui::Text("%s", encoderInfo.c_str());
-                ImGui::Text("%s", exitText.c_str());
-                ImGui::End();
-                // Show the ImPlot demo window
-                #ifdef _WIN32
-                ImGui::SetNextWindowPos(ImVec2(1056, 28), ImGuiCond_Once);
-                #endif /* _WIN32 */
-                #ifdef __linux__
-                ImGui::SetNextWindowPos(ImVec2(956, 580), ImGuiCond_Once);
-                #endif /* __linux__ */
-                ImGui::SetNextWindowSize(ImVec2(544, 556), ImGuiCond_Once);
-                if (ImGui::Begin("ImPlot Demo")) {
-                    ImPlot::ShowDemoWindow();
-                }
-                ImGui::End();
-                ImGui::Render();
-                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+                GUI::Render();
                 {
                     // std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::RENDER_GUI, t);
@@ -970,83 +857,44 @@ int main()
                 Timer::endTimer(Timer::BLIT_TO_SCREEN, t);
             }
 
-            if (flip_shader) {
-                Timer::startTimer(t);
-                glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
-                flipShader.use();
-                glBindVertexArray(quadVAO);
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, fboTexture);
-                flipShader.setInt("screenTexture", 0);
-                glDrawArrays(GL_TRIANGLES, 0, 3);
-                glBindVertexArray(0);
-                glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
-                {
-                    // std::lock_guard<std::mutex> lock(coutMutex);
-                    Timer::endTimer(Timer::FLIP_SHADER, t);
-                }
-            }
-
-            // PBO off
-            if (!pbo)
-            {
-                // Step 4: Read pixels from the resolved FBO for off-screen encoding (without PBOs)
-                // --------------------------------------------------------------------------------
-                // glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-                Timer::startTimer(t);
-                glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
-                {
-                    // std::lock_guard<std::mutex> lock(coutMutex);
-                    Timer::endTimer(Timer::GLREADPIXELS_PBO_OFF, t);
-                }
-
-                encodeDiff = crntTime - encodeTime;
-                if (encodeDiff >= 1.0 / framerate) {
-                    // FrameData data;
-                    // data.frame = frame;
-                    // data.pts = crntTime;
-
-                    // {
-                    //     std::unique_lock<std::mutex> lock(queueMutex);
-
-                    //     if (frameQueue.size() < MAX_QUEUE_SIZE) {
-                    //         Timer::startTimer(t);
-                    //         frameQueue.push(data);
-                    //         queueCond.notify_one();
-                    //         {
-                    //             std::lock_guard<std::mutex> lock(coutMutex);
-                    //             // std::cout << "[main] Queue size during push+wait: " << frameQueue.size() - 1 << "/" << MAX_QUEUE_SIZE << "\n";
-                    //             Timer::endTimer(Timer::QUEUE_PUSH_WAIT_PBO_OFF, t);
-                    //         }
-                    //     } else {
-                    //         {
-                    //             std::lock_guard<std::mutex> lock(coutMutex);
-                    //             // std::cout << "[main] Skipping frame due to full queue: " << frameQueue.size() << "/" << MAX_QUEUE_SIZE << "\n";
-                    //         }
-                    //     }
-                    // }
-
-                    // Timer::startTimer(t);
-                    if (!flip_shader) {
-                        flipFrameVertically(frame);
-                    }
+            // Step 4: Read pixels from the resolved FBO for off-screen encoding
+            // -----------------------------------------------------------------
+            encodeDiff = crntTime - encodeTime;
+            if (vsync || (encodeDiff >= 1.0 / framerate)) {
+                // fbo first needs to be flipped for encoding
+                if (flip_shader) {
+                    if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe for this pass
+                    Timer::startTimer(t);
+                    glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
+                    flipShader.use();
+                    glBindVertexArray(quadVAO);
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, fboTexture);
+                    flipShader.setInt("screenTexture", 0);
+                    glDrawArrays(GL_TRIANGLES, 0, 3);
+                    glBindVertexArray(0);
+                    glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
                     {
                         // std::lock_guard<std::mutex> lock(coutMutex);
-                        Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                        Timer::endTimer(Timer::FLIP_SHADER, t);
                     }
-                    Encoder::encodeFrame(frame, crntTime);
-                    // Resets times and counter
-			        encodeTime = crntTime;
+                    if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Restore wireframe
                 }
-            }
-            // PBO on
-            else
-            {
-                encodeDiff = crntTime - encodeTime;
-                if (encodeDiff >= 1.0 / framerate) {
-                    // float t0, t1;
-                    // Step 4: Read pixels from FBO into PBO (glReadPixels() should return immediately)
-                    // --------------------------------------------------------------------------------
+                if (!pbo) { // PBO off
+                    // glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+                    Timer::startTimer(t);
+                    glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
+                    {
+                        // std::lock_guard<std::mutex> lock(coutMutex);
+                        Timer::endTimer(Timer::GLREADPIXELS_PBO_OFF, t);
+                    }
+                    FrameData data;
+                    data.frame = frame;
+                    data.pts = crntTime;
+                    data.usingPBO = false;
+                    frameQueue.push(data);
+                    queueCond.notify_one();  // Wake encoder thread if asleep
+                } else { // PBO on
                     Timer::startTimer(t);
                     glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[firstIndex]);
                     glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, nullptr, GL_STREAM_READ); // Orphan first to ensure a new backing store is created
@@ -1058,43 +906,45 @@ int main()
                     }
                     
                     // Insert a fence for the current PBO
-                    if (pboFences[firstIndex]) {
-                        glDeleteSync(pboFences[firstIndex]);
-                    }
-                    pboFences[firstIndex] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+                    // if (pboFences[firstIndex]) {
+                    //     glDeleteSync(pboFences[firstIndex]);
+                    // }
+                    // pboFences[firstIndex] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
                     // Push nextIndex (the one rendered last frame) to queue
                     FrameData data;
                     data.pboIndex = nextIndex;
                     data.pts = crntTime;
+                    data.usingPBO = true;
+                    data.flipped = flip_shader;
+                    frameQueue.push(data);
+                    queueCond.notify_one();  // Wake encoder thread if asleep
 
-                    {
-                        std::unique_lock<std::mutex> lock(queueMutex);
+                    // {
+                    //     std::unique_lock<std::mutex> lock(queueMutex);
 
-                        if (frameQueue.size() < MAX_QUEUE_SIZE) {
-                            Timer::startTimer(t);
-                            frameQueue.push(data);
-                            // queueCond.notify_one();
-                            {
-                                // std::lock_guard<std::mutex> lock(coutMutex);
-                                // std::cout << "[main] Queue size before push+wait: " << frameQueue.size() - 1 << "/" << MAX_QUEUE_SIZE << "\n";
-                                Timer::endTimer(Timer::QUEUE_PUSH_WAIT_PBO_ON, t);
-                            }
-                        } else {
-                            {
-                                // std::lock_guard<std::mutex> lock(coutMutex);
-                                // std::cout << "[main] Skipping frame due to full queue: " << frameQueue.size() << "/" << MAX_QUEUE_SIZE << "\n";
-                            }
-                        }
-                    }
+                    //     if (frameQueue.size() < MAX_QUEUE_SIZE) {
+                    //         Timer::startTimer(t);
+                    //         frameQueue.push(data);
+                    //         queueCond.notify_one();  // Wake encoder thread if asleep
+                    //         {
+                    //             // std::lock_guard<std::mutex> lock(coutMutex);
+                    //             // std::cout << "[main] Queue size before push+wait: " << frameQueue.size() - 1 << "/" << MAX_QUEUE_SIZE << "\n";
+                    //             Timer::endTimer(Timer::QUEUE_PUSH_WAIT_PBO_ON, t);
+                    //         }
+                    //     } else {
+                    //         {
+                    //             // std::lock_guard<std::mutex> lock(coutMutex);
+                    //             // std::cout << "[main] Skipping frame due to full queue: " << frameQueue.size() << "/" << MAX_QUEUE_SIZE << "\n";
+                    //         }
+                    //     }
+                    // }
 
                     // Rotate indices
                     firstIndex = (firstIndex + 1) % PBO_COUNT;
                     nextIndex = (firstIndex + 1) % PBO_COUNT;
-
-                    // Resets times and counter
-			        encodeTime = crntTime;
                 }
+                encodeTime = crntTime;
             }
         }
         
@@ -1139,60 +989,10 @@ int main()
 
             // IMGUI
             // -----
+            #if IMGUI==1
             if (imgui) {
-                #if IMGUI==1
                 Timer::startTimer(t);
-                // Show the ImGui text window
-                #ifdef _WIN32
-                ImGui::SetNextWindowPos(ImVec2(imgui_xpos, imgui_ypos), ImGuiCond_Once);
-                #endif /* _WIN32 */
-                #ifdef __linux__
-                ImGui::SetNextWindowPos(ImVec2(60, 580), ImGuiCond_Once);
-                #endif /* __linux__ */
-                ImGui::SetNextWindowSize(ImVec2(helpText_width, helpText_height), ImGuiCond_Once);
-                ImGui::Begin("My name is window, ImGUI window");
-                ImGui::PushTextWrapPos(); // wrap at window edge
-                ImGui::Text("%s", helpText); // need %s to be safe as ImGui::Text() is a printf-style function, treats first argument as format string. Not safe when text includes '%' without using "%s".
-                ImGui::Text("%s", bulletHeaderPtr);
-                bool checked1 = !libx264;
-                bool checked2 = libx264;
-                ImGui::BeginDisabled();           // start disabled block (gray out & disable interaction)
-                ImGui::Bullet();
-                ImGui::SameLine();
-                ImGui::Checkbox("h264_mf", &checked1);
-                ImGui::Bullet();
-                ImGui::SameLine();
-                ImGui::Checkbox("libx264", &checked2);
-                ImGui::EndDisabled();             // end disabled block
-                if (libx264) {
-                    ImGui::Text("libx264 settings:");
-                    ImGui::BulletText("%s", bulletText1Ptr);
-                    ImGui::BulletText("%s", bulletText2Ptr);
-                    ImGui::BulletText("%s", bulletText6Ptr);
-                } else {
-                    ImGui::Text("h264_mf settings:");
-                    ImGui::BulletText("%s", bulletText3Ptr);
-                    ImGui::BulletText("%s", bulletText4Ptr);
-                    ImGui::BulletText("%s", bulletText5Ptr);
-                    ImGui::BulletText("%s", bulletText6Ptr);
-                }
-                ImGui::Text("%s", encoderInfo.c_str());
-                ImGui::Text("%s", exitText.c_str());
-                ImGui::End();
-                // Show the ImPlot demo window
-                #ifdef _WIN32
-                ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 544 - 60, 60), ImGuiCond_Once);
-                #endif /* _WIN32 */
-                #ifdef __linux__
-                ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 544 - 60, 580), ImGuiCond_Once);
-                #endif /* __linux__ */
-                ImGui::SetNextWindowSize(ImVec2(544, 556), ImGuiCond_Once);
-                if (ImGui::Begin("ImPlot Demo")) {
-                    ImPlot::ShowDemoWindow();
-                }
-                ImGui::End();
-                ImGui::Render();
-                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+                GUI::Render();
                 {
                     // std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::RENDER_GUI, t);
@@ -1204,11 +1004,14 @@ int main()
         // IMGUI (won't be visible in screen recording, but doesn't mess up when window is resized)
         // ----------------------------------------------------------------------------------------
         // #if IMGUI==1
-        // ImGui::Begin("My name is window, ImGUI window");
-        // ImGui::Text("Hello there adventurer!");
-        // ImGui::End();
-        // ImGui::Render();
-        // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // if (imgui) {
+        //     Timer::startTimer(t);
+        //     GUI::Render();
+        //     {
+        //         // std::lock_guard<std::mutex> lock(coutMutex);
+        //         Timer::endTimer(Timer::RENDER_GUI, t);
+        //     }
+        // }
         // #endif
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -1232,7 +1035,7 @@ int main()
 
     Timer::printAverages();
 
-    if (recording)
+    // if (recording)
     {
         glDeleteBuffers(PBO_COUNT, pboIds);
         glDeleteFramebuffers(1,&fboMsaaId);
@@ -1243,19 +1046,23 @@ int main()
 
         // Stop ffmpeg
         // -----------
-        // Encoder::finalizeEncoder();
+        // Encoder::finalizeEncoder(); // ignore, handled in encoder thread
 
-        recordingNew = false;
+        recording = false;
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            shuttingDown = true;
+        }
         queueCond.notify_all();
-        encoderThread.join();
+        // Wait for encoder thread to finish
+        if (encoderThread.joinable()) {
+            encoderThread.join();
+        }
     }
     // IMGUI
     // -----
     #if IMGUI==1
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImPlot::DestroyContext();
-    ImGui::DestroyContext();
+    GUI::Exit();
     #endif
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
@@ -1270,7 +1077,7 @@ int main()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window, float timeDiff, float crntTime) {
+void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::condition_variable &queueCond) {
     using namespace Settings; // compile-time instruction (no runtime overhead)
     // Exit
     // ----
@@ -1525,9 +1332,10 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime) {
     {
         wireframePressed = true;
         ToggleWireframe();
-        if (wireframe)
+        if (wireframe) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        else
+            // glLineWidth(2.0f); // Only affects non-core-profile backends
+        } else
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         std::cout << "[main] M key pressed. Press = " << wireframePressed << " Time: " << crntTime << "\n";
     }
@@ -1558,6 +1366,19 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime) {
     if ((glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE) && (atlasPressed)) {
         atlasPressed = false;
         std::cout << "[main] B key released. Press = " << atlasPressed << " Time: " << crntTime << "\n";
+    }
+    // Recording
+    // ---------
+    if ((glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) && (!recordPressed))
+    {
+        recordPressed = true;
+        recording = !recording;
+        queueCond.notify_one();  // Wake encoder thread if asleep
+        std::cout << "[main] R key pressed. Press = " << recordPressed << " Time: " << crntTime << "\n";
+    }
+    if ((glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) && (recordPressed)) {
+        recordPressed = false;
+        std::cout << "[main] R key released. Press = " << recordPressed << " Time: " << crntTime << "\n";
     }
 }
 
@@ -1657,7 +1478,7 @@ void flipFrameVertically(unsigned char* frame) {
 std::string GetFPSText(float fps, float ms, float crntTime) {
     using namespace Settings;
     char buffer[250];   // small stack-allocated array (extremely fast, in CPU cache)
-    bool press = pboPressed || flipPressed || pausePressed || vsyncPressed || wireframePressed || imguiPressed || atlasPressed;
+    bool press = pboPressed || flipPressed || pausePressed || vsyncPressed || wireframePressed || imguiPressed || atlasPressed || recordPressed;
     // "FPS: %.1f | %.1f ms"
     // "AaBbCcDdEeFfGg1!2£4$"
     // "In the dream, they took me to the light. A beautiful lie."
@@ -1757,4 +1578,21 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint c
     // Cleanup
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+std::string getTimestampedFilename() {
+    auto now = std::chrono::system_clock::now();
+    std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
+    std::tm localTime;
+    #ifdef _WIN32
+    localtime_s(&localTime, &nowTime);
+    #else
+    localtime_r(&nowTime, &localTime);
+    #endif
+
+    std::ostringstream oss;
+    oss << "../output/"
+        << std::put_time(&localTime, "%Y.%m.%d - %H.%M.%S")
+        << ".mp4";
+    return oss.str();
 }

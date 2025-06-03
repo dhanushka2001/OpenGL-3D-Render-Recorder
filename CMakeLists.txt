@@ -133,6 +133,13 @@ add_library(encoder STATIC
 # Set the target properties for encoder (where libencoder.a will be created)
 set_target_properties(encoder PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
 
+# Add the FFmpeg function library
+add_library(gui STATIC
+    src/gui.cpp
+)
+# Set the target properties for encoder (where libencoder.a will be created)
+set_target_properties(gui PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
+
 # Add the ImGui library
 add_library(imgui STATIC
     src/third_party/imgui/imgui.cpp 
@@ -166,17 +173,22 @@ target_include_directories(implot PUBLIC
 # Link ImPlot to ImGui
 target_link_libraries(implot PUBLIC imgui)  # ImPlot depends on ImGui
 
-# Add the Config library
+# Add the Settings library
 add_library(settings STATIC
     src/Settings.cpp
 )
 
-# Set the target properties for config (where libconfig.a will be created)
+# Set the target properties for settings (where libsettings.a will be created)
 set_target_properties(settings PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
 
-# Link config into any target that needs it
+# Link settings into any target that needs it
 target_link_libraries(encoder PUBLIC settings)
 target_link_libraries(text PUBLIC settings)
+target_link_libraries(gui PUBLIC settings)
+
+# Link gui to imgui (which implot is also linked to)
+target_link_libraries(gui PUBLIC imgui)
+target_link_libraries(gui PUBLIC implot)
 
 if(UNIX)
     find_package(OpenGL REQUIRED)
@@ -203,11 +215,12 @@ if(UNIX)
     message(STATUS "X264 include dirs: ${X264_INCLUDE_DIRS}")
     target_link_libraries(${PROJECT_NAME}
         timer
-        settings # don't even need to link as settings already linked to encoder and text, but no harm in including again
-        imgui    # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
+        gui      # gui depends on imgui and implot
         implot   # ImPlot static library from CMake
+        imgui    # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
         encoder
         text
+        settings # don't even need to link as settings already linked to encoder and text, but no harm in including again
         OpenGL::GL
         glfw
         PkgConfig::FFMPEG
@@ -224,6 +237,7 @@ if(WIN32)
         encoder
         text
         timer
+        gui
 
         ${CMAKE_SOURCE_DIR}/lib/GLFW/libglfw3.a
         ${CMAKE_SOURCE_DIR}/lib/OpenGL/libopengl32.a  # OpenGL
@@ -255,3 +269,46 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 #    COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/*
 #    COMMENT "Cleaning up the build directory"
 #)
+
+# Delete the CMakeCache.txt file (fixes "Rechecking globbed directories..." infinite loop issue when running "ninja" sometimes)
+# Run inside build/: cmake --build . --target clear
+add_custom_target(clear
+    COMMAND ${CMAKE_COMMAND} -E rm -f "${CMAKE_BINARY_DIR}/CMakeCache.txt"
+    COMMENT "Clearing CMake cache..."
+    VERBATIM
+)
+
+# Run inside build/: ninja zip OR cmake --build . --target zip
+set(PACKAGE_NAME "MyProgram-v1.0.0")
+set(PACKAGE_DIR "${CMAKE_BINARY_DIR}/${PACKAGE_NAME}")
+set(PACKAGE_ZIP "${CMAKE_BINARY_DIR}/${PACKAGE_NAME}.zip")
+# Uncomment ALL to make CMake run this target by default (always makes ZIP file)
+add_custom_target(zip #ALL
+    # Clean previous packaging folder if it exists
+    COMMAND ${CMAKE_COMMAND} -E rm -rf "${PACKAGE_DIR}"
+
+    # Create directory structure
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_DIR}/bin"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_DIR}/shaders"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_DIR}/assets"
+
+    # Copy binaries except imgui.ini
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_BINARY_DIR}/bin" "${PACKAGE_DIR}/bin"
+    COMMAND ${CMAKE_COMMAND} -E rm -f "${PACKAGE_DIR}/bin/imgui.ini"
+
+    # Copy shaders and assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/shaders" "${PACKAGE_DIR}/shaders"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/assets" "${PACKAGE_DIR}/assets"
+
+    # Create the ZIP archive (bin, shaders, assets under PACKAGE_NAME/)
+    COMMAND ${CMAKE_COMMAND} -E tar "cfv" "${PACKAGE_ZIP}" --format=zip -- "${PACKAGE_NAME}"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+
+    COMMENT "Packaging into ${PACKAGE_NAME}.zip with top-level folder"
+
+    # Delete unzipped packaging folder
+    COMMAND ${CMAKE_COMMAND} -E rm -rf "${PACKAGE_DIR}"
+
+    VERBATIM
+)
+
