@@ -12,20 +12,20 @@ namespace Timer {
         constexpr int NUM_TIMERS = 14;
 
         const char* names[NUM_TIMERS] = {
-            "[encoder] encodeFrame",
-            "[main] Rendering scene",
-            "[main] Blitting MSAA to non-MSAA FBO",
-            "[main] Rendering text",
-            "[main] Rendering ImGui/ImPlot",
-            "[main] Blitting non-MSAA FBO to screen",
-            "[main] Flip shader",
-            "[encoder] flipFrameVertically",
-            "[main] glClientWaitSync",
-            "[main] glMapBufferRange",
-            "[main] glReadPixels (PBO ON)",
-            "[main] glReadPixels (PBO OFF)",
-            "[main] queue push+wait (PBO ON)",
-            "[main] queue push+wait (PBO OFF)"
+            "encodeFrame",
+            "Rendering scene",
+            "Blitting MSAA to non-MSAA FBO",
+            "Rendering text",
+            "Rendering ImGui/ImPlot",
+            "Blitting non-MSAA FBO to screen",
+            "Flip shader",
+            "flipFrameVertically",
+            "glClientWaitSync",
+            "glMapBufferRange",
+            "glReadPixels (PBO ON)",
+            "glReadPixels (PBO OFF)",
+            "queue push+wait (PBO ON)",
+            "queue push+wait (PBO OFF)"
         };
 
         std::array<double, NUM_TIMERS> totalTimes = {};
@@ -75,10 +75,10 @@ namespace Timer {
                 SetConsoleOutputCP(CP_UTF8); // needed for ± symbol
                 #endif /* _WIN32 */
                 if (i == ENCODE) {
-                    std::cout << names[i] << " max: " << maxTimes[i] << "ms (" << maxTimeCount[i] << ") min: " << minTimes[i] << "ms (" << minTimeCount[i] << ") (" << counts[i] << " samples)\n";
+                    std::cout << "[Timer] " << names[i] << " took max: " << maxTimes[i] << "ms (" << maxTimeCount[i] << ") min: " << minTimes[i] << "ms (" << minTimeCount[i] << ") (" << counts[i] << " samples)\n";
                 }
                 // std::cout << names[i] << " avg: " << (totalTimes[i] / counts[i]) <<  " ms ± maxtime: " << maxTimes[i] << " (" << maxTimeCount[i] << ") mintime: " << minTimes[i] << " (" << minTimeCount[i] << ") (" << counts[i] << " samples)\n";
-                std::cout << names[i] << " took avg: " << (totalTimes[i] / counts[i]) <<  " ms ± " << (maxTimes[i] - minTimes[i]) / 2.0 << "ms (" << counts[i] << " samples)\n";
+                std::cout << "[Timer] " << names[i] << " took avg: " << (totalTimes[i] / counts[i]) <<  " ms ± " << (maxTimes[i] - minTimes[i]) / 2.0 << "ms (" << counts[i] << " samples)\n";
             }
         }
     }

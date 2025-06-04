@@ -17,11 +17,14 @@ const AVCodec* FFmpegEncoder::chooseEncoder() {
 
     if (libx264) {
         codec = avcodec_find_encoder_by_name("libx264");
-        if (!codec)
+        if (!codec) {
+            std::lock_guard<std::mutex> coutLock(coutMutex);
             std::cerr << "[Encoder] ERROR: libx264 encoder not found\n";
+        }
     } else {
         codec = avcodec_find_encoder_by_name("h264_mf");
         if (!codec) {
+            std::lock_guard<std::mutex> coutLock(coutMutex);
             std::cerr << "[Encoder] ERROR: h264_mf encoder not found\n";
             std::cout << "[Encoder] Checking for libx264 instead...\n";
             codec = avcodec_find_encoder(AV_CODEC_ID_H264);
@@ -33,7 +36,7 @@ const AVCodec* FFmpegEncoder::chooseEncoder() {
 }
 
 bool FFmpegEncoder::initialize(const char* filename, double recordingStartTime) {
-    std::lock_guard<std::mutex> lock(encoderMutex);
+    // std::lock_guard<std::mutex> lock(encoderMutex);
     startTime = recordingStartTime;
 
     avformat_alloc_output_context2(&formatCtx, nullptr, "mp4", filename);
@@ -56,11 +59,12 @@ bool FFmpegEncoder::initialize(const char* filename, double recordingStartTime) 
     AVDictionary* opts = nullptr;
 
     if (strcmp(codec->name, "libx264") == 0) {
+        std::lock_guard<std::mutex> coutLock(coutMutex);
         codecCtx->bit_rate = 0;
         av_dict_set(&opts, "preset", g_preset.c_str(), 0);
-        std::cout << "[ffmpeg] using preset: '" << g_preset << "'\n";
+        std::cout << "[Encoder] using preset: '" << g_preset << "'\n";
         av_dict_set(&opts, "crf", g_crf.c_str(), 0);
-        std::cout << "[ffmpeg] using crf: '" << g_crf << "'\n";
+        std::cout << "[Encoder] using crf: '" << g_crf << "'\n";
         av_dict_set(&opts, "tune", "zerolatency", 0);
     } else if (strcmp(codec->name, "h264_mf") == 0) {
         codecCtx->bit_rate = g_bit_rate;
@@ -97,7 +101,7 @@ bool FFmpegEncoder::initialize(const char* filename, double recordingStartTime) 
 }
 
 bool FFmpegEncoder::encodeFrame(const uint8_t* rgbData, float currentTime) {
-    std::lock_guard<std::mutex> lock(encoderMutex);
+    // std::lock_guard<std::mutex> lock(encoderMutex); // use a mutex just in case as encodeFrame() can be called from main thread and encoder thread (but shouldn't be at the same time)
     if (!frameX || !frameX->data[0] || !swsCtx) return false;
 
     uint8_t* inData[1] = {(uint8_t*)rgbData};

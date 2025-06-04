@@ -29,6 +29,7 @@ public:
 
 private:
     std::mutex encoderMutex;
+    std::mutex coutMutex;
 
     AVFormatContext* formatCtx = nullptr;
     AVCodecContext* codecCtx = nullptr;

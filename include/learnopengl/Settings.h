@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <atomic>
+#include <mutex>
 
 namespace Settings {
     // possibly add sub-namespaces like Screen, Camera, etc.
@@ -14,6 +15,7 @@ namespace Settings {
     extern bool                     fullscreen;
     extern int                      vsync;          // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
     extern bool                     pbo;
+    extern bool                     encoder_thread;
     constexpr unsigned int          PBO_COUNT       =  2;
     constexpr unsigned int          CHANNEL_COUNT   =  3;
     extern bool                     paused;
@@ -51,6 +53,8 @@ namespace Settings {
         state = static_cast<TextTriState>((static_cast<uint8_t>(state) + 1) % 3);
     }
     extern TextTriState currentTextMode;
+
+    inline std::mutex coutMutex;
 }
 
 #endif /* SETTINGS_H */

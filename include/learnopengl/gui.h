@@ -3,6 +3,7 @@
 
 namespace GUI {
     void Init(GLFWwindow *window);
+    void NewFrame();
     void Render();
     void Exit();
 }

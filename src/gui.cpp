@@ -24,26 +24,37 @@ namespace GUI {
             "Click N to toggle ImGui/ImPlot.\n"
             "Click B to cycle between fullscreen font texture\n"
             "atlas and text, text only, or all OFF.\n"
-            "\nClick P when recording to see the boost in FPS with\n"
-            "multithreading and asynchronous read-back PBOs!\n"
+            "\nClick T when recording to enable multithreading.\n"
+            "Click P when recording to enable PBOs for asynchronous read-back.\n"
+            "Click F to toggle frame flipping on the GPU with shaders.\n"
             "Click V to toggle Vsync.\n"
-            "\nPress R to turn recording ON/OFF.\n"
-            "Screen recording is ";
+            "\nScreen recording is ";
         constexpr const char* HeaderText = "\nEncoder selected:\n";
         constexpr const char* encoderTypes[] = { "h264_mf", "libx264" };
         constexpr const char* framerates[] = { "30", "60" };
+        constexpr const char* presets[] = {
+            "ultrafast", "superfast", "veryfast", "faster",
+            "fast", "medium", "slow", "slower"
+        };
         int currentEncoderIdx = Settings::libx264 ? 1 : 0;
         int selectedFramerateIdx = (Settings::framerate == 60) ? 1 : 0;
         constexpr const int num_encoders = IM_ARRAYSIZE(encoderTypes);
-        constexpr const char* EncoderInfo = 
-            "\nlibx264 is a software encoder optimized for size and\n"
+        constexpr const char* x264Info = 
+            "libx264 is a software encoder optimized for size and\n"
             "quality (can produce same quality as h264_mf for half\n"
-            "the size).\nh264_mf is a hardware encoder designed for speed and\n"
+            "the size).";
+         constexpr const char* h264mfInfo = 
+            "h264_mf is a hardware encoder designed for speed and\n"
             "low CPU use.";
+        const std::string recordingInfo = "\nPress R to turn recording ON/OFF. You can find the recordings in /build/output/.";
         constexpr const char* ExitText = "\nPress ESC to exit.";
-        constexpr const int xpos = 30;
-        constexpr const int ypos = 30;
-        constexpr const int width = 420;
+        // imgui (height can change at runtime)
+        constexpr const int imgui_xpos = 30;
+        constexpr const int imgui_ypos = 30;
+        constexpr const int imgui_width = 420;
+        // implot
+        constexpr const int implot_width = 544;
+        constexpr const int implot_height = 556;
         bool encoderChanged = false;
         int presetIdx = 0;
     }
@@ -58,36 +69,33 @@ namespace GUI {
         ImGui_ImplOpenGL3_Init("#version 430");
     }
 
+    void NewFrame() {
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+    }
+
     // hot function, used in render loop
     void Render() {
         using namespace Settings;
-        int height = Settings::libx264 ? 528 : 550; // new line = +20 height. libx264 height = h264_mf height - 16.
-        ImGui::SetNextWindowPos(ImVec2(xpos, ypos), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Once);
+
+        int imgui_height = Settings::libx264 ? 517 : 536; // new line = +20 height. libx264 height = h264_mf height - 16.
+        ImGui::SetNextWindowPos(ImVec2(imgui_xpos, imgui_ypos), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(imgui_width, imgui_height), ImGuiCond_Once);
         if (encoderChanged) {
-            ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2(imgui_width, imgui_height), ImGuiCond_Always);
             encoderChanged = false;
         }
         ImGui::Begin(Title);
         ImGui::PushTextWrapPos(); // wrap at window edge
         
-        const std::string isRecording = Settings::recording ?
-            "ON. You can find the recordings in /build/output/." :
-            "OFF. ";
-        std::string MainText = MainBody + isRecording;
+        const std::string isRecording = Settings::recording ? "ON." : "OFF.";
+        std::string MainText = MainBody + isRecording + recordingInfo;
         ImGui::Text(MainText.c_str());
 
         ImGui::Text("%s", HeaderText);
         if (recording) ImGui::BeginDisabled();
         {
-            // --- Encoder selection ---
-            // currentEncoderIdx = libx264 ? 1 : 0;
-            // if (ImGui::Combo("Encoder", &currentEncoderIdx, encoderTypes, num_encoders)) {
-            //     // User changed selection, update the external flag accordingly
-            //     libx264 = (currentEncoderIdx == 1);
-            //     // If you want, update other encoder settings or flags here too
-            // }
-
             bool isLibx264 = Settings::libx264;
             bool isH264mf = !Settings::libx264;
             // Custom checkbox logic for h264_mf
@@ -110,10 +118,7 @@ namespace GUI {
             // --- Encoder-specific settings ---
             if (Settings::libx264) {
                 // --- libx264 settings ---
-                const char* presets[] = {
-                    "ultrafast", "superfast", "veryfast", "faster",
-                    "fast", "medium", "slow", "slower"
-                };
+
                 // Match g_preset to index
                 // static int presetIdx = 0;
                 for (int i = 0; i < IM_ARRAYSIZE(presets); ++i) {
@@ -162,19 +167,24 @@ namespace GUI {
         }
         if (recording) ImGui::EndDisabled();
 
-        ImGui::Text("%s", EncoderInfo);
+        if (libx264) {
+            ImGui::Text("%s", x264Info);
+        } else {
+            ImGui::Text("%s", h264mfInfo);
+        }
+        // ImGui::Text("%s", EncoderInfo);
         ImGui::Text("%s", ExitText);
         ImGui::End();
 
         
         // Show the ImPlot demo window
         #ifdef _WIN32
-        ImGui::SetNextWindowPos(ImVec2(1056, 28), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - implot_width, 30), ImGuiCond_Once);
         #endif /* _WIN32 */
         #ifdef __linux__
         ImGui::SetNextWindowPos(ImVec2(956, 580), ImGuiCond_Once);
         #endif /* __linux__ */
-        ImGui::SetNextWindowSize(ImVec2(544, 556), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(implot_width, implot_height), ImGuiCond_Once);
         if (ImGui::Begin("ImPlot Demo")) {
             ImPlot::ShowDemoWindow();
         }

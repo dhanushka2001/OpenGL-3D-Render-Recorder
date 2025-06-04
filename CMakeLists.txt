@@ -265,10 +265,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # Add a custom 'clean' target
-#add_custom_target(clean-all
-#    COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/*
-#    COMMENT "Cleaning up the build directory"
-#)
+add_custom_target(clean-all
+   COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/*
+   COMMENT "Cleaning up the build directory"
+)
 
 # Delete the CMakeCache.txt file (fixes "Rechecking globbed directories..." infinite loop issue when running "ninja" sometimes)
 # Run inside build/: cmake --build . --target clear
