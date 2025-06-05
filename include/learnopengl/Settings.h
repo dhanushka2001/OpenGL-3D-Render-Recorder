@@ -15,12 +15,12 @@ namespace Settings {
     extern bool                     fullscreen;
     extern int                      vsync;          // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
     extern bool                     pbo;
-    extern bool                     encoder_thread;
     constexpr unsigned int          PBO_COUNT       =  2;
     constexpr unsigned int          CHANNEL_COUNT   =  3;
     extern bool                     paused;
     extern bool                     msaa;           // | 0 = no anti-aliasing | 1 = 4xMSAA |
     extern std::atomic<bool>        recording;
+    extern std::atomic<bool>        encoder_thread;
     extern bool                     flip_shader;
     extern bool                     wireframe;
     extern bool                     imgui;

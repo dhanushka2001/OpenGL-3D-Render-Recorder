@@ -133,7 +133,7 @@ add_library(encoder STATIC
 # Set the target properties for encoder (where libencoder.a will be created)
 set_target_properties(encoder PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
 
-# Add the FFmpeg function library
+# Add the GUI library that handles ImGui/ImPlot
 add_library(gui STATIC
     src/gui.cpp
 )

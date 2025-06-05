@@ -6,7 +6,7 @@
 // --------------
 #include <learnopengl/shader_s.h>       // Shader class
 #include <learnopengl/camera.h>         // Camera class
-#include <learnopengl/encoder.h>        // FFmpeg functions
+#include <learnopengl/encoder.h>        // FFmpeg Encoder class
 #include <learnopengl/fontmanager.h>    // Font Manager
 #include <learnopengl/textrenderer.h>   // Text Renderer
 #include <learnopengl/timer.h>          // Timer
@@ -556,8 +556,7 @@ int main()
     std::mutex queueMutex;
     std::condition_variable queueCond;
     std::atomic<bool> shuttingDown = false;  // To stop the thread on app exit
-    bool isEncoding = false;
-    // std::atomic<bool> recording = false;
+    std::atomic<bool> isEncoding = false;
     const size_t MAX_QUEUE_SIZE = 8;
 
     Timer::init();
@@ -579,118 +578,121 @@ int main()
             while (!shuttingDown || !frameQueue.empty()) {
                 std::unique_lock<std::mutex> lock(queueMutex);
 
-                // Wait for relevant signal
+                // Let encoder thread sleep, wait(lock, predicate), wait until predicate returns true
                 queueCond.wait(lock, [&]() {
                     return recording || !frameQueue.empty() || shuttingDown;
                 });
 
-                // exit cleanly only if recording stopped and queue empty
+                // exit cleanly only if shutting down, recording stopped and queue empty
                 if (shuttingDown && !recording && frameQueue.empty()) break;
 
+                // go back to top of while loop if not recording and queue empty (e.g. recording turned off)
                 if (!recording && frameQueue.empty()) continue;
 
                 // Step 1: If recording is ON and not currently encoding, then start encoding
                 if (recording && !isEncoding) {
-                    std::string filename = getTimestampedFilename();
+                    if (encoder_thread) {
+                        std::string filename = getTimestampedFilename();
 
-                    while (!frameQueue.empty()) frameQueue.pop();  // Clear any old frames from previous instance
+                        while (!frameQueue.empty()) frameQueue.pop();  // Clear any old frames from previous instance
 
-                    // Local instance for this session only
-                    // auto encoder = std::make_unique<FFmpegEncoder>();
-                    if (!encoder->initialize(filename.c_str(), glfwGetTime())) {
-                        std::cerr << "[encoderThread] ERROR: Failed to initialize encoder\n";
-                        continue;
+                        // Local instance for this session only
+                        // auto encoder = std::make_unique<FFmpegEncoder>();
+                        if (!encoder->initialize(filename.c_str(), glfwGetTime())) {
+                            std::cerr << "[encoderThread] ERROR: Failed to initialize encoder\n";
+                            continue;
+                        }
+
+                        isEncoding = true;
                     }
+                }
 
-                    isEncoding = true;
+                // Step 2: While recording or queue still has frames, encode frames
+                while (recording || !frameQueue.empty()) {
+                    // keep while loop running even if encoder_thread OFF, so that encoder thread can handle finalize() when recording turned OFF.
+                    if (encoder_thread) {
+                        lock.unlock();  // Unlock while processing
+                        if (!frameQueue.empty()) {
+                            FrameData frame;
+                            {
+                                std::lock_guard<std::mutex> qlock(queueMutex);
+                                frame = std::move(frameQueue.front());
+                                frameQueue.pop();
+                            }
+                            if (frame.usingPBO) { // PBO ON
+                                // if (pboFences[frame.pboIndex]) {
+                                //     GLenum waitReturn = glClientWaitSync(pboFences[index], GL_SYNC_FLUSH_COMMANDS_BIT, 1'000'000'000);
+                                //     if (waitReturn == GL_ALREADY_SIGNALED || waitReturn == GL_CONDITION_SATISFIED) {
+                                //         glDeleteSync(pboFences[frame.pboIndex]);
+                                //         pboFences[index] = nullptr;
+                                //     } else {
+                                //         std::cerr << "[encoderThread] WARNING: glClientWaitSync timeout or error\n";
+                                //         lock.lock();  // Relock before looping
+                                //         continue;
+                                //     }
+                                // }
 
-                    // Step 2: While recording or queue still has frames, encode frames
-                    while (recording || !frameQueue.empty()) {
-                        // keep while loop running even if encoder_thread OFF, so that encoder thread can handle finalize() when recording turned OFF.
-                        if (encoder_thread) {
-                            lock.unlock();  // Unlock while processing
-                            if (!frameQueue.empty()) {
-                                FrameData frame;
-                                {
-                                    std::lock_guard<std::mutex> qlock(queueMutex);
-                                    frame = std::move(frameQueue.front());
-                                    frameQueue.pop();
-                                }
-                                if (frame.usingPBO) { // PBO ON
-                                    // if (pboFences[frame.pboIndex]) {
-                                    //     GLenum waitReturn = glClientWaitSync(pboFences[index], GL_SYNC_FLUSH_COMMANDS_BIT, 1'000'000'000);
-                                    //     if (waitReturn == GL_ALREADY_SIGNALED || waitReturn == GL_CONDITION_SATISFIED) {
-                                    //         glDeleteSync(pboFences[frame.pboIndex]);
-                                    //         pboFences[index] = nullptr;
-                                    //     } else {
-                                    //         std::cerr << "[encoderThread] WARNING: glClientWaitSync timeout or error\n";
-                                    //         lock.lock();  // Relock before looping
-                                    //         continue;
-                                    //     }
+                                glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[frame.pboIndex]);
+                                GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, DATA_SIZE, GL_MAP_READ_BIT);
+
+                                if (ptr) {
+                                    glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+                                    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
+                                    if (!frame.flipped) {
+                                        Timer::startTimer(t);
+                                        flipFrameVertically(ptr);
+                                        {
+                                            std::lock_guard<std::mutex> coutLock(coutMutex);
+                                            Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                                        }
+                                    }
+                                    frame.frame = ptr;
+
+                                    // Timer::startTimer(t);
+                                    // encoder->encodeFrame(ptr, frame.pts);
+                                    // {
+                                    //     std::lock_guard<std::mutex> coutLock(coutMutex);
+                                    //     Timer::endTimer(Timer::ENCODE, t);
                                     // }
-
-                                    glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[frame.pboIndex]);
-                                    GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, DATA_SIZE, GL_MAP_READ_BIT);
-
-                                    if (ptr) {
-                                        glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-                                        glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-                                        if (!frame.flipped) {
-                                            Timer::startTimer(t);
-                                            flipFrameVertically(ptr);
-                                            {
-                                                std::lock_guard<std::mutex> coutLock(coutMutex);
-                                                Timer::endTimer(Timer::FLIP_FUNCTION, t);
-                                            }
-                                        }
-                                        frame.frame = ptr;
-
-                                        // Timer::startTimer(t);
-                                        // encoder->encodeFrame(ptr, frame.pts);
-                                        // {
-                                        //     std::lock_guard<std::mutex> coutLock(coutMutex);
-                                        //     Timer::endTimer(Timer::ENCODE, t);
-                                        // }
-                                    }
-                                } else { // NON-PBO logic
-                                    if (frame.frame) {
-                                        if (!flip_shader) {
-                                            Timer::startTimer(t);
-                                            flipFrameVertically(frame.frame);
-                                            {
-                                                std::lock_guard<std::mutex> coutLock(coutMutex);
-                                                Timer::endTimer(Timer::FLIP_FUNCTION, t);
-                                            }
-                                        }
-
-                                        // Timer::startTimer(t);
-                                        // encoder->encodeFrame(frame.frame, frame.pts);
-                                        // {
-                                        //     std::lock_guard<std::mutex> coutLock(coutMutex);
-                                        //     Timer::endTimer(Timer::ENCODE, t);
-                                        // }
-                                    }
                                 }
-                                Timer::startTimer(t);
-                                encoder->encodeFrame(frame.frame, frame.pts);
-                                {
-                                    std::lock_guard<std::mutex> coutLock(coutMutex);
-                                    Timer::endTimer(Timer::ENCODE, t);
+                            } else { // NON-PBO logic
+                                if (frame.frame) {
+                                    if (!frame.flipped) {
+                                        Timer::startTimer(t);
+                                        flipFrameVertically(frame.frame);
+                                        {
+                                            std::lock_guard<std::mutex> coutLock(coutMutex);
+                                            Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                                        }
+                                    }
+
+                                    // Timer::startTimer(t);
+                                    // encoder->encodeFrame(frame.frame, frame.pts);
+                                    // {
+                                    //     std::lock_guard<std::mutex> coutLock(coutMutex);
+                                    //     Timer::endTimer(Timer::ENCODE, t);
+                                    // }
                                 }
                             }
-                            // {
-                            //     std::lock_guard<std::mutex> coutLock(coutMutex);
-                            //     std::cout << "Frame queue empty\n";
-                            // }
-                            lock.lock();  // Relock for condition checks
+                            Timer::startTimer(t);
+                            encoder->encodeFrame(frame.frame, frame.pts);
+                            {
+                                std::lock_guard<std::mutex> coutLock(coutMutex);
+                                Timer::endTimer(Timer::ENCODE, t);
+                            }
                         }
+                        // {
+                        //     std::lock_guard<std::mutex> coutLock(coutMutex);
+                        //     std::cout << "Frame queue empty\n";
+                        // }
+                        lock.lock();  // Relock for condition checks
                     }
-
-                    // Step 3: Finalize when done recording
-                    encoder->finalize();
-                    isEncoding = false;
                 }
+
+                // Step 3: Finalize when done recording and queue empty
+                encoder->finalize();
+                isEncoding = false;
             }
         } catch (const std::exception& e) {
             std::cerr << "[encoderThread] ERROR: Encoder thread crashed: " << e.what() << std::endl;
@@ -769,6 +771,21 @@ int main()
         // recording ON
         if (recording)
         {
+            // Step 1: If recording is ON and not currently encoding, and not using encoder thread, then start encoding using main thread
+            if (!isEncoding && !encoder_thread) {
+                std::string filename = getTimestampedFilename();
+
+                while (!frameQueue.empty()) frameQueue.pop();  // Clear any old frames from previous instance
+
+                // Local instance for this session only
+                // auto encoder = std::make_unique<FFmpegEncoder>();
+                if (!encoder->initialize(filename.c_str(), glfwGetTime())) {
+                    std::cerr << "[main] ERROR: Failed to initialize encoder\n";
+                    continue;
+                }
+                isEncoding = true;
+            }
+
             // Step 1: Render the scene to the MSAA FBO
             // ----------------------------------------
             glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
@@ -891,6 +908,7 @@ int main()
                     data.frame = frame;
                     data.pts = crntTime;
                     data.usingPBO = false;
+                    data.flipped = flip_shader;
                     if (encoder_thread) {
                         {
                             std::lock_guard<std::mutex> qlock(queueMutex);
@@ -1085,6 +1103,10 @@ int main()
             shuttingDown = true;
         }
         queueCond.notify_all();
+        {
+            std::lock_guard<std::mutex> coutLock(coutMutex);
+            std::cout << "Exiting program, waiting for encoder to finish...\n";
+        }
         // Wait for encoder thread to finish
         if (encoderThread.joinable()) {
             encoderThread.join();
