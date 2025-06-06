@@ -59,13 +59,14 @@ bool FFmpegEncoder::initialize(const char* filename, double recordingStartTime) 
     AVDictionary* opts = nullptr;
 
     if (strcmp(codec->name, "libx264") == 0) {
-        std::lock_guard<std::mutex> coutLock(coutMutex);
         codecCtx->bit_rate = 0;
         av_dict_set(&opts, "preset", g_preset.c_str(), 0);
-        std::cout << "[Encoder] using preset: '" << g_preset << "'\n";
         av_dict_set(&opts, "crf", g_crf.c_str(), 0);
-        std::cout << "[Encoder] using crf: '" << g_crf << "'\n";
         av_dict_set(&opts, "tune", "zerolatency", 0);
+        
+        std::lock_guard<std::mutex> coutLock(coutMutex);
+        std::cout << "[Encoder] using preset: '" << g_preset << "'\n";
+        std::cout << "[Encoder] using crf: '" << g_crf << "'\n";
     } else if (strcmp(codec->name, "h264_mf") == 0) {
         codecCtx->bit_rate = g_bit_rate;
         codecCtx->gop_size = g_gop_size;
