@@ -279,7 +279,7 @@ add_custom_target(clear
 )
 
 # Run inside build/: ninja zip OR cmake --build . --target zip
-set(PACKAGE_NAME "MyProgram-v1.0.0")
+set(PACKAGE_NAME "MyProgram-v1.1.0")
 set(PACKAGE_DIR "${CMAKE_BINARY_DIR}/${PACKAGE_NAME}")
 set(PACKAGE_ZIP "${CMAKE_BINARY_DIR}/${PACKAGE_NAME}.zip")
 # Uncomment ALL to make CMake run this target by default (always makes ZIP file)

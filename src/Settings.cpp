@@ -13,8 +13,8 @@ namespace Settings {
     bool                    paused          =  0;
     bool                    msaa            =  1;  // | 0 = no anti-aliasing | 1 = 4xMSAA |
     std::atomic<bool>       recording       =  0;
-    std::atomic<bool>       encoder_thread  =  0;
-    bool                    flip_shader     =  0;
+    std::atomic<bool>       encoder_thread  =  1;
+    bool                    flip_shader     =  1;
     bool                    wireframe       =  0;
     bool                    imgui           =  1;
     TextTriState            currentTextMode = TextTriState::TextAndAtlasON;
