@@ -1,5 +1,5 @@
 *Learning OpenGL for High Performance Scientific Computing and Modelling on the GPU*
-# LearnOpenGL
+# OpenGL-3D-Render-Recorder
 
 https://github.com/user-attachments/assets/fc8763bd-dcda-4dbf-9c60-3e322aa1a2ce
 
