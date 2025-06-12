@@ -9,12 +9,12 @@ namespace Settings {
     unsigned int            framerate       = 60;  // recording 30fps, 60fps, etc.
     bool                    fullscreen      =  0;
     int                     vsync           =  0;  // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
-    bool                    pbo             =  0;
-    bool                    paused          =  0;
     bool                    msaa            =  1;  // | 0 = no anti-aliasing | 1 = 4xMSAA |
     std::atomic<bool>       recording       =  0;
-    std::atomic<bool>       encoder_thread  =  1;
-    bool                    flip_shader     =  1;
+    std::atomic<bool>       encoder_thread  =  0;
+    bool                    pbo             =  0;
+    bool                    paused          =  0;    
+    bool                    flip_shader     =  0;
     bool                    wireframe       =  0;
     bool                    imgui           =  1;
     TextTriState            currentTextMode = TextTriState::TextAndAtlasON;

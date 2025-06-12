@@ -2,6 +2,7 @@
 // -----------
 #include <glad/glad.h>                  // glad
 #include <GLFW/glfw3.h>                 // GLFW (includes stdint.h)
+
 // Custom headers
 // --------------
 #include <learnopengl/shader_s.h>       // Shader class
@@ -12,12 +13,14 @@
 #include <learnopengl/timer.h>          // Timer
 #include <learnopengl/gui.h>            // GUI
 #include <learnopengl/Settings.h>       // Settings
+
 // I/O and filesystem
 // ------------------
 #include <iostream>                     // for std::cin/cout/cerr
 #include <filesystem>                   // for std::filesystem
-#include <iomanip>                      // for std::precision(3)              
-#include <cstdio>                       // For sprintf
+// #include <iomanip>                      // for std::precision(3)              
+// #include <cstdio>                       // For sprintf
+
 // stb
 // ---
 #define  STB_IMAGE_IMPLEMENTATION
@@ -25,17 +28,12 @@
 // #define  STB_IMAGE_WRITE_IMPLEMENTATION
 // #include <stb/stb_image_write.h>
 // #define  GL_GLEXT_PROTOTYPES 1
+
 // Memory buffer
 // -------------
 #include <array>
-#include <vector>
-// Multithreading
-// --------------
-#include <thread>
-#include <queue>
-#include <mutex>
-#include <atomic>
-#include <condition_variable>
+// #include <vector>
+
 // glm
 // ---
 #include <glm/glm.hpp>
@@ -54,8 +52,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 std::string GetFPSText(float fps, float ms, float crntTime);
 void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime, int &frameCountFPS);
 void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::array<glm::vec3, 10>& cubePositions, glm::vec3 &lightPos, float crntTime);
-void flipFrameVertically(unsigned char* frame);
-std::string getTimestampedFilename();
 
 #define IMGUI               1
 
@@ -126,6 +122,7 @@ int main()
     // const GLFWvidmode* mode = glfwGetVideoMode(monitor);
     // SetScreenResolution(mode->width, mode->height);
     SetScreenResolution(1600, 900); // if the resolution is too low, FPS could get too high (~1000fps) and program will crash
+    // SetScreenResolution(800, 450);
 
     lastX = SCR_WIDTH / 2;
     lastY = SCR_HEIGHT / 2;
@@ -139,7 +136,7 @@ int main()
     // unsigned int frameCounter = 0;
     GLuint pboIds[PBO_COUNT];
     GLsync pboFences[PBO_COUNT] = { nullptr };
-    unsigned int DATA_SIZE;
+    const size_t DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * 3;
 
     // glfw window creation
     // --------------------
@@ -369,19 +366,25 @@ int main()
     // GLuint rboId;
     GLuint fboTexture;
 
-    unsigned char* frame = NULL;
+
+    std::array<std::unique_ptr<unsigned char[]>, BUFFER_COUNT> frameBuffers;
+    int currentWriteIndex = 0;
+
+    std::array<GLubyte*, BUFFER_COUNT> pboBuffers;
 
     // if (recording)
     {
         // PBO OFF
         // -------
-        frame = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 3];
+        for (int i = 0; i < BUFFER_COUNT; ++i) {
+            frameBuffers[i] = std::make_unique<unsigned char[]>(DATA_SIZE);
+        }
 
         // PBO ON
         // ------
         // create 2 pixel buffer objects, you need to delete them when program exits.
         // glBufferData() with NULL pointer reserves only memory space.
-        DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
+        // DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
         glGenBuffers(PBO_COUNT, pboIds);
         for (int i = 0; i < static_cast<int>(PBO_COUNT); ++i) {
             glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[i]);
@@ -542,23 +545,6 @@ int main()
     TextRenderer textRenderer(fontManager);
 
 
-    // FrameData holds a copy of the frame and its timestamp
-    struct FrameData {
-        unsigned char *frame;           // only used if pbo is OFF
-        GLuint pboIndex;                // only used if pbo is ON
-        double pts;
-        bool usingPBO = pbo;            // was PBO ON/OFF when the frame was rendered?
-        bool flipped = flip_shader;     // has the frame already been flipped with flip shader?
-    };
-
-    // A lock-free queue is overkill here — simple mutex + condition_variable works well
-    std::queue<FrameData> frameQueue;
-    std::mutex queueMutex;
-    std::condition_variable queueCond;
-    std::atomic<bool> shuttingDown = false;  // To stop the thread on app exit
-    std::atomic<bool> isEncoding = false;
-    const size_t MAX_QUEUE_SIZE = 8;
-
     Timer::init();
     std::chrono::high_resolution_clock::time_point t;
 
@@ -567,146 +553,16 @@ int main()
     if (!fs::exists(outputDir)) {
         fs::create_directories(outputDir);
     }
-    std::shared_ptr<Encoder> encoder = std::make_shared<Encoder>();
-    // encoder thread
-    encoder->start(window);
-    // std::thread encoderThread([&]() {
-    //     glfwMakeContextCurrent(sharedContextWindow);  // Make encoder's context current here
-    //     gladLoadGL();  // Needed again in this thread!
 
-    //     try {
-    //         // keep encoder thread running even if shutting down if frame still in queue
-    //         while (!shuttingDown || !frameQueue.empty()) {
-    //             std::unique_lock<std::mutex> qlock(queueMutex);
-
-    //             // Let encoder thread sleep, wait(lock, predicate), wait until predicate returns true
-    //             queueCond.wait(qlock, [&]() {
-    //                 return recording || !frameQueue.empty() || shuttingDown;
-    //             });
-
-    //             // exit cleanly only if shutting down, recording stopped and queue empty
-    //             if (shuttingDown && !recording && frameQueue.empty()) break;
-
-    //             // go back to top of while loop if not recording and queue empty (e.g. recording turned off)
-    //             if (!recording && frameQueue.empty()) continue;
-
-    //             // Step 1: If recording is ON and not currently encoding, then start encoding
-    //             if (recording && !isEncoding) {
-    //                 if (encoder_thread) {
-    //                     std::string filename = getTimestampedFilename();
-
-    //                     while (!frameQueue.empty()) frameQueue.pop();  // Clear any old frames from previous instance
-
-    //                     // Local instance for this session only
-    //                     // auto encoder = std::make_unique<FFmpegEncoder>();
-    //                     if (!encoder->initialize(filename.c_str(), glfwGetTime())) {
-    //                         std::cerr << "[encoderThread] ERROR: Failed to initialize encoder\n";
-    //                         continue;
-    //                     }
-
-    //                     isEncoding = true;
-    //                 }
-    //             }
-
-    //             // Step 2: While recording or queue still has frames, encode frames
-    //             while (recording || !frameQueue.empty()) {
-    //                 // keep while loop running even if encoder_thread OFF, so that encoder thread can handle finalize() when recording turned OFF.
-    //                 if (encoder_thread) {
-    //                     qlock.unlock();  // Unlock while processing
-    //                     if (!frameQueue.empty()) {
-    //                         FrameData frame;
-    //                         {
-    //                             std::lock_guard<std::mutex> qlock(queueMutex);
-    //                             frame = std::move(frameQueue.front());
-    //                             frameQueue.pop();
-    //                         }
-    //                         if (frame.usingPBO) { // PBO ON
-    //                             // if (pboFences[frame.pboIndex]) {
-    //                             //     GLenum waitReturn = glClientWaitSync(pboFences[index], GL_SYNC_FLUSH_COMMANDS_BIT, 1'000'000'000);
-    //                             //     if (waitReturn == GL_ALREADY_SIGNALED || waitReturn == GL_CONDITION_SATISFIED) {
-    //                             //         glDeleteSync(pboFences[frame.pboIndex]);
-    //                             //         pboFences[index] = nullptr;
-    //                             //     } else {
-    //                             //         std::cerr << "[encoderThread] WARNING: glClientWaitSync timeout or error\n";
-    //                             //         lock.lock();  // Relock before looping
-    //                             //         continue;
-    //                             //     }
-    //                             // }
-
-    //                             glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[frame.pboIndex]);
-    //                             GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, DATA_SIZE, GL_MAP_READ_BIT);
-
-    //                             if (ptr) {
-    //                                 glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-    //                                 glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-    //                                 if (!frame.flipped) {
-    //                                     Timer::startTimer(t);
-    //                                     flipFrameVertically(ptr);
-    //                                     {
-    //                                         std::lock_guard<std::mutex> coutLock(coutMutex);
-    //                                         Timer::endTimer(Timer::FLIP_FUNCTION, t);
-    //                                     }
-    //                                 }
-    //                                 frame.frame = ptr;
-
-    //                                 // Timer::startTimer(t);
-    //                                 // encoder->encodeFrame(ptr, frame.pts);
-    //                                 // {
-    //                                 //     std::lock_guard<std::mutex> coutLock(coutMutex);
-    //                                 //     Timer::endTimer(Timer::ENCODE, t);
-    //                                 // }
-    //                             }
-    //                         } else { // NON-PBO logic
-    //                             if (frame.frame) {
-    //                                 if (!frame.flipped) {
-    //                                     Timer::startTimer(t);
-    //                                     flipFrameVertically(frame.frame);
-    //                                     {
-    //                                         std::lock_guard<std::mutex> coutLock(coutMutex);
-    //                                         Timer::endTimer(Timer::FLIP_FUNCTION, t);
-    //                                     }
-    //                                 }
-
-    //                                 // Timer::startTimer(t);
-    //                                 // encoder->encodeFrame(frame.frame, frame.pts);
-    //                                 // {
-    //                                 //     std::lock_guard<std::mutex> coutLock(coutMutex);
-    //                                 //     Timer::endTimer(Timer::ENCODE, t);
-    //                                 // }
-    //                             }
-    //                         }
-    //                         Timer::startTimer(t);
-    //                         encoder->encodeFrame(frame.frame, frame.pts);
-    //                         {
-    //                             std::lock_guard<std::mutex> coutLock(coutMutex);
-    //                             Timer::endTimer(Timer::ENCODE, t);
-    //                         }
-    //                     }
-    //                     // {
-    //                     //     std::lock_guard<std::mutex> coutLock(coutMutex);
-    //                     //     std::cout << "Frame queue empty\n";
-    //                     // }
-    //                     qlock.lock();  // Relock for condition checks
-    //                 }
-    //             }
-
-    //             // Step 3: Finalize when done recording and queue empty
-    //             encoder->finalize();
-    //             isEncoding = false;
-    //         }
-    //     } catch (const std::exception& e) {
-    //         std::cerr << "[encoderThread] ERROR: Encoder thread crashed: " << e.what() << std::endl;
-    //     }
-    // });
-
-
+    std::unique_ptr<Encoder> encoder = std::make_unique<Encoder>();
+    encoder->start(window); // encoder thread
+    
     // timings
     // -------
     unsigned int counter = 0;               // tracks amount of frames for window title
     int frameCountFPS = 0;                  // tracks amount of frames for FPS text
-    float fps = 0.0f;
-    float ms = 0.0f;                   // for FPS text
+    float fps = 0.0f;                       // for FPS text
+    float ms = 0.0f;                        // for FPS text
     float timeDiff, prevTime = 0.0f;        // for movement (time between frames)
     float deltaTime, oldTime = 0.0f;        // for window title FPS counter
     float lastTime = 0.0f;                  // for FPS text
@@ -726,7 +582,7 @@ int main()
         // input
         // -----
         // glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-        processInput(window, timeDiff, crntTime, queueCond);
+        processInput(window, timeDiff, crntTime, encoder->queueCond);
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
             std::cerr << "[main] OpenGL Error: " << error << std::endl;
@@ -772,250 +628,196 @@ int main()
         // recording ON
         if (recording)
         {
-            // Step 1: If recording is ON and not currently encoding, and not using encoder thread, then start encoding using main thread
-            if (!isEncoding && !encoder_thread) {
-                std::string filename = getTimestampedFilename();
-
-                while (!frameQueue.empty()) frameQueue.pop();  // Clear any old frames from previous instance
-
-                // Local instance for this session only
-                // auto encoder = std::make_unique<FFmpegEncoder>();
-                if (!encoder->initialize(filename.c_str(), glfwGetTime())) {
-                    std::cerr << "[main] ERROR: Failed to initialize encoder\n";
-                    continue;
-                }
-                isEncoding = true;
-            }
-
             // Step 1: Render the scene to the MSAA FBO
             // ----------------------------------------
-            glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
-            glEnable(GL_DEPTH_TEST); // Needed for 3D rendering
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            // Enable blending
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-            // static crate
-            Timer::startTimer(t);
-            glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
-            RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
-
-            // controllable crate
-            glm::vec3 translate = glm::vec3(xOffset, yOffset, zOffset);
-            RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
-
-            // draw the light cube object
-            // also draw the lamp object
-            lightShader.use();
-            lightShader.setMat4("projection", projection);
-            view = camera.GetViewMatrix();
-            lightShader.setMat4("view", view);
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, lightPos);
-            model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-            lightShader.setMat4("model", model);
-            glBindVertexArray(lightVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
             {
-                // std::lock_guard<std::mutex> lock(coutMutex);
-                Timer::endTimer(Timer::RENDER_SCENE, t);
+                glBindFramebuffer(GL_FRAMEBUFFER, fboMsaaId);
+                glEnable(GL_DEPTH_TEST); // Needed for 3D rendering
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                // Enable blending
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+                // static crate
+                Timer::startTimer(t);
+                glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
+                RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
+
+                // controllable crate
+                glm::vec3 translate = glm::vec3(xOffset, yOffset, zOffset);
+                RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
+
+                // draw the light cube object
+                // also draw the lamp object
+                lightShader.use();
+                lightShader.setMat4("projection", projection);
+                view = camera.GetViewMatrix();
+                lightShader.setMat4("view", view);
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, lightPos);
+                model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
+                lightShader.setMat4("model", model);
+                glBindVertexArray(lightVAO);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                {
+                    // std::lock_guard<std::mutex> lock(coutMutex);
+                    Timer::endTimer(Timer::RENDER_SCENE, t);
+                }
             }
             
             // Step 2: Resolve MSAA FBO to standard non-MSAA FBO
             // -------------------------------------------------
-            Timer::startTimer(t);
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
-            glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
-                              0, 0, SCR_WIDTH, SCR_HEIGHT,           // dest rect
-                                      GL_COLOR_BUFFER_BIT,           // buffer mask
-                                               GL_LINEAR);           // scale filter
             {
-                // std::lock_guard<std::mutex> lock(coutMutex);
-                Timer::endTimer(Timer::BLIT_MSAA, t);
-            }
-
-            Timer::startTimer(t);
-            if (currentTextMode == TextTriState::TextAndAtlasON || currentTextMode == TextTriState::TextONAtlasOFF)
-                // textRenderer.renderText(fpsText, x, y, scale, color, font);
-                textRenderer.renderTextFast(fpsText, x, y, scale, color, font);
-            if (currentTextMode == TextTriState::TextAndAtlasON)
-                textRenderer.renderAtlas(font);
-            {
-                // std::lock_guard<std::mutex> lock(coutMutex);
-                Timer::endTimer(Timer::RENDER_TEXT, t);
-            }
-        
-            // IMGUI (visible in screen recording, messes up when window is resized)
-            // ---------------------------------------------------------------------
-            #if IMGUI==1
-            if (imgui) {
                 Timer::startTimer(t);
-                GUI::Render();
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
+                glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                                0, 0, SCR_WIDTH, SCR_HEIGHT,           // dest rect
+                                        GL_COLOR_BUFFER_BIT,           // buffer mask
+                                                GL_LINEAR);           // scale filter
                 {
                     // std::lock_guard<std::mutex> lock(coutMutex);
-                    Timer::endTimer(Timer::RENDER_GUI, t);
+                    Timer::endTimer(Timer::BLIT_MSAA, t);
                 }
+
+                Timer::startTimer(t);
+                if (currentTextMode == TextTriState::TextAndAtlasON || currentTextMode == TextTriState::TextONAtlasOFF)
+                    // textRenderer.renderText(fpsText, x, y, scale, color, font);
+                    textRenderer.renderTextFast(fpsText, x, y, scale, color, font);
+                if (currentTextMode == TextTriState::TextAndAtlasON)
+                    textRenderer.renderAtlas(font);
+                {
+                    // std::lock_guard<std::mutex> lock(coutMutex);
+                    Timer::endTimer(Timer::RENDER_TEXT, t);
+                }
+            
+                // IMGUI (visible in screen recording, messes up when window is resized)
+                // ---------------------------------------------------------------------
+                #if IMGUI==1
+                if (imgui) {
+                    Timer::startTimer(t);
+                    GUI::Render();
+                    {
+                        // std::lock_guard<std::mutex> lock(coutMutex);
+                        Timer::endTimer(Timer::RENDER_GUI, t);
+                    }
+                }
+                #endif /* IMGUI==1 */
             }
-            #endif /* IMGUI==1 */
 
             // Step 3: Render the scene on-screen using Blitting: https://stackoverflow.com/a/31487085
             // ---------------------------------------------------------------------------------------
-            // Bind the target FBO to read
-            glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-            Timer::startTimer(t);
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-            glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
-                              0, 0, SCR_WIDTH, SCR_HEIGHT,           // dest rect
-                                      GL_COLOR_BUFFER_BIT,           // buffer mask
-                                              GL_NEAREST);           // scale filter
             {
-                // std::lock_guard<std::mutex> lock(coutMutex);
-                Timer::endTimer(Timer::BLIT_TO_SCREEN, t);
+                // Bind the target FBO to read
+                glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+                Timer::startTimer(t);
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+                glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                                0, 0, SCR_WIDTH, SCR_HEIGHT,           // dest rect
+                                        GL_COLOR_BUFFER_BIT,           // buffer mask
+                                                GL_NEAREST);           // scale filter
+                {
+                    // std::lock_guard<std::mutex> lock(coutMutex);
+                    Timer::endTimer(Timer::BLIT_TO_SCREEN, t);
+                }
             }
 
             // Step 4: Read pixels from the resolved FBO for off-screen encoding
             // -----------------------------------------------------------------
-            encodeDiff = crntTime - encodeTime;
-            if (vsync || (encodeDiff >= 1.0 / framerate)) {
-                // fbo first needs to be flipped for encoding
-                if (flip_shader) {
-                    if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe for this pass
-                    Timer::startTimer(t);
-                    glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
-                    flipShader.use();
-                    glBindVertexArray(quadVAO);
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, fboTexture);
-                    flipShader.setInt("screenTexture", 0);
-                    glDrawArrays(GL_TRIANGLES, 0, 3);
-                    glBindVertexArray(0);
-                    glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
-                    {
-                        // std::lock_guard<std::mutex> lock(coutMutex);
-                        Timer::endTimer(Timer::FLIP_SHADER, t);
+            {
+                encodeDiff = crntTime - encodeTime;
+                if (vsync || (encodeDiff >= 1.0 / framerate)) {
+                    // fbo first needs to be flipped for encoding
+                    if (flip_shader) {
+                        if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe for this pass
+                        Timer::startTimer(t);
+                        glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
+                        flipShader.use();
+                        glBindVertexArray(quadVAO);
+                        glActiveTexture(GL_TEXTURE0);
+                        glBindTexture(GL_TEXTURE_2D, fboTexture);
+                        flipShader.setInt("screenTexture", 0);
+                        glDrawArrays(GL_TRIANGLES, 0, 3);
+                        glBindVertexArray(0);
+                        glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
+                        {
+                            // std::lock_guard<std::mutex> lock(coutMutex);
+                            Timer::endTimer(Timer::FLIP_SHADER, t);
+                        }
+                        if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Restore wireframe
                     }
-                    if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Restore wireframe
-                }
-                if (!pbo) { // PBO off
-                    // glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-                    Timer::startTimer(t);
-                    glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame);
-                    {
-                        // std::lock_guard<std::mutex> lock(coutMutex);
-                        Timer::endTimer(Timer::GLREADPIXELS_PBO_OFF, t);
-                    }
-                    FrameData data;
-                    data.frame = frame;
-                    data.pts = crntTime;
-                    data.usingPBO = false;
-                    data.flipped = flip_shader;
-                    if (encoder_thread) {
-                        // {
-                        //     std::lock_guard<std::mutex> qlock(queueMutex);
-                        //     frameQueue.push(data);
-                        // }
-                        // queueCond.notify_one();  // Wake encoder thread if asleep
-                        encoder->pushFrame(data.frame, data.pts);
-                    }
-                    else {
+                    if (!pbo) { // PBO off
+                        unsigned char *buffer = frameBuffers[currentWriteIndex].get(); // get raw pointer 
+                        Timer::startTimer(t);
+                        glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+                        {
+                            // std::lock_guard<std::mutex> lock(coutMutex);
+                            Timer::endTimer(Timer::GLREADPIXELS_PBO_OFF, t);
+                        }
                         if (!flip_shader) {
                             Timer::startTimer(t);
-                            flipFrameVertically(data.frame);
+                            encoder->flipFrameVertically(buffer);
                             {
                                 std::lock_guard<std::mutex> coutLock(coutMutex);
                                 Timer::endTimer(Timer::FLIP_FUNCTION, t);
                             }
                         }
-
-                        Timer::startTimer(t);
-                        encoder->encodeFrame(data.frame, data.pts);
-                        {
-                            std::lock_guard<std::mutex> coutLock(coutMutex);
-                            Timer::endTimer(Timer::ENCODE, t);
+                        if (encoder_thread) {
+                            encoder->pushFrame(buffer, crntTime);
                         }
-                    }
-                } else { // PBO on
-                    Timer::startTimer(t);
-                    glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[firstIndex]);
-                    glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, nullptr, GL_STREAM_READ); // Orphan first to ensure a new backing store is created
-                    glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, 0);
-                    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-                    {
-                        // std::lock_guard<std::mutex> lock(coutMutex);
-                        Timer::endTimer(Timer::GLREADPIXELS_PBO_ON, t);
-                    }
-                    
-                    // Insert a fence for the current PBO
-                    // if (pboFences[firstIndex]) {
-                    //     glDeleteSync(pboFences[firstIndex]);
-                    // }
-                    // pboFences[firstIndex] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-
-                    // Push nextIndex (the one rendered last frame) to queue to be encoded
-
-                    glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[nextIndex]);
-                    GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, DATA_SIZE, GL_MAP_READ_BIT);
-
-                    if (ptr) {
-                        glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+                        else {
+                            Timer::startTimer(t);
+                            encoder->encodeFrame(buffer, crntTime);
+                            {
+                                std::lock_guard<std::mutex> coutLock(coutMutex);
+                                Timer::endTimer(Timer::ENCODE, t);
+                            }
+                        }
+                    } else { // PBO on
+                        Timer::startTimer(t);
+                        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[firstIndex]);
+                        glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, nullptr, GL_STREAM_READ); // Orphan first to ensure a new backing store is created
+                        glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, 0);
                         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-                    }
-                    if (!flip_shader) {
-                        Timer::startTimer(t);
-                        flipFrameVertically(ptr);
                         {
-                            std::lock_guard<std::mutex> coutLock(coutMutex);
-                            Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                            // std::lock_guard<std::mutex> lock(coutMutex);
+                            Timer::endTimer(Timer::GLREADPIXELS_PBO_ON, t);
                         }
-                    }
-
-                    FrameData data;
-                    data.frame = ptr;
-                    data.pboIndex = nextIndex;
-                    data.pts = crntTime;            // using crntTime for previous frame (makes code simpler)
-                    data.usingPBO = true;
-                    data.flipped = flip_shader;
-
-                    // if just toggled PBO ON, skip first frame
-                    if (encoder_thread) {
-                        // {
-                        //     std::lock_guard<std::mutex> qlock(queueMutex);
-                        //     frameQueue.push(data);
-                        // }
-                        // queueCond.notify_one();  // Wake encoder thread if asleep
-                        encoder->pushFrame(data.frame, data.pts);
-                    } else {
+                        
                         glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[nextIndex]);
-                        GLubyte* ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, DATA_SIZE, GL_MAP_READ_BIT);
+                        GLubyte* ptr = pboBuffers[currentWriteIndex];
+                        ptr = (GLubyte*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, DATA_SIZE, GL_MAP_READ_BIT);
 
                         if (ptr) {
                             glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
                             glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-                            data.frame = ptr;
-                        }
-                        if (!flip_shader) {
-                            Timer::startTimer(t);
-                            flipFrameVertically(data.frame);
-                            {
-                                std::lock_guard<std::mutex> coutLock(coutMutex);
-                                Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                        
+                            if (!flip_shader) {
+                                Timer::startTimer(t);
+                                encoder->flipFrameVertically(ptr);
+                                {
+                                    std::lock_guard<std::mutex> coutLock(coutMutex);
+                                    Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                                }
+                            }
+                            // if just toggled PBO ON, skip first frame
+                            if (encoder_thread) {
+                                encoder->pushFrame(ptr, crntTime);
+                            } else {
+                                Timer::startTimer(t);
+                                encoder->encodeFrame(ptr, crntTime);
+                                {
+                                    std::lock_guard<std::mutex> coutLock(coutMutex);
+                                    Timer::endTimer(Timer::ENCODE, t);
+                                }
                             }
                         }
-
-                        Timer::startTimer(t);
-                        encoder->encodeFrame(data.frame, data.pts);
-                        {
-                            std::lock_guard<std::mutex> coutLock(coutMutex);
-                            Timer::endTimer(Timer::ENCODE, t);
-                        }
+                        // Rotate indices
+                        firstIndex = (firstIndex + 1) % PBO_COUNT;
+                        nextIndex = (firstIndex + 1) % PBO_COUNT;
                     }
-
-                    // Rotate indices
-                    firstIndex = (firstIndex + 1) % PBO_COUNT;
-                    nextIndex = (firstIndex + 1) % PBO_COUNT;
+                    currentWriteIndex = (currentWriteIndex + 1) % BUFFER_COUNT;
+                    encodeTime = crntTime;
                 }
-                encodeTime = crntTime;
             }
         }
         
@@ -1091,48 +893,29 @@ int main()
         glfwPollEvents();           // take care of all GLFW events
         glfwSwapInterval(vsync);    // vsync
     }
+    // std::cout << "[main] Setting recording to false\n";
+    recording = false;
+    // need to stop encoder BEFORE deleting VAO/VBO/frame etc.
+    // std::cout << "[main] Stopping encoder\n";        
+    encoder->stop();
+
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
+    // std::cout << "[main] Deleting VAO, VBO, shaders\n";  
     glDeleteVertexArrays(1, &VAO);
     glDeleteVertexArrays(1, &lightVAO);
     glDeleteBuffers(1, &VBO);
-    // De-allocate frame buffer (deletes all items in the array)
-    delete[] frame;
     // Delete all the shader programs we've created
 	ourShader.Delete();
     lightShader.Delete();
-	// Delete window before ending the program
-	glfwDestroyWindow(window);
 
-    // if (recording)
-    {
-        glDeleteBuffers(PBO_COUNT, pboIds);
-        glDeleteFramebuffers(1,&fboMsaaId);
-        glDeleteFramebuffers(1,&fboId);
-        glDeleteRenderbuffers(1,&rboMsaaColorId);
-        glDeleteRenderbuffers(1,&rboMsaaDepthId);
-        // glDeleteRenderbuffers(1,&rboId);
-
-        // Stop ffmpeg
-        // -----------
-        // Encoder::finalizeEncoder(); // ignore, handled in encoder thread
-
-        recording = false;
-        // {
-        //     std::lock_guard<std::mutex> qlock(queueMutex);
-        //     shuttingDown = true;
-        // }
-        // queueCond.notify_all();
-        // {
-        //     std::lock_guard<std::mutex> coutLock(coutMutex);
-        //     std::cout << "Exiting program, waiting for encoder to finish...\n";
-        // }
-        // Wait for encoder thread to finish
-        // if (encoderThread.joinable()) {
-        //     encoderThread.join();
-        // }
-        encoder->stop();
-    }
+    // std::cout << "[main] Deleting PBOs, FBOs, RBOs\n";  
+    glDeleteBuffers(PBO_COUNT, pboIds);
+    glDeleteFramebuffers(1,&fboMsaaId);
+    glDeleteFramebuffers(1,&fboId);
+    glDeleteRenderbuffers(1,&rboMsaaColorId);
+    glDeleteRenderbuffers(1,&rboMsaaDepthId);
+    // glDeleteRenderbuffers(1,&rboId);
 
     Timer::printAverages();
 
@@ -1141,6 +924,9 @@ int main()
     #if IMGUI==1
     GUI::Exit();
     #endif
+
+    // Delete window before ending the program
+	glfwDestroyWindow(window);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -1156,6 +942,7 @@ int main()
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::condition_variable &queueCond) {
     using namespace Settings; // compile-time instruction (no runtime overhead)
+    std::ostringstream oss;
     // Exit
     // ----
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -1461,14 +1248,14 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::condi
     {
         recordPressed = true;
         recording = !recording;
-        queueCond.notify_one();  // Wake encoder thread if asleep
-        std::lock_guard<std::mutex> coutLock(coutMutex);
-        std::cout << "[main] R key pressed. Press = " << recordPressed << " Time: " << crntTime << "\n";
+        queueCond.notify_all();  // Wake encoder thread if asleep
+
+        oss << "[main] R key pressed. Press = " << recordPressed << " Time: " << crntTime << "\n";
     }
     if ((glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) && (recordPressed)) {
         recordPressed = false;
         std::lock_guard<std::mutex> coutLock(coutMutex);
-        std::cout << "[main] R key released. Press = " << recordPressed << " Time: " << crntTime << "\n";
+        oss << "[main] R key released. Press = " << recordPressed << " Time: " << crntTime << "\n";
     }
     // Encoder thread
     // --------------
@@ -1476,14 +1263,19 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::condi
     {
         encoderPressed = true;
         encoder_thread = !encoder_thread;
-        queueCond.notify_one();  // Wake encoder thread if asleep
+        queueCond.notify_all();  // Wake encoder thread if asleep
         std::lock_guard<std::mutex> coutLock(coutMutex);
-        std::cout << "[main] T key pressed. Press = " << encoderPressed << " Time: " << crntTime << "\n";
+        oss << "[main] T key pressed. Press = " << encoderPressed << " Time: " << crntTime << "\n";
     }
     if ((glfwGetKey(window, GLFW_KEY_T) == GLFW_RELEASE) && (encoderPressed)) {
         encoderPressed = false;
         std::lock_guard<std::mutex> coutLock(coutMutex);
-        std::cout << "[main] T key released. Press = " << encoderPressed << " Time: " << crntTime << "\n";
+        oss << "[main] T key released. Press = " << encoderPressed << " Time: " << crntTime << "\n";
+    }
+    // print to terminal
+    if (!oss.str().empty()) {
+        std::lock_guard<std::mutex> lock(coutMutex);
+        std::cout << oss.str();
     }
 }
 
@@ -1554,30 +1346,6 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
-}
-
-// Flip the frame vertically
-void flipFrameVertically(unsigned char* frame) {
-    using namespace Settings;
-    // for (unsigned int y = 0; y < SCR_HEIGHT / 2; y++) {
-    //     int oppositeY = SCR_HEIGHT - 1 - y;
-    //     for (unsigned int x = 0; x < SCR_WIDTH * 3; x++) {
-    //         std::swap(frame[y * SCR_WIDTH * 3 + x], frame[oppositeY * SCR_WIDTH * 3 + x]);
-    //     }
-    // }
-
-    const size_t rowSize = SCR_WIDTH * 3;
-    std::vector<unsigned char> tempRow(rowSize);
-
-    for (unsigned int y = 0; y < SCR_HEIGHT / 2; ++y) {
-        unsigned char* row = frame + y * rowSize;
-        unsigned char* oppositeRow = frame + (SCR_HEIGHT - 1 - y) * rowSize;
-
-        // Swap rows
-        std::memcpy(tempRow.data(), row, rowSize);
-        std::memcpy(row, oppositeRow, rowSize);
-        std::memcpy(oppositeRow, tempRow.data(), rowSize);
-    }
 }
 
 std::string GetFPSText(float fps, float ms, float crntTime) {
@@ -1683,21 +1451,4 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint c
     // Cleanup
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-std::string getTimestampedFilename() {
-    auto now = std::chrono::system_clock::now();
-    std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
-    std::tm localTime;
-    #ifdef _WIN32
-    localtime_s(&localTime, &nowTime);
-    #else
-    localtime_r(&nowTime, &localTime);
-    #endif
-
-    std::ostringstream oss;
-    oss << "../output/"
-        << std::put_time(&localTime, "%Y.%m.%d - %H.%M.%S")
-        << ".mp4";
-    return oss.str();
 }

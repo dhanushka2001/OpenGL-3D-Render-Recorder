@@ -2,10 +2,12 @@
 #include <chrono>
 #include <array>
 #include <iostream>                     // for std::cin/cout/cerr
+#include <iomanip>                      // for std::setw()
 #ifdef _WIN32
 #include <Windows.h>
 #endif /* _WIN32 */
 #include <learnopengl/timer.h>
+#include <learnopengl/Settings.h>
 
 namespace Timer {
     namespace {     // anonymous namespace (encapsulation)
@@ -13,11 +15,11 @@ namespace Timer {
 
         const char* names[NUM_TIMERS] = {
             "encodeFrame",
-            "Rendering scene",
-            "Blitting MSAA to non-MSAA FBO",
-            "Rendering text",
-            "Rendering ImGui/ImPlot",
-            "Blitting non-MSAA FBO to screen",
+            "Render scene",
+            "Blit MSAA->non-MSAA FBO",
+            "Render text",
+            "Render ImGui/ImPlot",
+            "Blit non-MSAA FBO->screen",
             "Flip shader",
             "flipFrameVertically",
             "glClientWaitSync",
@@ -68,17 +70,37 @@ namespace Timer {
     }
     
     void printAverages() {
+        using namespace Settings;
         std::cout << "[Timer] Printing timings...\n";
+        std::ostringstream oss;
+        oss << "Video framerate: " << framerate << " fps";
+        std::cout << "[Timer] "
+                  << std::left << std::setw(25) << oss.str()
+                  << " max: " << std::right << std::setw(8)
+                  << std::fixed << std::setprecision(4) << 1000.0 / framerate <<  " ms\n";
+        std::ostringstream oss2;
+        oss2 << "Ring buffer size: " << BUFFER_COUNT;     
+        std::cout << "[Timer] "
+                  << std::left << std::setw(25) << oss2.str()
+                  << " max: " << std::right << std::setw(8)
+                  << std::fixed << std::setprecision(4) << BUFFER_COUNT * 1000.0 / framerate <<  " ms (thread-safe if >encodeFrame)\n";
         for (int i = 0; i < NUM_TIMERS; ++i) {
             if (counts[i] > 0) {
                 #ifdef _WIN32
                 SetConsoleOutputCP(CP_UTF8); // needed for ± symbol
                 #endif /* _WIN32 */
                 if (i == ENCODE) {
-                    std::cout << "[Timer] " << names[i] << " took max: " << maxTimes[i] << "ms (" << maxTimeCount[i] << ") min: " << minTimes[i] << "ms (" << minTimeCount[i] << ") (" << counts[i] << " samples)\n";
+                    std::cout << "[Timer] " 
+                              << std::left << std::setw(25) << names[i]
+                              << " max: " << std::right << std::setw(8) << std::fixed << std::setprecision(4) << maxTimes[i]
+                              << " ms (" << maxTimeCount[i] << ") min: " << minTimes[i] << "ms (" << minTimeCount[i] << ") (" << counts[i] << " samples)\n";
                 }
                 // std::cout << names[i] << " avg: " << (totalTimes[i] / counts[i]) <<  " ms ± maxtime: " << maxTimes[i] << " (" << maxTimeCount[i] << ") mintime: " << minTimes[i] << " (" << minTimeCount[i] << ") (" << counts[i] << " samples)\n";
-                std::cout << "[Timer] " << names[i] << " took avg: " << (totalTimes[i] / counts[i]) <<  " ms ± " << (maxTimes[i] - minTimes[i]) / 2.0 << "ms (" << counts[i] << " samples)\n";
+                std::cout << "[Timer] "
+                          << std::left << std::setw(25) << names[i]
+                          << " avg: " << std::right << std::setw(8) << std::fixed << std::setprecision(4) << (totalTimes[i] / counts[i]) <<  " ms"
+                          << " ± " << std::setw(8) << (maxTimes[i] - minTimes[i]) / 2.0 << "ms"
+                          << " (" << counts[i] << " samples)\n";
             }
         }
     }

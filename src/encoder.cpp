@@ -1,9 +1,10 @@
 #include <learnopengl/encoder.h>
 #include <learnopengl/Settings.h>
 #include <iostream>
-
 #include <iomanip>
+
 #include <thread>
+
 // glad & GLFW
 // -----------
 #include <glad/glad.h>                  // glad
@@ -18,7 +19,10 @@ Encoder::Encoder() {
 }
 
 Encoder::~Encoder() {
-    finalize();  // auto-cleanup if not already called
+    // recording = false;
+    // std::cout << "Finalizing encoder in encoder destructor\n";
+    // this->finalize();  // auto-cleanup if not already called
+    // this->stop();
 }
 
 const AVCodec* Encoder::chooseEncoder() {
@@ -72,10 +76,15 @@ bool Encoder::initialize(const char* filename, double recordingStartTime) {
         av_dict_set(&opts, "preset", g_preset.c_str(), 0);
         av_dict_set(&opts, "crf", g_crf.c_str(), 0);
         av_dict_set(&opts, "tune", "zerolatency", 0);
-        
-        std::lock_guard<std::mutex> coutLock(coutMutex);
-        std::cout << "[Encoder] using preset: '" << g_preset << "'\n";
-        std::cout << "[Encoder] using crf: '" << g_crf << "'\n";
+
+        std::ostringstream oss, oss2;
+        oss  << "[Encoder] using preset: '" << g_preset << "'\n";
+        oss2 << "[Encoder] using crf: '" << g_crf << "'\n";
+        {
+            std::lock_guard<std::mutex> coutLock(coutMutex);
+            std::cout << oss.str();
+            std::cout << oss2.str();
+        }
     } else if (strcmp(codec->name, "h264_mf") == 0) {
         codecCtx->bit_rate = g_bit_rate;
         codecCtx->gop_size = g_gop_size;
@@ -162,7 +171,6 @@ void Encoder::finalize() {
 
 void Encoder::start(GLFWwindow *window) {
     Timer::init();
-    // std::chrono::high_resolution_clock::time_point t;
 
     encoderThread = std::thread([this, window]() {
         std::chrono::high_resolution_clock::time_point t;
@@ -188,49 +196,55 @@ void Encoder::start(GLFWwindow *window) {
 
                 // Step 1: If recording is ON and not currently encoding, then start encoding
                 if (recording && !isEncoding) {
-                    // if (encoder_thread) {
-                    if (1) {
-                        std::string filename = getTimestampedFilename();
+                    std::string filename = getTimestampedFilename();
 
-                        while (!frameQueue.empty()) frameQueue.pop();  // Clear any old frames from previous instance
+                    while (!frameQueue.empty()) frameQueue.pop();  // Clear any old frames from previous instance
 
-                        // Local instance for this session only
-                        // auto encoder = std::make_unique<FFmpegEncoder>();
-                        if (!this->initialize(filename.c_str(), glfwGetTime())) {
-                            std::cerr << "[encoderThread] ERROR: Failed to initialize encoder\n";
-                            continue;
-                        }
-
-                        isEncoding = true;
+                    // Local instance for this session only
+                    // auto encoder = std::make_unique<FFmpegEncoder>();
+                    if (!this->initialize(filename.c_str(), glfwGetTime())) {
+                        std::cerr << "[encoderThread] ERROR: Failed to initialize encoder\n";
+                        continue;
                     }
+
+                    isEncoding = true;
                 }
 
                 // Step 2: While recording or queue still has frames, encode frames
                 while (recording || !frameQueue.empty()) {
-                    qlock.unlock();  // Unlock while processing
-                    if (!frameQueue.empty()) {
-                        FrameData frame;
-                        {
-                            std::lock_guard<std::mutex> qlock(queueMutex);
-                            frame = std::move(frameQueue.front());
-                            frameQueue.pop();
+                    if (encoder_thread) {
+                        qlock.unlock();  // Unlock while processing
+                        if (!frameQueue.empty()) {
+                            FrameData data;
+                            {
+                                std::lock_guard<std::mutex> qlock(queueMutex);
+                                data = std::move(frameQueue.front());
+                                frameQueue.pop();
+                            }
+                            Timer::startTimer(t);
+                            this->encodeFrame(data.frame, data.pts); // Now use data.frame.get() to get the raw pointer (for FFmpeg C library)
+                            {
+                                std::lock_guard<std::mutex> coutLock(coutMutex);
+                                Timer::endTimer(Timer::ENCODE, t);
+                            }
                         }
-                        Timer::startTimer(t);
-                        this->encodeFrame(frame.frame, frame.pts);
-                        {
-                            std::lock_guard<std::mutex> coutLock(coutMutex);
-                            Timer::endTimer(Timer::ENCODE, t);
-                        }
+                        qlock.lock();  // Relock for condition checks
                     }
-                    qlock.lock();  // Relock for condition checks
                 }
 
                 // Step 3: Finalize when done recording and queue empty
+                // std::cout << "[encoderThread] Finalizing encoder in encoderThread inside outer while loop\n";
                 this->finalize();
                 isEncoding = false;
             }
         } catch (const std::exception& e) {
             std::cerr << "[encoderThread] ERROR: Encoder thread crashed: " << e.what() << std::endl;
+        }
+        // This MUST always run
+        glfwMakeContextCurrent(nullptr);
+        if (sharedContextWindow) {
+            // std::cout << "[encoderThread] Destroying shared context window\n";
+            glfwDestroyWindow(sharedContextWindow);
         }
     });
 }
@@ -238,23 +252,27 @@ void Encoder::start(GLFWwindow *window) {
 void Encoder::pushFrame(unsigned char* frame, double timestamp) {
     {
         std::lock_guard<std::mutex> lock(queueMutex);
-        frameQueue.push(FrameData{frame, timestamp});
+        frameQueue.push(FrameData{frame, timestamp}); // move into FrameData so Encoder takes ownership
     }
-    queueCond.notify_one();
+    queueCond.notify_all();
 }
 
 void Encoder::stop() {
     {
         std::lock_guard<std::mutex> lock(queueMutex);
+        // std::cout << "[Encoder] Setting shuttingDown to true\n";
         shuttingDown = true;
     }
-    queueCond.notify_one();  // Wake up the thread so it can exit
+    // std::cout << "[Encoder] Notfying all threads...\n";
+    queueCond.notify_all();  // Wake up the thread so it can exit
     {
         std::lock_guard<std::mutex> coutLock(coutMutex);
-        std::cout << "Exiting program, waiting for encoder to finish...\n";
+        // std::cout << "[Encoder] Exiting program, waiting for encoder to finish...\n";
     }
     if (encoderThread.joinable()) {
+        // std::cout << "[Encoder] Trying to join encoder thread with main thread...\n";
         encoderThread.join();
+        // std::cout << "[Encoder] Encoder thread joined with main thread\n";
     }
 }
 

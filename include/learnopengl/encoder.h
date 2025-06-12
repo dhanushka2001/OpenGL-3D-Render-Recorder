@@ -41,6 +41,11 @@ public:
     void pushFrame(unsigned char* frame, double timestamp);
     void stop();    // signals shutdown and joins thread
 
+    void flipFrameVertically(unsigned char* frame);
+
+    std::condition_variable queueCond;
+    std::atomic<bool> isEncoding = false;
+
 private:
     // std::mutex encoderMutex;
     std::mutex coutMutex;
@@ -64,31 +69,30 @@ private:
 
     
     std::string getTimestampedFilename();
-    void flipFrameVertically(unsigned char* frame);
 
     // FrameData holds a copy of the frame and its timestamp
     struct FrameData {
-        unsigned char *frame;       // raw pixel data
-        double pts;                 // presentation timestamp
+        unsigned char *frame;         // raw pixel data
+        double pts;                   // presentation timestamp
     };
 
     std::queue<FrameData> frameQueue;
     std::mutex queueMutex;
-    std::condition_variable queueCond;
+    // std::condition_variable queueCond;
+    // std::atomic<bool> isEncoding = false;
     std::atomic<bool> shuttingDown = false;  // To stop the thread on app exit
-    std::atomic<bool> isEncoding = false;
     const size_t MAX_QUEUE_SIZE = 8;
 
     // std::shared_ptr<Encoder> encoder = std::make_shared<Encoder>();
 
     // pbo settings
     // ------------
-    GLuint firstIndex = 0;
-    GLuint nextIndex = 1;//(firstIndex + 1) % PBO_COUNT;
-    // unsigned int frameCounter = 0;
-    GLuint pboIds[Settings::PBO_COUNT];
-    GLsync pboFences[Settings::PBO_COUNT] = { nullptr };
-    unsigned int DATA_SIZE;
+    // GLuint firstIndex = 0;
+    // GLuint nextIndex = 1;//(firstIndex + 1) % PBO_COUNT;
+    // // unsigned int frameCounter = 0;
+    // GLuint pboIds[Settings::PBO_COUNT];
+    // GLsync pboFences[Settings::PBO_COUNT] = { nullptr };
+    // unsigned int DATA_SIZE;
 
     std::thread encoderThread;
 };

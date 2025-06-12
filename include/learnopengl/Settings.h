@@ -15,8 +15,9 @@ namespace Settings {
     extern bool                     fullscreen;
     extern int                      vsync;          // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
     extern bool                     pbo;
-    constexpr unsigned int          PBO_COUNT       =  2;
-    constexpr unsigned int          CHANNEL_COUNT   =  3;
+    constexpr std::size_t           PBO_COUNT       =  2;
+    constexpr std::size_t           CHANNEL_COUNT   =  3;
+    constexpr std::size_t           BUFFER_COUNT    =  3;
     extern bool                     paused;
     extern bool                     msaa;           // | 0 = no anti-aliasing | 1 = 4xMSAA |
     extern std::atomic<bool>        recording;
