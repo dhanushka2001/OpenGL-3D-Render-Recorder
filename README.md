@@ -1,4 +1,11 @@
 *Learning OpenGL for High Performance Scientific Computing and Modelling on the GPU*
+
+![GitHub Release](https://img.shields.io/github/v/release/dhanushka2001/OpenGL-3D-Render-Recorder)
+![GitHub License](https://img.shields.io/github/license/dhanushka2001/OpenGL-3D-Render-Recorder)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/dhanushka2001/OpenGL-3D-Render-Recorder)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/dhanushka2001/OpenGL-3D-Render-Recorder/total)
+![GitHub Repo stars](https://img.shields.io/github/stars/dhanushka2001/OpenGL-3D-Render-Recorder)
+
 # OpenGL-3D-Render-Recorder
 
 https://github.com/user-attachments/assets/fc8763bd-dcda-4dbf-9c60-3e322aa1a2ce
