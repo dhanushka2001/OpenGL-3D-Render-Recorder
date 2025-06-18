@@ -20,6 +20,7 @@ Real-time 3D renderer in C++ with OpenGL (GLFW).
 
 <details><summary>Beginner tutorial</summary>
 
+* If you want to run the program quickly, just download and extract the latest [release](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/releases) ZIP which contains the precompiled executable. Or if you'd like to compile the source code yourself, follow the instructions below.
 * Install [MSYS2](https://www.msys2.org/) (install it directly to ``C:\msys64``)
 * Run the MSYS2 <ins>**MINGW64**</ins> shell and install the required packages (``git``, ``gcc``, ``cmake``, ``ninja``):
 
