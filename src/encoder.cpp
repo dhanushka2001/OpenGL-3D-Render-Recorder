@@ -217,12 +217,13 @@ void Encoder::start(GLFWwindow *window) {
                         if (!frameQueue.empty()) {
                             FrameData data;
                             {
-                                std::lock_guard<std::mutex> qlock(queueMutex);
-                                data = std::move(frameQueue.front());
+                                std::lock_guard<std::mutex> innerlock(queueMutex);
+                                data = frameQueue.front();
                                 frameQueue.pop();
                             }
                             Timer::startTimer(t);
-                            this->encodeFrame(data.frame, data.pts); // Now use data.frame.get() to get the raw pointer (for FFmpeg C library)
+                            // this->encodeFrame(data.frame.data(), data.pts); // Use .get() for smart pointers, or .data() for std::vector
+                            this->encodeFrame(data.frame, data.pts);
                             {
                                 std::lock_guard<std::mutex> coutLock(coutMutex);
                                 Timer::endTimer(Timer::ENCODE, t);
@@ -249,11 +250,12 @@ void Encoder::start(GLFWwindow *window) {
     });
 }
 
-void Encoder::pushFrame(unsigned char* frame, double timestamp) {
-    {
-        std::lock_guard<std::mutex> lock(queueMutex);
-        frameQueue.push(FrameData{frame, timestamp}); // move into FrameData so Encoder takes ownership
-    }
+void Encoder::pushFrame(uint8_t* frame, double timestamp) { //, size_t DATA_SIZE) {
+    std::lock_guard<std::mutex> lock(queueMutex);
+    // using namespace Settings;
+    // std::vector<uint8_t> copiedFrame(frame, frame + DATA_SIZE);
+    // frameQueue.push(FrameData{std::move(copiedFrame), timestamp}); // move into FrameData so Encoder takes ownership
+    frameQueue.push(FrameData{frame, timestamp}); // move into FrameData so Encoder takes ownership
     queueCond.notify_all();
 }
 

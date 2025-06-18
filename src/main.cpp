@@ -45,7 +45,7 @@
 
 // Function declaration
 // --------------------
-void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::condition_variable &queueCond);
+void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::unique_ptr<Encoder> &encoder);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -366,8 +366,7 @@ int main()
     // GLuint rboId;
     GLuint fboTexture;
 
-
-    std::array<std::unique_ptr<unsigned char[]>, BUFFER_COUNT> frameBuffers;
+    std::array<std::unique_ptr<uint8_t[]>, BUFFER_COUNT> frameBuffers;
     int currentWriteIndex = 0;
 
     std::array<GLubyte*, BUFFER_COUNT> pboBuffers;
@@ -377,14 +376,13 @@ int main()
         // PBO OFF
         // -------
         for (int i = 0; i < BUFFER_COUNT; ++i) {
-            frameBuffers[i] = std::make_unique<unsigned char[]>(DATA_SIZE);
+            frameBuffers[i] = std::make_unique<uint8_t[]>(DATA_SIZE);
         }
 
         // PBO ON
         // ------
         // create 2 pixel buffer objects, you need to delete them when program exits.
         // glBufferData() with NULL pointer reserves only memory space.
-        // DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * CHANNEL_COUNT;
         glGenBuffers(PBO_COUNT, pboIds);
         for (int i = 0; i < static_cast<int>(PBO_COUNT); ++i) {
             glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[i]);
@@ -582,7 +580,7 @@ int main()
         // input
         // -----
         // glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-        processInput(window, timeDiff, crntTime, encoder->queueCond);
+        processInput(window, timeDiff, crntTime, encoder);
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
             std::cerr << "[main] OpenGL Error: " << error << std::endl;
@@ -746,7 +744,7 @@ int main()
                         if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Restore wireframe
                     }
                     if (!pbo) { // PBO off
-                        unsigned char *buffer = frameBuffers[currentWriteIndex].get(); // get raw pointer 
+                        uint8_t *buffer = frameBuffers[currentWriteIndex].get(); // get raw pointer 
                         Timer::startTimer(t);
                         glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, buffer);
                         {
@@ -802,6 +800,7 @@ int main()
                             // if just toggled PBO ON, skip first frame
                             if (encoder_thread) {
                                 encoder->pushFrame(ptr, crntTime);
+                                // encoder->pushFrame(ptr, crntTime);
                             } else {
                                 Timer::startTimer(t);
                                 encoder->encodeFrame(ptr, crntTime);
@@ -940,7 +939,7 @@ int main()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::condition_variable &queueCond) {
+void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::unique_ptr<Encoder> &encoder) {
     using namespace Settings; // compile-time instruction (no runtime overhead)
     std::ostringstream oss;
     // Exit
@@ -1247,10 +1246,17 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::condi
     if ((glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) && (!recordPressed))
     {
         recordPressed = true;
-        recording = !recording;
-        queueCond.notify_all();  // Wake encoder thread if asleep
-
-        oss << "[main] R key pressed. Press = " << recordPressed << " Time: " << crntTime << "\n";
+        // recording = !recording;
+        
+        // if encoding and recording turned off, wait for encoding to turn off before turning recording again
+        if (!encoder->isEncoding.load(std::memory_order_acquire) || recording.load(std::memory_order_acquire)) {
+            recording.store(!recording.load(std::memory_order_acquire), std::memory_order_release);
+            encoder->queueCond.notify_all();  // Wake up encoder thread if asleep
+            oss << "[main] R key pressed. Press = " << recordPressed << " Time: " << crntTime << "\n";
+        }
+        else {
+            oss << "[main] R key pressed. WARNING: Trying to turn on recording when encoding hasn't finished!\n";
+        }
     }
     if ((glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) && (recordPressed)) {
         recordPressed = false;
@@ -1263,7 +1269,7 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::condi
     {
         encoderPressed = true;
         encoder_thread = !encoder_thread;
-        queueCond.notify_all();  // Wake encoder thread if asleep
+        encoder->queueCond.notify_all();  // Wake encoder thread if asleep
         std::lock_guard<std::mutex> coutLock(coutMutex);
         oss << "[main] T key pressed. Press = " << encoderPressed << " Time: " << crntTime << "\n";
     }
@@ -1272,7 +1278,8 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::condi
         std::lock_guard<std::mutex> coutLock(coutMutex);
         oss << "[main] T key released. Press = " << encoderPressed << " Time: " << crntTime << "\n";
     }
-    // print to terminal
+    // Print to terminal
+    // -----------------
     if (!oss.str().empty()) {
         std::lock_guard<std::mutex> lock(coutMutex);
         std::cout << oss.str();

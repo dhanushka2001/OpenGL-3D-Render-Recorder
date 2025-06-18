@@ -49,12 +49,11 @@ namespace GUI {
         const std::string recordingInfo = "\nPress R to turn recording ON/OFF. You can find the recordings in /build/output/.";
         constexpr const char* ExitText = "\nPress ESC to exit.";
         // imgui (height can change at runtime)
-        constexpr const int imgui_xpos = 30;
-        constexpr const int imgui_ypos = 30;
-        constexpr const int imgui_width = 420;
+        constexpr const int padding         = 30;
+        constexpr const int imgui_width     = 420;
         // implot
-        constexpr const int implot_width = 544;
-        constexpr const int implot_height = 556;
+        constexpr const int implot_width    = 544;
+        constexpr const int implot_height   = 556;
         bool encoderChanged = false;
         int presetIdx = 0;
     }
@@ -80,7 +79,12 @@ namespace GUI {
         using namespace Settings;
 
         int imgui_height = Settings::libx264 ? 517 : 536; // new line = +20 height. libx264 height = h264_mf height - 16.
-        ImGui::SetNextWindowPos(ImVec2(imgui_xpos, imgui_ypos), ImGuiCond_Once);
+        #ifdef _WIN32
+        ImGui::SetNextWindowPos(ImVec2(padding, padding), ImGuiCond_Once);
+        #endif /* _WIN32 */
+        #ifdef __linux__
+        ImGui::SetNextWindowPos(ImVec2(padding, padding + imgui_height), ImGuiCond_Once);
+        #endif /* __linux__ */
         ImGui::SetNextWindowSize(ImVec2(imgui_width, imgui_height), ImGuiCond_Once);
         if (encoderChanged) {
             ImGui::SetNextWindowSize(ImVec2(imgui_width, imgui_height), ImGuiCond_Always);
@@ -179,10 +183,10 @@ namespace GUI {
         
         // Show the ImPlot demo window
         #ifdef _WIN32
-        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - implot_width, 30), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - implot_width, padding), ImGuiCond_Once);
         #endif /* _WIN32 */
         #ifdef __linux__
-        ImGui::SetNextWindowPos(ImVec2(956, 580), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - implot_width, padding + implot_height), ImGuiCond_Once);
         #endif /* __linux__ */
         ImGui::SetNextWindowSize(ImVec2(implot_width, implot_height), ImGuiCond_Once);
         if (ImGui::Begin("ImPlot Demo")) {

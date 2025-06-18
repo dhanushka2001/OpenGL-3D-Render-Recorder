@@ -17,7 +17,7 @@ namespace Settings {
     extern bool                     pbo;
     constexpr std::size_t           PBO_COUNT       =  2;
     constexpr std::size_t           CHANNEL_COUNT   =  3;
-    constexpr std::size_t           BUFFER_COUNT    =  3;
+    constexpr std::size_t           BUFFER_COUNT    =  5;
     extern bool                     paused;
     extern bool                     msaa;           // | 0 = no anti-aliasing | 1 = 4xMSAA |
     extern std::atomic<bool>        recording;

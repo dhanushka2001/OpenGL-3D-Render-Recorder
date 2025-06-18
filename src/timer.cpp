@@ -32,9 +32,9 @@ namespace Timer {
 
         std::array<double, NUM_TIMERS> totalTimes = {};
         std::array<double, NUM_TIMERS> minTimes = {};
-        std::array<double, NUM_TIMERS> minTimeCount = {};
         std::array<double, NUM_TIMERS> maxTimes = {};
-        std::array<double, NUM_TIMERS> maxTimeCount = {};
+        std::array<int, NUM_TIMERS> minTimeCount = {};
+        std::array<int, NUM_TIMERS> maxTimeCount = {};
         std::array<int, NUM_TIMERS> counts = {};
     }
 

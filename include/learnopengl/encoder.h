@@ -36,9 +36,9 @@ public:
     bool initialize(const char* filename, double recordingStartTime);
     bool encodeFrame(const uint8_t* rgbData, float currentTime);
     void finalize();
-
+    
     void start(GLFWwindow *window);   // start encoder thread
-    void pushFrame(unsigned char* frame, double timestamp);
+    void pushFrame(uint8_t* frame, double timestamp); //, size_t DATA_SIZE = 0);
     void stop();    // signals shutdown and joins thread
 
     void flipFrameVertically(unsigned char* frame);
@@ -47,7 +47,6 @@ public:
     std::atomic<bool> isEncoding = false;
 
 private:
-    // std::mutex encoderMutex;
     std::mutex coutMutex;
 
     AVFormatContext* formatCtx = nullptr;
@@ -67,13 +66,14 @@ private:
     Encoder& operator=(const Encoder&) = delete;
 
 
-    
     std::string getTimestampedFilename();
 
     // FrameData holds a copy of the frame and its timestamp
     struct FrameData {
-        unsigned char *frame;         // raw pixel data
+        // std::vector<uint8_t> frame;
+        uint8_t *frame;
         double pts;                   // presentation timestamp
+        // std::atomic<bool> *inUseFlag;
     };
 
     std::queue<FrameData> frameQueue;
