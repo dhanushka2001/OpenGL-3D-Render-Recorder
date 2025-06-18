@@ -6,6 +6,23 @@
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/dhanushka2001/OpenGL-3D-Render-Recorder/total)
 ![GitHub Repo stars](https://img.shields.io/github/stars/dhanushka2001/OpenGL-3D-Render-Recorder)
 
+<!--
+![C++](https://img.shields.io/badge/c++-%2300599C.svg?style=for-the-badge&logo=c%2B%2B&logoColor=white)
+![OpenGL](https://img.shields.io/badge/OpenGL-%23FFFFFF.svg?style=for-the-badge&&logo=opengl)
+![FFmpeg](https://shields.io/badge/FFmpeg-%23171717.svg?logo=ffmpeg&style=for-the-badge&labelColor=171717&logoColor=5cb85c)
+![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
+-->
+
+![C++ new](https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=c%2B%2B&logoColor=white)
+![OpenGL new](https://img.shields.io/badge/OpenGL-%23FFFFFF.svg?style=flat&logo=opengl)
+![FFmpeg new](https://shields.io/badge/FFmpeg-%23171717.svg?logo=ffmpeg&style=flat&labelColor=171717&logoColor=5cb85c)
+![Windows new](https://img.shields.io/badge/Windows-0078D6?style=flat&logo=windows&logoColor=white)
+![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=flat&logo=arch-linux&logoColor=white)
+<!--
+![Linux new](https://img.shields.io/badge/Linux-FCC624?style=flat&logo=linux&logoColor=black)
+-->
+
 # OpenGL-3D-Render-Recorder
 
 https://github.com/user-attachments/assets/fc8763bd-dcda-4dbf-9c60-3e322aa1a2ce
