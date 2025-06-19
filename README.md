@@ -1,10 +1,10 @@
 *Learning OpenGL for High Performance Scientific Computing and Modelling on the GPU*
 
-![GitHub Release](https://img.shields.io/github/v/release/dhanushka2001/OpenGL-3D-Render-Recorder)
-![GitHub License](https://img.shields.io/github/license/dhanushka2001/OpenGL-3D-Render-Recorder)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/m/dhanushka2001/OpenGL-3D-Render-Recorder)
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/dhanushka2001/OpenGL-3D-Render-Recorder/total)
-![GitHub Repo stars](https://img.shields.io/github/stars/dhanushka2001/OpenGL-3D-Render-Recorder)
+[![GitHub Release](https://img.shields.io/github/v/release/dhanushka2001/OpenGL-3D-Render-Recorder)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/releases)
+[![GitHub License](https://img.shields.io/github/license/dhanushka2001/OpenGL-3D-Render-Recorder)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/blob/main/LICENSE)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/dhanushka2001/OpenGL-3D-Render-Recorder)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/commits/main/)
+[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/dhanushka2001/OpenGL-3D-Render-Recorder/total)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/releases)
+[![GitHub Repo stars](https://img.shields.io/github/stars/dhanushka2001/OpenGL-3D-Render-Recorder)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/stargazers)
 
 <!--
 ![C++](https://img.shields.io/badge/c++-%2300599C.svg?style=for-the-badge&logo=c%2B%2B&logoColor=white)
@@ -15,8 +15,8 @@
 -->
 
 ![C++ new](https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=c%2B%2B&logoColor=white)
-![OpenGL new](https://img.shields.io/badge/OpenGL-%23FFFFFF.svg?style=flat&logo=opengl)
-![FFmpeg new](https://shields.io/badge/FFmpeg-%23171717.svg?logo=ffmpeg&style=flat&labelColor=171717&logoColor=5cb85c)
+[![OpenGL new](https://img.shields.io/badge/OpenGL-%23FFFFFF.svg?style=flat&logo=opengl)](https://github.com/glfw/glfw)
+[![FFmpeg new](https://shields.io/badge/FFmpeg-%23171717.svg?logo=ffmpeg&style=flat&labelColor=171717&logoColor=5cb85c)](https://github.com/FFmpeg/FFmpeg)
 ![Windows new](https://img.shields.io/badge/Windows-0078D6?style=flat&logo=windows&logoColor=white)
 ![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=flat&logo=arch-linux&logoColor=white)
 <!--
