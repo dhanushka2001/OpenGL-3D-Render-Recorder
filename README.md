@@ -61,10 +61,10 @@ Real-time 3D renderer in C++ with OpenGL (GLFW).
 </details>
 
 ```console
-git clone https://github.com/dhanushka2001/LearnOpenGL
+git clone https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder
 ```
 ```console
-cd LearnOpenGL
+cd OpenGL-3D-Render-Recorder
 mkdir build
 cd build
 cmake ..
