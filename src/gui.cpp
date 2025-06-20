@@ -9,6 +9,7 @@
 // Settings
 // --------
 #include <learnopengl/Settings.h>
+#include <learnopengl/encoder.h>
 
 namespace GUI {
     namespace { // anonymous namespace (encapsulation) evaluated once at program startup
@@ -75,7 +76,7 @@ namespace GUI {
     }
 
     // hot function, used in render loop
-    void Render() {
+    void Render(Encoder *encoder) {
         using namespace Settings;
 
         int imgui_height = Settings::libx264 ? 517 : 536; // new line = +20 height. libx264 height = h264_mf height - 16.
@@ -98,7 +99,8 @@ namespace GUI {
         ImGui::Text(MainText.c_str());
 
         ImGui::Text("%s", HeaderText);
-        if (recording) ImGui::BeginDisabled();
+        bool isEncoding = encoder->isEncoding.load(std::memory_order_acquire);
+        if (isEncoding) ImGui::BeginDisabled();
         {
             bool isLibx264 = Settings::libx264;
             bool isH264mf = !Settings::libx264;
@@ -167,8 +169,11 @@ namespace GUI {
             if (ImGui::Combo("Framerate", &selectedFramerateIdx, framerates, IM_ARRAYSIZE(framerates))) {
                 Settings::framerate = (selectedFramerateIdx == 0) ? 30 : 60;
             }
+            
+            // bool isLaptopMode = Settings::laptop_mode;
+            ImGui::Checkbox("Laptop mode", &Settings::laptop_mode);
         }
-        if (recording) ImGui::EndDisabled();
+        if (isEncoding) ImGui::EndDisabled();
 
         if (libx264) {
             ImGui::Text("%s", x264Info);

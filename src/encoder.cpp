@@ -223,8 +223,11 @@ void Encoder::start(GLFWwindow *window) {
                                 frameQueue.pop();
                             }
                             Timer::startTimer(t);
-                            // this->encodeFrame(data.frame.data(), data.pts); // Use .get() for smart pointers, or .data() for std::vector
-                            this->encodeFrame(data.frame, data.pts);
+                            if (laptop_mode) {
+                                this->encodeFrame(data.frameVec.data(), data.pts); // Use .get() for smart pointers, or .data() for std::vector
+                            } else {
+                                this->encodeFrame(data.framePtr, data.pts);
+                            }
                             {
                                 std::lock_guard<std::mutex> coutLock(coutMutex);
                                 Timer::endTimer(Timer::ENCODE, t);
@@ -251,12 +254,14 @@ void Encoder::start(GLFWwindow *window) {
     });
 }
 
-void Encoder::pushFrame(uint8_t* frame, double timestamp) { //, size_t DATA_SIZE) {
+void Encoder::pushFrame(uint8_t* frame, double timestamp, size_t DATA_SIZE) {
     std::lock_guard<std::mutex> lock(queueMutex);
-    // using namespace Settings;
-    // std::vector<uint8_t> copiedFrame(frame, frame + DATA_SIZE);
-    // frameQueue.push(FrameData{std::move(copiedFrame), timestamp}); // move into FrameData so Encoder takes ownership
-    frameQueue.push(FrameData{frame, timestamp}); // move into FrameData so Encoder takes ownership
+    if (laptop_mode) {
+        std::vector<uint8_t> copiedFrame(frame, frame + DATA_SIZE); // deep copy of original raw frame
+        frameQueue.push(FrameData{std::move(copiedFrame), timestamp}); // move into FrameData so Encoder takes ownership
+    } else {
+        frameQueue.push(FrameData{frame, timestamp}); // move into FrameData so Encoder takes ownership
+    }
     queueCond.notify_all();
 }
 

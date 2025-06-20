@@ -686,7 +686,7 @@ int main()
                 #if IMGUI==1
                 if (imgui) {
                     Timer::startTimer(t);
-                    GUI::Render();
+                    GUI::Render(encoder.get());
                     {
                         // std::lock_guard<std::mutex> lock(coutMutex);
                         Timer::endTimer(Timer::RENDER_GUI, t);
@@ -753,7 +753,7 @@ int main()
                             }
                         }
                         if (encoder_thread) {
-                            encoder->pushFrame(buffer, crntTime);
+                            encoder->pushFrame(buffer, crntTime, DATA_SIZE);
                         }
                         else {
                             Timer::startTimer(t);
@@ -790,9 +790,8 @@ int main()
                                     Timer::endTimer(Timer::FLIP_FUNCTION, t);
                                 }
                             }
-                            // if just toggled PBO ON, skip first frame
                             if (encoder_thread) {
-                                encoder->pushFrame(ptr, crntTime);
+                                encoder->pushFrame(ptr, crntTime, DATA_SIZE);
                             } else {
                                 Timer::startTimer(t);
                                 encoder->encodeFrame(ptr, crntTime);
@@ -861,7 +860,7 @@ int main()
             #if IMGUI==1
             if (imgui) {
                 Timer::startTimer(t);
-                GUI::Render();
+                GUI::Render(encoder.get());
                 {
                     // std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::RENDER_GUI, t);
