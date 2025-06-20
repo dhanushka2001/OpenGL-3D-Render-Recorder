@@ -40,18 +40,26 @@ jobs:
       run: cmake --build build
 
   windows:
-    name: Build on Windows
+    name: Build on Windows (MSYS2 MinGW)
     runs-on: windows-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Ninja + CMake
-      uses: lukka/get-cmake@latest
+    - name: Set up MSYS2 with MinGW-w64
+      uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >-
+          mingw-w64-x86_64-toolchain
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
 
-    - name: Configure
-      run: cmake -S . -B build -G Ninja
-
-    - name: Build
-      run: cmake --build build
+    - name: Build using MinGW64 shell
+      shell: msys2 {0}
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
+        ninja
