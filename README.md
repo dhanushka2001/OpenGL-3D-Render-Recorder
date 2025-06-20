@@ -1,5 +1,6 @@
 *Learning OpenGL for High Performance Scientific Computing and Modelling on the GPU*
 
+[![Build Status](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/actions/workflows/cmake-multi-platform.yml/badge.svg)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/actions/workflows/cmake-multi-platform.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/dhanushka2001/OpenGL-3D-Render-Recorder)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/releases)
 [![GitHub License](https://img.shields.io/github/license/dhanushka2001/OpenGL-3D-Render-Recorder)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/blob/main/LICENSE)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/dhanushka2001/OpenGL-3D-Render-Recorder)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/commits/main/)
