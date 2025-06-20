@@ -18,8 +18,6 @@
 // ------------------
 #include <iostream>                     // for std::cin/cout/cerr
 #include <filesystem>                   // for std::filesystem
-// #include <iomanip>                      // for std::precision(3)              
-// #include <cstdio>                       // For sprintf
 
 // stb
 // ---
@@ -135,7 +133,7 @@ int main()
     GLuint nextIndex = 1;//(firstIndex + 1) % PBO_COUNT;
     // unsigned int frameCounter = 0;
     GLuint pboIds[PBO_COUNT];
-    GLsync pboFences[PBO_COUNT] = { nullptr };
+    // GLsync pboFences[PBO_COUNT] = { nullptr };
     const size_t DATA_SIZE = SCR_WIDTH * SCR_HEIGHT * 3;
 
     // glfw window creation
@@ -159,10 +157,6 @@ int main()
     glfwSetCursorPos(window, lastX,lastY);  // set cursor in centre of screen to remove whiplash cursor jump
     glfwSetScrollCallback(window, scroll_callback);
 
-    
-    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);  // Hidden window
-    GLFWwindow* sharedContextWindow = glfwCreateWindow(1, 1, "", nullptr, window); // Pass window as 5th param = share context
-    
 
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -375,7 +369,7 @@ int main()
     {
         // PBO OFF
         // -------
-        for (int i = 0; i < BUFFER_COUNT; ++i) {
+        for (int i = 0; i < static_cast<int>(BUFFER_COUNT); ++i) {
             frameBuffers[i] = std::make_unique<uint8_t[]>(DATA_SIZE);
         }
 
@@ -566,7 +560,6 @@ int main()
     float lastTime = 0.0f;                  // for FPS text
     float encodeDiff, encodeTime = 0.0f;    // for encoding frames
     float crntTime = 0.0f;                  // current time (used by all)
-    float nextIndexTime = 0.0f;             // crntTime of previous pbo
 
 
     // render loop
@@ -636,8 +629,8 @@ int main()
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-                // static crate
                 Timer::startTimer(t);
+                // static crate
                 glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
                 RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
 
@@ -800,7 +793,6 @@ int main()
                             // if just toggled PBO ON, skip first frame
                             if (encoder_thread) {
                                 encoder->pushFrame(ptr, crntTime);
-                                // encoder->pushFrame(ptr, crntTime);
                             } else {
                                 Timer::startTimer(t);
                                 encoder->encodeFrame(ptr, crntTime);
@@ -830,6 +822,7 @@ int main()
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+            Timer::startTimer(t);
             // static crate
             glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
             RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
@@ -850,6 +843,10 @@ int main()
             lightShader.setMat4("model", model);
             glBindVertexArray(lightVAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
+            {
+                // std::lock_guard<std::mutex> lock(coutMutex);
+                Timer::endTimer(Timer::RENDER_SCENE, t);
+            }
 
             // Render text in front: https://stackoverflow.com/a/5527249
             // glClear(GL_DEPTH_BUFFER_BIT);
@@ -1246,16 +1243,16 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::uniqu
     if ((glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) && (!recordPressed))
     {
         recordPressed = true;
-        // recording = !recording;
+        recording_once = true;
         
         // if encoding and recording turned off, wait for encoding to turn off before turning recording again
-        if (!encoder->isEncoding.load(std::memory_order_acquire) || recording.load(std::memory_order_acquire)) {
+        if (encoder->isEncoding.load(std::memory_order_acquire) && !recording.load(std::memory_order_acquire)) {
+            oss << "[main] R key pressed. WARNING: Trying to turn on recording when encoding hasn't finished!\n";
+        }
+        else {
             recording.store(!recording.load(std::memory_order_acquire), std::memory_order_release);
             encoder->queueCond.notify_all();  // Wake up encoder thread if asleep
             oss << "[main] R key pressed. Press = " << recordPressed << " Time: " << crntTime << "\n";
-        }
-        else {
-            oss << "[main] R key pressed. WARNING: Trying to turn on recording when encoding hasn't finished!\n";
         }
     }
     if ((glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) && (recordPressed)) {
@@ -1268,7 +1265,7 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::uniqu
     if ((glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) && (!encoderPressed))
     {
         encoderPressed = true;
-        encoder_thread = !encoder_thread;
+        encoder_thread.store(!encoder_thread.load(std::memory_order_acquire), std::memory_order_release);
         encoder->queueCond.notify_all();  // Wake encoder thread if asleep
         std::lock_guard<std::mutex> coutLock(coutMutex);
         oss << "[main] T key pressed. Press = " << encoderPressed << " Time: " << crntTime << "\n";

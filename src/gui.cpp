@@ -145,7 +145,6 @@ namespace GUI {
 
             } else {
                 // h264_mf settings
-                static int bitRate = Settings::g_bit_rate; // e.g. 10-100 Mbps
                 static int gopSize = Settings::g_gop_size; // e.g. 10–120 // smaller GOP=>more I-frames: better seeking/error recovery, faster previewing, but larger file size. for real-time/streaming: GOP = 2 x framerate.
                 static int maxBFrames = Settings::g_max_b_frames; // 0–5
                 

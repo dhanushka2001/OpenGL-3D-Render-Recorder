@@ -1,7 +1,11 @@
 #ifndef ENCODER_H
 #define ENCODER_H
 
+#include <thread>
+#include <queue>
+#include <condition_variable>
 #include <mutex>
+#include <atomic>
 #include <cstdint>
 
 extern "C" {
@@ -18,14 +22,10 @@ extern "C" {
 #endif
 }
 
-#include <queue>
-#include <condition_variable>
 // glad & GLFW
 // -----------
 #include <glad/glad.h>                  // glad
 #include <GLFW/glfw3.h>                 // GLFW (includes stdint.h)
-#include <learnopengl/Settings.h>
-#include <thread>
 
 
 class Encoder {
@@ -73,26 +73,12 @@ private:
         // std::vector<uint8_t> frame;
         uint8_t *frame;
         double pts;                   // presentation timestamp
-        // std::atomic<bool> *inUseFlag;
     };
 
     std::queue<FrameData> frameQueue;
     std::mutex queueMutex;
-    // std::condition_variable queueCond;
-    // std::atomic<bool> isEncoding = false;
     std::atomic<bool> shuttingDown = false;  // To stop the thread on app exit
     const size_t MAX_QUEUE_SIZE = 8;
-
-    // std::shared_ptr<Encoder> encoder = std::make_shared<Encoder>();
-
-    // pbo settings
-    // ------------
-    // GLuint firstIndex = 0;
-    // GLuint nextIndex = 1;//(firstIndex + 1) % PBO_COUNT;
-    // // unsigned int frameCounter = 0;
-    // GLuint pboIds[Settings::PBO_COUNT];
-    // GLsync pboFences[Settings::PBO_COUNT] = { nullptr };
-    // unsigned int DATA_SIZE;
 
     std::thread encoderThread;
 };

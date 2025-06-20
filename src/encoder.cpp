@@ -174,6 +174,7 @@ void Encoder::start(GLFWwindow *window) {
 
     encoderThread = std::thread([this, window]() {
         std::chrono::high_resolution_clock::time_point t;
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);  // Hidden window
         GLFWwindow* sharedContextWindow = glfwCreateWindow(1, 1, "", nullptr, window); // Pass window as 5th param = share context
         glfwMakeContextCurrent(sharedContextWindow);  // Make encoder's context current here
         gladLoadGL();  // Needed again in this thread!

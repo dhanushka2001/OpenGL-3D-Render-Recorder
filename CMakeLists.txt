@@ -14,6 +14,10 @@ set(CMAKE_CXX_EXTENSIONS	 ON)
 # CMake Build Type (Debug/Release)
 set(CMAKE_BUILD_TYPE Release)
 
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+
 # Specify the source files
 set(SOURCES
     src/main.cpp

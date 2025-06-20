@@ -2,7 +2,7 @@
 #include <chrono>
 #include <array>
 #include <iostream>                     // for std::cin/cout/cerr
-#include <iomanip>                      // for std::setw()
+#include <iomanip>                      // for std::setw(), std::precision()
 #ifdef _WIN32
 #include <Windows.h>
 #endif /* _WIN32 */
@@ -72,18 +72,20 @@ namespace Timer {
     void printAverages() {
         using namespace Settings;
         std::cout << "[Timer] Printing timings...\n";
-        std::ostringstream oss;
-        oss << "Video framerate: " << framerate << " fps";
-        std::cout << "[Timer] "
-                  << std::left << std::setw(25) << oss.str()
-                  << " max: " << std::right << std::setw(8)
-                  << std::fixed << std::setprecision(4) << 1000.0 / framerate <<  " ms\n";
-        std::ostringstream oss2;
-        oss2 << "Ring buffer size: " << BUFFER_COUNT;     
-        std::cout << "[Timer] "
-                  << std::left << std::setw(25) << oss2.str()
-                  << " max: " << std::right << std::setw(8)
-                  << std::fixed << std::setprecision(4) << BUFFER_COUNT * 1000.0 / framerate <<  " ms (thread-safe if >encodeFrame)\n";
+        if (recording_once) {
+            std::ostringstream oss;
+            oss << "Video framerate: " << framerate << " fps";
+            std::cout << "[Timer] "
+                    << std::left << std::setw(25) << oss.str()
+                    << " max: " << std::right << std::setw(8)
+                    << std::fixed << std::setprecision(4) << 1000.0 / framerate <<  " ms\n";
+            std::ostringstream oss2;
+            oss2 << "Ring buffer size: " << BUFFER_COUNT;     
+            std::cout << "[Timer] "
+                    << std::left << std::setw(25) << oss2.str()
+                    << " max: " << std::right << std::setw(8)
+                    << std::fixed << std::setprecision(4) << BUFFER_COUNT * 1000.0 / framerate <<  " ms (thread-safe if >encodeFrame+glReadPixels)\n";
+        }
         for (int i = 0; i < NUM_TIMERS; ++i) {
             if (counts[i] > 0) {
                 #ifdef _WIN32

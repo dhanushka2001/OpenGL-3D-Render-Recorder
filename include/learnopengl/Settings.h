@@ -25,6 +25,7 @@ namespace Settings {
     extern bool                     flip_shader;
     extern bool                     wireframe;
     extern bool                     imgui;
+    extern bool                     recording_once;
     extern bool                     libx264;
     // h264_mf
     extern int64_t g_bit_rate;
