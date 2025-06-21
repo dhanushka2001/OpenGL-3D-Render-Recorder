@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.31)
 
 # Project name and version
-project(myprogram VERSION 1.0)
+project(OpenGL-3D-Render-Recorder VERSION 1.2.0)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 		 17)
@@ -283,7 +283,8 @@ add_custom_target(clear
 )
 
 # Run inside build/: ninja zip OR cmake --build . --target zip
-set(PACKAGE_NAME "MyProgram-v1.1.0")
+set(PACKAGE_NAME "OpenGL-3D-Render-Recorder-v1.2.0-Windows-x86_64")
+# set(PACKAGE_NAME "OpenGL-3D-Render-Recorder-v1.2.0-Arch-Linux-x86_64")
 set(PACKAGE_DIR "${CMAKE_BINARY_DIR}/${PACKAGE_NAME}")
 set(PACKAGE_ZIP "${CMAKE_BINARY_DIR}/${PACKAGE_NAME}.zip")
 # Uncomment ALL to make CMake run this target by default (always makes ZIP file)
