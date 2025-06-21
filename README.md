@@ -18,8 +18,8 @@
 ![C++ new](https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=c%2B%2B&logoColor=white)
 [![OpenGL new](https://img.shields.io/badge/OpenGL-%23FFFFFF.svg?style=flat&logo=opengl)](https://github.com/glfw/glfw)
 [![FFmpeg new](https://shields.io/badge/FFmpeg-%23171717.svg?logo=ffmpeg&style=flat&labelColor=171717&logoColor=5cb85c)](https://github.com/FFmpeg/FFmpeg)
-![Windows new](https://img.shields.io/badge/Windows-0078D6?style=flat&logo=windows&logoColor=white)
-![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=flat&logo=arch-linux&logoColor=white)
+[![Windows new](https://img.shields.io/badge/Windows-0078D6?style=flat&logo=windows&logoColor=white)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/releases)
+[![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=flat&logo=arch-linux&logoColor=white)](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/releases)
 <!--
 ![Linux new](https://img.shields.io/badge/Linux-FCC624?style=flat&logo=linux&logoColor=black)
 -->
