@@ -100,7 +100,6 @@ int main()
 {
     // glfw: initialize and configure
     // ------------------------------
-    // Initialise GLFW
     if( !glfwInit() ) {
         fprintf( stderr, "Failed to initialize GLFW\n" );
         return -1;
@@ -115,6 +114,7 @@ int main()
 #endif
 
     // Set window size (needs to be fixed when recording)
+    // --------------------------------------------------
     using namespace Settings;
     // GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     // const GLFWvidmode* mode = glfwGetVideoMode(monitor);
@@ -639,7 +639,6 @@ int main()
                 RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
 
                 // draw the light cube object
-                // also draw the lamp object
                 lightShader.use();
                 lightShader.setMat4("projection", projection);
                 view = camera.GetViewMatrix();
@@ -831,7 +830,6 @@ int main()
             RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
 
             // draw the light cube object
-            // also draw the lamp object
             lightShader.use();
             lightShader.setMat4("projection", projection);
             view = camera.GetViewMatrix();

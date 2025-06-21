@@ -12,7 +12,6 @@
 #include <learnopengl/timer.h>
 #include <cstring>
 
-using namespace Settings;
 
 Encoder::Encoder() {
     av_log_set_level(AV_LOG_INFO);
@@ -26,6 +25,7 @@ Encoder::~Encoder() {
 }
 
 const AVCodec* Encoder::chooseEncoder() {
+    using namespace Settings;
     const AVCodec* codec = nullptr;
 
     if (libx264) {
@@ -49,6 +49,7 @@ const AVCodec* Encoder::chooseEncoder() {
 }
 
 bool Encoder::initialize(const char* filename, double recordingStartTime) {
+    using namespace Settings;
     // std::lock_guard<std::mutex> lock(encoderMutex);
     startTime = recordingStartTime;
 
@@ -120,6 +121,7 @@ bool Encoder::initialize(const char* filename, double recordingStartTime) {
 }
 
 bool Encoder::encodeFrame(const uint8_t* rgbData, float currentTime) {
+    using namespace Settings;
     // std::lock_guard<std::mutex> lock(encoderMutex); // use a mutex just in case as encodeFrame() can be called from main thread and encoder thread (but shouldn't be at the same time)
     if (!frameX || !frameX->data[0] || !swsCtx) return false;
 
@@ -170,6 +172,7 @@ void Encoder::finalize() {
 }
 
 void Encoder::start(GLFWwindow *window) {
+    using namespace Settings;
     Timer::init();
 
     encoderThread = std::thread([this, window]() {
@@ -255,6 +258,7 @@ void Encoder::start(GLFWwindow *window) {
 }
 
 void Encoder::pushFrame(uint8_t* frame, double timestamp, size_t DATA_SIZE) {
+    using namespace Settings;
     std::lock_guard<std::mutex> lock(queueMutex);
     if (laptop_mode) {
         std::vector<uint8_t> copiedFrame(frame, frame + DATA_SIZE); // deep copy of original raw frame
@@ -266,6 +270,7 @@ void Encoder::pushFrame(uint8_t* frame, double timestamp, size_t DATA_SIZE) {
 }
 
 void Encoder::stop() {
+    using namespace Settings;
     {
         std::lock_guard<std::mutex> lock(queueMutex);
         // std::cout << "[Encoder] Setting shuttingDown to true\n";

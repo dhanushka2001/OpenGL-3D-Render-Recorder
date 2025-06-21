@@ -79,7 +79,7 @@ namespace GUI {
     void Render(Encoder *encoder) {
         using namespace Settings;
 
-        int imgui_height = Settings::libx264 ? 517 : 536; // new line = +20 height. libx264 height = h264_mf height - 16.
+        int imgui_height = Settings::libx264 ? 542 : 559; // new line = +20 height. libx264 height = h264_mf height - 16.
         #ifdef _WIN32
         ImGui::SetNextWindowPos(ImVec2(padding, padding), ImGuiCond_Once);
         #endif /* _WIN32 */
@@ -171,7 +171,7 @@ namespace GUI {
             }
             
             // bool isLaptopMode = Settings::laptop_mode;
-            ImGui::Checkbox("Laptop mode", &Settings::laptop_mode);
+            ImGui::Checkbox("Laptop mode (deep copy frames, thread-safe)", &Settings::laptop_mode);
         }
         if (isEncoding) ImGui::EndDisabled();
 

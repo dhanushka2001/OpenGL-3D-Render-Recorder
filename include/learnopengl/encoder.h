@@ -47,8 +47,6 @@ public:
     std::atomic<bool> isEncoding = false;
 
 private:
-    std::mutex coutMutex;
-
     AVFormatContext* formatCtx = nullptr;
     AVCodecContext* codecCtx = nullptr;
     AVStream* videoStream = nullptr;
@@ -56,17 +54,12 @@ private:
     AVFrame* frameX = nullptr;
     AVPacket pkt = {};
 
-    double startTime = 0.0;
-
     // Helper
     const AVCodec* chooseEncoder();
 
     // No copying
     Encoder(const Encoder&) = delete;
     Encoder& operator=(const Encoder&) = delete;
-
-
-    std::string getTimestampedFilename();
 
     // FrameData holds a copy of the frame and its timestamp
     struct FrameData {
@@ -87,6 +80,8 @@ private:
 
     };
 
+    double startTime = 0.0;
+    std::string getTimestampedFilename();
     std::queue<FrameData> frameQueue;
     std::mutex queueMutex;
     std::atomic<bool> shuttingDown = false;  // To stop the thread on app exit
