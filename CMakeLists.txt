@@ -14,6 +14,10 @@ set(CMAKE_CXX_EXTENSIONS	 ON)
 # CMake Build Type (Debug/Release)
 set(CMAKE_BUILD_TYPE Release)
 
+# set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+
 # Specify the source files
 set(SOURCES
     src/main.cpp
@@ -279,7 +283,7 @@ add_custom_target(clear
 )
 
 # Run inside build/: ninja zip OR cmake --build . --target zip
-set(PACKAGE_NAME "MyProgram-v1.0.0")
+set(PACKAGE_NAME "MyProgram-v1.1.0")
 set(PACKAGE_DIR "${CMAKE_BINARY_DIR}/${PACKAGE_NAME}")
 set(PACKAGE_ZIP "${CMAKE_BINARY_DIR}/${PACKAGE_NAME}.zip")
 # Uncomment ALL to make CMake run this target by default (always makes ZIP file)

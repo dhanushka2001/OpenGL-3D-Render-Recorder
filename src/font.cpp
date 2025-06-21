@@ -121,7 +121,7 @@ void Font::createTextureAtlas() {
             break;
         }
         // Check if character doesn't fit in the row
-        if (offsetX + g->bitmap.width > atlasWidth) {
+        if (offsetX + static_cast<int>(g->bitmap.width) > atlasWidth) {
             maxWidth = std::max(maxWidth, offsetX);
             offsetY += maxRowHeight + padding; // next row + padding
             std::cout << "[Font] Reached atlas width limit: " << offsetX << " + " << g->bitmap.width << " = " << offsetX + static_cast<int>(g->bitmap.width) << " > " << atlasWidth << ". Starting new row. Height: " << offsetY << "/" << atlasHeight << "\n";
@@ -129,7 +129,7 @@ void Font::createTextureAtlas() {
             maxRowHeight = 0;   // reset
         }
         // Check if character doesn't fit in the atlas
-        if (offsetY + g->bitmap.rows > atlasHeight) {
+        if (offsetY + static_cast<int>(g->bitmap.rows) > atlasHeight) {
             std::cerr << "[Font] ERROR: Exceeded atlas height! " << offsetY << " + " << g->bitmap.rows << " = " << offsetY + static_cast<int>(g->bitmap.rows) << " > " << atlasHeight << ". Texture atlas too small!" << std::endl;
             break;
         }

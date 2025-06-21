@@ -9,6 +9,7 @@
 // Settings
 // --------
 #include <learnopengl/Settings.h>
+#include <learnopengl/encoder.h>
 
 namespace GUI {
     namespace { // anonymous namespace (encapsulation) evaluated once at program startup
@@ -49,12 +50,11 @@ namespace GUI {
         const std::string recordingInfo = "\nPress R to turn recording ON/OFF. You can find the recordings in /build/output/.";
         constexpr const char* ExitText = "\nPress ESC to exit.";
         // imgui (height can change at runtime)
-        constexpr const int imgui_xpos = 30;
-        constexpr const int imgui_ypos = 30;
-        constexpr const int imgui_width = 420;
+        constexpr const int padding         = 30;
+        constexpr const int imgui_width     = 420;
         // implot
-        constexpr const int implot_width = 544;
-        constexpr const int implot_height = 556;
+        constexpr const int implot_width    = 544;
+        constexpr const int implot_height   = 556;
         bool encoderChanged = false;
         int presetIdx = 0;
     }
@@ -76,11 +76,16 @@ namespace GUI {
     }
 
     // hot function, used in render loop
-    void Render() {
+    void Render(Encoder *encoder) {
         using namespace Settings;
 
-        int imgui_height = Settings::libx264 ? 517 : 536; // new line = +20 height. libx264 height = h264_mf height - 16.
-        ImGui::SetNextWindowPos(ImVec2(imgui_xpos, imgui_ypos), ImGuiCond_Once);
+        int imgui_height = Settings::libx264 ? 542 : 559; // new line = +20 height. libx264 height = h264_mf height - 16.
+        #ifdef _WIN32
+        ImGui::SetNextWindowPos(ImVec2(padding, padding), ImGuiCond_Once);
+        #endif /* _WIN32 */
+        #ifdef __linux__
+        ImGui::SetNextWindowPos(ImVec2(padding, padding + imgui_height), ImGuiCond_Once);
+        #endif /* __linux__ */
         ImGui::SetNextWindowSize(ImVec2(imgui_width, imgui_height), ImGuiCond_Once);
         if (encoderChanged) {
             ImGui::SetNextWindowSize(ImVec2(imgui_width, imgui_height), ImGuiCond_Always);
@@ -94,7 +99,8 @@ namespace GUI {
         ImGui::Text(MainText.c_str());
 
         ImGui::Text("%s", HeaderText);
-        if (recording) ImGui::BeginDisabled();
+        bool isEncoding = encoder->isEncoding.load(std::memory_order_acquire);
+        if (isEncoding) ImGui::BeginDisabled();
         {
             bool isLibx264 = Settings::libx264;
             bool isH264mf = !Settings::libx264;
@@ -141,7 +147,6 @@ namespace GUI {
 
             } else {
                 // h264_mf settings
-                static int bitRate = Settings::g_bit_rate; // e.g. 10-100 Mbps
                 static int gopSize = Settings::g_gop_size; // e.g. 10–120 // smaller GOP=>more I-frames: better seeking/error recovery, faster previewing, but larger file size. for real-time/streaming: GOP = 2 x framerate.
                 static int maxBFrames = Settings::g_max_b_frames; // 0–5
                 
@@ -164,8 +169,11 @@ namespace GUI {
             if (ImGui::Combo("Framerate", &selectedFramerateIdx, framerates, IM_ARRAYSIZE(framerates))) {
                 Settings::framerate = (selectedFramerateIdx == 0) ? 30 : 60;
             }
+            
+            // bool isLaptopMode = Settings::laptop_mode;
+            ImGui::Checkbox("Laptop mode (deep copy frames, thread-safe)", &Settings::laptop_mode);
         }
-        if (recording) ImGui::EndDisabled();
+        if (isEncoding) ImGui::EndDisabled();
 
         if (libx264) {
             ImGui::Text("%s", x264Info);
@@ -179,10 +187,10 @@ namespace GUI {
         
         // Show the ImPlot demo window
         #ifdef _WIN32
-        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - implot_width, 30), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - implot_width, padding), ImGuiCond_Once);
         #endif /* _WIN32 */
         #ifdef __linux__
-        ImGui::SetNextWindowPos(ImVec2(956, 580), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - implot_width, padding + implot_height), ImGuiCond_Once);
         #endif /* __linux__ */
         ImGui::SetNextWindowSize(ImVec2(implot_width, implot_height), ImGuiCond_Once);
         if (ImGui::Begin("ImPlot Demo")) {
