@@ -71,30 +71,24 @@ cd build
 cmake ..
 ```
 
-Then build using either ``make`` or ``ninja``.
-* On Linux:
-  
-  ```console
-  make
-  ```
-* On Windows:
-  
-  ```console
-  ninja
-  ```
-  
-  Windows seems to default to building for ``ninja``, which is faster as it tries to compile files in parallel, however, this can sometimes cause out-of-memory errors for machines with low RAM, like my laptop, in which case you should use:
+Windows seems to default to building for ``ninja`` when running ``cmake ..``, which is good as ``ninja`` tries to compile files in parallel. However on Linux it seems to default to building for ``make``, which is slower. To specify building for ``ninja``, clear the ``/build/`` folder and run:
 
-  ```console
-  ninja -j1
-  ```
+```console
+cmake .. -G Ninja
+```
+Finally, to build the executable, just run:
 
-  which limits ``ninja`` to 1 job at a time. Or you can use ``mingw32-make`` instead by doing:
+```console
+ninja
+```
 
-  ```console
-  cmake .. -G "MinGW Makefiles"
-  mingw32-make
-  ```
+``ninja`` can sometimes give out-of-memory errors for machines with low RAM, like my laptop, in which case you should use:
+
+```console
+ninja -j1
+```
+
+which limits ``ninja`` to 1 job at a time.
 
 The executable will be inside ``/build/bin/``, and screen recordings will be inside ``/build/output/``.
 
@@ -110,7 +104,7 @@ If, when running ``ninja``, it gets stuck in an infinite loop "Rechecking globbe
 cmake --build . --target clear
 ```
 
-or manually delete ``CMakeCache.txt`` in /build/, and rerun ``ninja``.
+or manually delete ``CMakeCache.txt`` in ``/build/``, and rerun ``ninja``.
 
 ## Introduction
 * Learning to use OpenGL (GLFW) so I can do high-performance scientific computing and modelling on the GPU.
@@ -174,13 +168,6 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     
   </details>
   
-* I am using MinGW-w64 (GCC) to compile the C++ code. I recommend installing it using [MSYS2](https://www.msys2.org/), [here](https://www.youtube.com/watch?v=C3IxeHthNnM) is a good tutorial. Make sure to install MSYS2 in the C drive (``C:\msys64``), and to run this command in MSYS2 (ensure you're using the ``mingw64`` [environment](https://www.msys2.org/docs/environments/)):
-
-  ```console
-  pacman -S --needed base-devel mingw-w64-x86_64-toolchain
-  ```
-  
-  (it's important to run this command and not one with "``ucrt64``" in it as the compiler won't be saved in the correct place and the code won't run). Once it has finished downloading you need to add the filepath to Windows PATH by going to Environment Variables and adding ``C:\msys64\mingw64\bin`` to PATH (I recommend putting it at the top of the list, if you have a long list of filepaths and you put the directory where the compiler is stored at the bottom, it may not work, I learned this the hard way).
 * Using www.learnopengl.com as my main resource.
 
 ## Progress update 1 - Hello Triangle - 30/06/24
@@ -205,7 +192,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
 ## Progress update 2 - Shaders - 20/07/24
 
-  <details><summary> Progress update 2 - Shaders - 20/07/24 </summary>
+<details><summary> Progress update 2 - Shaders - 20/07/24 </summary>
     
   * I understand the render pipeline for OpenGL and what all the shaders in the pipeline do.
   
@@ -901,7 +888,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     [^29]: Rohit Kasle. "Passing By Pointer vs Passing By Reference in C++" _GeeksforGeeks.org_, 11 Oct. 2024, [geeksforgeeks.org/passing-by-pointer-vs-passing-by-reference-in-cpp/](https://www.geeksforgeeks.org/passing-by-pointer-vs-passing-by-reference-in-cpp/).
     
   * Vertex shader for the text shader program.
-    ```cpp
+    ```glsl
     #version 430 core
     
     layout (location = 0) in vec4 vertex; // x, y, z, w -> position and texture coords
@@ -916,7 +903,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     }
     ```
   * Fragment shader for the text shader program.
-    ```cpp
+    ```glsl
     #version 430 core
     
     in vec2 TexCoord;   // Texture coordinates from the vertex shader
@@ -1081,7 +1068,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   
   * Along with rendering text, I also wanted to render the texture atlas on-screen, just so that I could see all the glyphs, which means creating another shader program and a function to activate the shader program, bind the VAO and VBO for a fullscreen quad, and render the texture of the texture atlas.
     * Vertex shader for the texture atlas shader program.
-      ```cpp
+      ```glsl
       #version 430 core
       layout(location = 0) in vec2 aPos;          // Vertex position (2D quad)
       layout(location = 1) in vec2 aTexCoord;     // Texture coordinates
@@ -1097,7 +1084,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       }
       ```
     * Fragment shader for the texture atlas shader program.
-      ```cpp
+      ```glsl
       #version 430 core
       in vec2 TexCoord;    // Texture coordinates from vertex shader
       out vec4 FragColor;  // Final output color
@@ -1395,7 +1382,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     }
     ```
   * Updated scene vertex shader.
-    ```cpp
+    ```glsl
     #version 430 core
     layout (location = 0) in vec3 aPos;
     layout (location = 1) in vec3 aColor;
@@ -1414,7 +1401,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     }
     ```
   * Updated scene fragment shader.
-    ```cpp
+    ```glsl
     #version 430 core
     out vec4 FragColor;
     
@@ -1521,22 +1508,22 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     [^53]: Victor Gordan. "OpenGL Tutorial 17 - Transparency & Blending" _YouTube_, 28 May 2021, [youtube.com/watch?v=crOfyWiWxmc](https://www.youtube.com/watch?v=crOfyWiWxmc).
 </details>
 
-## Progress update 8 - 3D, Coordinate Systems, Camera, and Dear ImGUI - 19/01/25
+## Progress update 8 - 3D, Coordinate Systems, Camera, and Dear ImGui - 19/01/25
 
-<details><summary> Progress update 8 - 3D, Coordinate Systems, Camera, and Dear ImGUI - 19/01/25 </summary>
+<details><summary> Progress update 8 - 3D, Coordinate Systems, Camera, and Dear ImGui - 19/01/25 </summary>
 
   * For some reason the program would display a white window for a brief second and immediately close with no error message, this happened when I increased the dimensions of the window. It turned out the issue was due to a segfault,[^54] I didn't allocate enough memory for the FFmpeg frame buffer, I was experimenting with it earlier as mentioned above noticing that I could allocate less than the number of pixels and it would work just fine, however just to be safe I put it back to normal and it works fine again.
   
-  [^54]: swalog. "OpenGL GLFW window closes as soon as it opens" _Stack Overflow_, 26 Aug. 2014, [stackoverflow.com/a/25499922](https://stackoverflow.com/a/25499922).
+    [^54]: swalog. "OpenGL GLFW window closes as soon as it opens" _Stack Overflow_, 26 Aug. 2014, [stackoverflow.com/a/25499922](https://stackoverflow.com/a/25499922).
   
   * I can now render in 3D using transform, model, view, and projection matrices. The diagram below shows the pipeline. The reason we break it into these steps is that making changes can be easier in different parts of the process. I switch from orthographic to perspective projection for 3D rendering.
   
     ![coordinate_systems](https://github.com/user-attachments/assets/8200e64e-22af-42fd-be4e-5fe1247f3698)
   
-  
   * For the crate which is now a 3D cuboid, we will need 36 vertices (6 faces * 2 triangles * 3 vertices per triangle). At first I thought this was inefficient as a cuboid only has 8 vertices, however, in order for each face to have its own unique texture, each of the 3 vertices for the two triangles for every face will need to be stored, along with their texture coords. We could use EBOs to bring the number of vertices down to 8, but then different faces will be sharing vertices and so also sharing texture coords, so the faces can't all be assigned unique textures.
   
     ![ebo2](https://github.com/user-attachments/assets/ba763f3f-19d6-43ee-a823-d5d74ef54673)
+
     For context, there was very little performance difference with and without using an EBO. Others have explained that the main benefit of EBOs comes when dealing with meshes of models that contain hundreds of vertices, and in those situations faces sharing vertices (and thus texture coords) with neighboring faces is fine as they are so close to each other that their texture coords will be approximately the same.[^55]
   
     [^55]: AngusMcBurger. "Beginner questions on EBOs and when to use them" _Reddit_, 6 Sep. 2017, [reddit.com/r/opengl/comments/6yfav6/comment/dmnqog2/](https://www.reddit.com/r/opengl/comments/6yfav6/comment/dmnqog2/).
@@ -1640,14 +1627,12 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     #endif  /* RENDER_EBO==1 */
     #endif  /* RENDER_3D==1 */
     ```
-    
-  
-    
+
   * I also implemented a Camera header which _LearnOpenGL.com_ provides, containing a camera class that allows us to control the camera's position, yaw, and pitch. For some reason, I can't use my laptop's touchpad and the keyboard at the same time to move the camera in OpenGL, however, when using a separate mouse, I can use the keyboard simultaneously. 
   
   * The _LearnOpenGL.com_ Camera chapter uses a weird if statement in the mouse callback function to check if this is the first use of the callback function and sets the ``xpos`` and ``ypos`` of the cursor to the centre of the screen, the reason being to avoid the whiplash cursor jump effect you would otherwise get, as the cursor is not initialized to the centre of the screen. A much cleaner alternative as mentioned by someone in the comments is to just use the GLFW function ``glfwSetCursorPos(window, lastX,lastY);`` before the while/render loop,[^56] where ``lastX`` and ``lastY`` are set to ``SCR_WIDTH / 2.0f`` and ``SCR_HEIGHT / 2.0f`` respectively, and remove the if statement in the mouse callback function. Another important point is to make sure ``YAW`` is initialized to ``-90.0f``.
   
-  [^56]: Andy. "Camera" _LearnOpenGL.com_, 8 June 2017, [disq.us/p/1jdygzu](http://disq.us/p/1jdygzu).
+    [^56]: Andy. "Camera" _LearnOpenGL.com_, 8 June 2017, [disq.us/p/1jdygzu](http://disq.us/p/1jdygzu).
   
   * I also clamped ``YAW`` to between ``0.0f`` and ``360.0f`` using the ``fmodf`` function and using ``Yaw + 360.0f`` rather than just ``Yaw``.
    
@@ -1657,16 +1642,16 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   
   * Another comment suggests using quaternions instead of matrices to control the camera in 3D. They linked to their [article](https://chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html)[^57] which includes the code and a nice [article](https://graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf) from Stanford on 'Quaternions and Rotations'. The main benefits of using quaternions over matrices are that they are more compact (4 numbers instead of 9 with 3x3 rotation matrices), efficient (16 multiplications and 12 additions instead of 27 multiplications and 18 additions), numerically stable (avoids the gimbal lock problem[^58]), and the geometric meaning is apparently clearer too.[^59] Although some mention that quaternions are better when chaining multiple rotations but not better when actually computing the rotating vectors,[^60] requiring ~30 operations rather than 15 operations like with 3D rotation matrix-vector multiplication.[^61] So "multiplication of matrices is ~2 times slower than quaternions. [But] matrix-vector multiplication is ~2 times faster [than quaternions]."[^62]
   
-  [^57]: Chan Haeng Lee. "FPS Quaternion Camera Implementation (쿼터니언 카메라 구현)" _chanhaeng.blogspot.com_, 24 Sep. 2018, [chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html](https://chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html).
-  [^58]: Henry Cohn. "The gimbal lock shows up in my quaternions" _Math Overflow_, 3 May 2012, [mathoverflow.net/a/95908](https://mathoverflow.net/a/95908).
-  [^59]: Yan-Bin Jia. "Quaternions and Rotations Com S 477/577 Notes" _Stanford_, 10 Sep. 2013, [graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf](https://graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf).
-  [^60]: Muphrid. "why is representing rotations through quaternions more compact and quicker than using matrices??" _Math Stack Exchange_, 9 July 2015, [math.stackexchange.com/a/1355206](https://math.stackexchange.com/a/1355206).
-  [^61]: "Quaternions and spatial rotation - Performance comparisons" _Wikipedia_, 10 Jan. 2025, [en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Performance_comparisons](https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Performance_comparisons).
-  [^62]: Kevin Kostlan. "Why are quaternions used for rotations?" _Stack Overflow_, 26 Apr. 2013, [stackoverflow.com/a/16246782](https://stackoverflow.com/a/16246782).
+    [^57]: Chan Haeng Lee. "FPS Quaternion Camera Implementation (쿼터니언 카메라 구현)" _chanhaeng.blogspot.com_, 24 Sep. 2018, [chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html](https://chanhaeng.blogspot.com/2018/09/quaternion-camera-implementation.html).
+    [^58]: Henry Cohn. "The gimbal lock shows up in my quaternions" _Math Overflow_, 3 May 2012, [mathoverflow.net/a/95908](https://mathoverflow.net/a/95908).
+    [^59]: Yan-Bin Jia. "Quaternions and Rotations Com S 477/577 Notes" _Stanford_, 10 Sep. 2013, [graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf](https://graphics.stanford.edu/courses/cs348a-17-winter/Papers/quaternion.pdf).
+    [^60]: Muphrid. "why is representing rotations through quaternions more compact and quicker than using matrices??" _Math Stack Exchange_, 9 July 2015, [math.stackexchange.com/a/1355206](https://math.stackexchange.com/a/1355206).
+    [^61]: "Quaternions and spatial rotation - Performance comparisons" _Wikipedia_, 10 Jan. 2025, [en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Performance_comparisons](https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Performance_comparisons).
+    [^62]: Kevin Kostlan. "Why are quaternions used for rotations?" _Stack Overflow_, 26 Apr. 2013, [stackoverflow.com/a/16246782](https://stackoverflow.com/a/16246782).
   
   * [This](https://lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update) (nicely coded) article explains a way to stop OpenGL from pausing when resizing/moving the window, involving multithreading.[^63]
   
-  [^63]: Luke Arcamo. "GLFW: Prevent freezing on window update" _lukearcamo.github.io_, 22 July 2021, [lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update](https://lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update).
+    [^63]: Luke Arcamo. "GLFW: Prevent freezing on window update" _lukearcamo.github.io_, 22 July 2021, [lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update](https://lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update).
   
   * I only just now learned about #include/header guards, which are used in headers to prevent creating duplicate copies of the header when unintentionally including the header more than once (this can happen sneakily when you include headers that include other headers you may already have included in your main.cpp file). This can be done two ways, using ``#ifndef``; ``#define``; and ``#endif``, or ``#pragma once``.[^64][^65] You will notice most header files use one or the other, all C++ standard library files have them, making it safe to include libraries in multiple files without the worry of duplicate code being generated.[^66]
   
@@ -1725,12 +1710,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     }
     ```
     
-  [^69]: T.J. Crowder. ""if " and " #if "; which one is better to use" _Stack Overflow_, 8 May 2013, [stackoverflow.com/a/16438775/7875204](https://stackoverflow.com/a/16438775/7875204).
+    [^69]: T.J. Crowder. ""if " and " #if "; which one is better to use" _Stack Overflow_, 8 May 2013, [stackoverflow.com/a/16438775/7875204](https://stackoverflow.com/a/16438775/7875204).
   
   * I made it so that in windowed mode, the Viewport always stays in the centre of the window with the original aspect ratio no matter how the window is resized. However, this only works nicely when screen recording is OFF as it changes the size of the viewport.
   
     ![opengl4](https://github.com/user-attachments/assets/85b4b0eb-ceff-4824-b40d-cffad1a3937e)
-  
   
     ```cpp
     // scale viewport to always be inside window with correct aspect ratio
@@ -1992,7 +1976,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     }
     ```
   
-  [^71]: Shane McPhillips, immuv. "glfw window with no title bar" _Stack Overflow_, 23 Mar. 2022, 11 Jan 2022, [stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar](https://stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar).
+    [^71]: Shane McPhillips, immuv. "glfw window with no title bar" _Stack Overflow_, 23 Mar. 2022, 11 Jan 2022, [stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar](https://stackoverflow.com/questions/70582321/glfw-window-with-no-title-bar).
   
   * I wanted to add a GUI to make the program more functional and interactive. I ended up going with Dear ImGui as it seems to be bloat-free, minimal, and easy to use. People have also recommended it as a good GUI to use with OpenGL that works right out of the box. I was wondering why it's called "Dear ImGui", at first I thought "ImGui" stood for "I'm GUI", but it actually stands for "Immediate Mode GUI", as for "Dear", [here](https://github.com/ocornut/imgui/discussions/4041#discussioncomment-5409937)'s a slightly underwhelming explanation from the creator, [here](https://news.ycombinator.com/item?id=24986908#24987826)'s a more amusing guess involving Santa. [Here](https://www.youtube.com/watch?v=VRwhNKoxUtk)'s a nice tutorial, but I will explain in detail the steps. First, you need to download the ZIP file containing the Dear ImGui code, [here](https://github.com/ocornut/imgui)'s the link to the repository. Next, you need to extract these files:
   
@@ -2093,6 +2077,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     All you need to do now is include the imgui headers in main.cpp as well as the initialization code and the code to render a simple window and you're done!
   
     At the top of main.cpp:
+
     ```cpp
     #include <imgui\imgui.h>
     #include <imgui\imgui_impl_glfw.h>
@@ -2101,6 +2086,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     ```
   
     At initialization, before the render loop:
+
     ```cpp
     #if IMGUI==1
     IMGUI_CHECKVERSION();
@@ -2113,6 +2099,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     ```
   
     Inside the render loop, before you render your scene:
+
     ```cpp
     #if IMGUI==1
     ImGui_ImplOpenGL3_NewFrame();
@@ -2122,6 +2109,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     ```
   
     Inside the render loop. Putting this while drawing to the non-MSAA FBO will mean the GUI will be visible in the screen recording too. Putting this at the very end when drawing to the default framebuffer will allow you to move the GUI outside of the viewport and still be visible, but the GUI won't be visible in the screen recording.
+
     ```cpp
     #if IMGUI==1
     ImGui::Begin("My name is window, ImGUI window");
@@ -2133,6 +2121,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     ```
   
     Just after the render loop, when de-allocating resources:
+
     ```cpp
     #if IMGUI==1
     ImGui_ImplOpenGL3_Shutdown();
@@ -2290,9 +2279,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
 </details>
 
-## Progress update 9 - Improving screen recording using FFmpeg API - 30/01/25
+## Progress update 9 - FFmpeg CLI→API, asynchronous readback with PBOs, and CMake - 30/01/25
 
-<details><summary> Progress update 9 - Improving screen recording using FFmpeg API - 30/01/25 </summary>
+<details><summary> FFmpeg CLI→API </summary>
+    
+  ### FFmpeg CLI→API
   
   * Before getting into the **Lighting** chapter, I finally fixed a major bug in my screen recording implementation. When encoding a video using FFmpeg, you have to decide on a framerate, I went with 60fps, what this meant though was all the encoded frames would be separated by 1/60th of a second, when in reality the framerate is variable and can drop when the program lags. When the FPS was lower than 60, the recording would speed up, as frames that should be further apart were being brought closer together in time, and vice versa when the FPS was higher than 60. My fix as of now was to just use V-Sync to cap the FPS at 60 and hope the FPS didn't drop too low.
   
@@ -2608,16 +2599,3170 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
           av_frame_free(&frameX);
       }
       ```
+  * With this implementation, using the FFmpeg API rather than the CLI, video recording is MUCH smoother. Which isn't a surprise as this was not what the CLI was meant for, but exactly what the API was meant for.
+</details>
 
+  <!--
+  ### Dear ImGui
+  * You may have noticed I have added a GUI, I am using [Dear ImGui](https://github.com/ocornut/imgui), it is easy to implement, works right out of the box, and bloat-free. In order to set it up I simply put all the ImGui headers in my project's /include/ folder, and the ImGui source files compiled to a static library in my project's /lib/ folder. The next step is to get something like ImPlot so I can do real-time plots. Inside ``main.cpp`` you setup Dear ImGui as follows:
+
+    Include headers
+    ```cpp
+    #include <imgui/imgui.h>
+    #include <imgui/imgui_impl_glfw.h>
+    #include <imgui/imgui_impl_opengl3.h>
+    ```
+
+    Before the render loop
+    ```cpp
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 430");
+    ```
+
+    Inside the render loop at the top
+    ```cpp
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ```
+
+    Inside the render loop, render the ImGui window
+    ```cpp
+    ImGui::Begin("My name is window, ImGUI window");
+    ImGui::Text("Hello there adventurer!");
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ```
+
+    Outside the render loop at the end of ``main()``
+    ```cpp
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    ```
+  -->
+
+<details><summary> Asynchronous readback with PBOs </summary>
+  
+  ### Asynchronous readback with PBOs
+  * There is something in OpenGL called Pixel Buffer Objects (PBOs), which to my knowledge act as frame buffers storing RGB pixel data after doing ``glReadPixels(...)``. The major benefit of PBOs is "asynchronous DMA (Direct Memory Access) transfer without involving CPU cycles".[^24] With 2 ping-ponging PBOs performing asynchronous glReadPixels(), I get a ~2x performance improvement.
+
+    [![gl_pbo07](https://github.com/user-attachments/assets/266244e1-dfd3-4bb9-8bf1-32c671fd6ed7)](https://www.songho.ca/opengl/gl_pbo.html#pack)
+
+    ```cpp
+    // pbo settings
+    // ------------
+    const unsigned int  PBO_COUNT       =  2;
+    GLuint pboIds[PBO_COUNT];
+    int index = 0;
+    int nextIndex = 1;
+    ```
+
+    ```cpp
+    // create 2 pixel buffer objects, you need to delete them when program exits.
+    // glBufferData() with NULL pointer reserves only memory space.
+    glGenBuffers(PBO_COUNT, pboIds);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[0]);
+    glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[1]);
+    glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, 0, GL_DYNAMIC_READ);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    ```
+
+    Inside the render loop
+    ```cpp
+    // Step 4: Read pixels from the resolved FBO for off-screen encoding (with PBOs)
+    // -----------------------------------------------------------------------------
+    index = (index + 1) % 2;       // "index" is used for GPU to read pixels from framebuffer to a PBO
+    nextIndex = (index + 1) % 2;   // "nextIndex" is used for CPU to update/process pixels in the other PBO
+    // read pixels from framebuffer to PBO (pack). glReadPixels() should return immediately.
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[index]);
+    glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, 0);
+
+    // map the PBO to process its data by CPU (unpack)
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[nextIndex]);
+    GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_WRITE);
+    if (ptr)
+    {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
+                          0, 0, SCR_WIDTH, SCR_HEIGHT,           // dst rect
+                                  GL_COLOR_BUFFER_BIT,           // buffer mask
+                                          GL_NEAREST);           // scale filter
+    
+        // Flip the frame vertically
+        flipFrameVertically(ptr);
+        
+        // Encode frame using FFmpeg
+        encodeFrame(ptr);
+        
+        glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+    }
+
+    // back to conventional pixel operation
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    ```
+
+    At the end of ``main()``
+    ```cpp
+    glDeleteBuffers(PBO_COUNT, pboIds);
+    ```
+</details>
+
+<details><summary> CMake </summary>
+
+  ### CMake
+  * And finally, I set up a CMakeLists.txt file in order to build the project with CMake as well as with VSCode.
+
+    ```cmake
+    # Minimum CMake version
+    cmake_minimum_required(VERSION 3.31)
+    
+    # Project name and version
+    project(myprogram VERSION 1.0)
+    
+    # Set C++ standard
+    set(CMAKE_CXX_STANDARD 		 17)
+    set(CMAKE_CXX_STANDARD_REQUIRED YES)
+    set(CMAKE_CXX_EXTENSIONS	 ON)
+    
+    # CMake Build Type (Debug/Release)
+    set(CMAKE_BUILD_TYPE Release)
+    
+    # Specify the source files
+    set(SOURCES
+        src/main.cpp
+        src/glad.c
+    )    
+    
+    # Include headers for FFmpeg and others
+    include_directories(
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/include/freetype2
+        ${CMAKE_SOURCE_DIR}/lib/GLFW
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg
+        ${CMAKE_SOURCE_DIR}/lib/freetype
+        ${CMAKE_SOURCE_DIR}/lib/imgui
+    )
+    
+    # Executable target
+    add_executable(${PROJECT_NAME} ${SOURCES})
+    
+    # Define the source and destination directories for shaders
+    set(SHADER_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
+    set(SHADER_DEST_DIR   ${CMAKE_BINARY_DIR}/shaders)
+    
+    # Create a custom command to copy shaders
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${SHADER_SOURCE_DIR} ${SHADER_DEST_DIR}
+        COMMENT "Copying /shaders/ to build directory"
+    )
+    
+    # Define the source and destination directories for textures
+    set(TEXTURE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/textures)
+    set(TEXTURE_DEST_DIR   ${CMAKE_BINARY_DIR}/textures)
+    
+    # Create a custom command to copy textures
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${TEXTURE_SOURCE_DIR} ${TEXTURE_DEST_DIR}
+        COMMENT "Copying /textures/ to build directory"
+    )
+    
+    # Find all .a files in lib directory recursively
+    # file(GLOB_RECURSE LIB_FILES "${CMAKE_SOURCE_DIR}/lib/**/*.a")
+    
+    # Link all the found libraries
+    target_link_libraries(${PROJECT_NAME} #${LIB_FILES}
+        ${CMAKE_SOURCE_DIR}/lib/imgui/libimgui.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavformat.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavcodec.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavutil.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswscale.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswresample.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libpthread.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libm.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libws2_32.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libiconv.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/liblzma.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libole32.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libbcrypt.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libuuid.a
+        ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libstrmiids.a
+        ${CMAKE_SOURCE_DIR}/lib/GLFW/libglfw3.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libfreetype.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libharfbuzz.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libgraphite2.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libpng.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libz.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libbz2.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlidec.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlienc.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlicommon.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/librpcrt4.a
+        ${CMAKE_SOURCE_DIR}/lib/freetype/libgdi32.a
+        ${CMAKE_SOURCE_DIR}/lib/libopengl32.a
+    )
+        
+    
+    # Set output directory for the executable
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    )
+    ```
+
+</details>
+  
   <!-- Replace the old FFmpeg function calls with new functions -->
   <!-- Mention using variable framerate (VFR) rather than constant framerate (CFR) as CRF was messing up with variable framerate content, so encoded video won't be 60fps but will display recording accurately -->
   <!-- Show example video recording and mention how much smoother compared to old method -->
   <!-- Talk about how when calling ffmpeg.exe it's a I/O bottleneck etc. and talk about the stack overflow post that used the FFmpeg API -->
 </details>
 
+## Progress update 10 - ImPlot, and making an Encoder namespace - 10/03/25
+
+<details><summary> ImPlot </summary>
+
+  ### ImPlot
+  * Delaying doing the **Lighting** chapter again, but I was able to implement ImPlot the same way as with ImGui.
+    
+      Include headers
+      ```cpp
+      #include <imgui/imgui.h>
+      #include <imgui/imgui_impl_glfw.h>
+      #include <imgui/imgui_impl_opengl3.h>
+      #include <implot/implot.h>                  // <-- Add for ImPlot
+      ```
   
+      Before the render loop
+      ```cpp
+      #if IMGUI==1
+      IMGUI_CHECKVERSION();
+      ImGui::CreateContext();
+      ImPlot::CreateContext();                    // <-- Add for ImPlot
+      ImGuiIO& io = ImGui::GetIO(); (void)io;
+      ImGui::StyleColorsDark();
+      ImGui_ImplGlfw_InitForOpenGL(window, true);
+      ImGui_ImplOpenGL3_Init("#version 430");
+      ```
+  
+      Inside the render loop at the top (nothing new to add)
+      ```cpp
+      ImGui_ImplOpenGL3_NewFrame();
+      ImGui_ImplGlfw_NewFrame();
+      ImGui::NewFrame();
+      ```
+  
+      Inside the render loop, render the ImGui and ImPlot windows
+      ```cpp
+      ImGui::Begin("My name is window, ImGUI window");
+      ImGui::Text("Hello there adventurer!");
+      ImGui::End();
+      
+      // Show the ImPlot demo window              // <-- Add for ImPlot
+      if (ImGui::Begin("ImPlot Demo")) {          // <-- Add for ImPlot
+          ImPlot::ShowDemoWindow();               // <-- Add for ImPlot
+      }                                           // <-- Add for ImPlot
+      ImGui::End();                               // <-- Add for ImPlot
+      
+      ImGui::Render();
+      ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+      ```
+  
+      Outside the render loop at the end of ``main()``
+      ```cpp
+      ImGui_ImplOpenGL3_Shutdown();
+      ImGui_ImplGlfw_Shutdown();
+      ImPlot::DestroyContext();                   // <-- Add for ImPlot
+      ImGui::DestroyContext();
+      ```
+
+  * I also decided to keep the Dear ImGui and ImPlot source code, leaving it inside a ``/third_party/`` folder, and compiling and linking it at compile-time using CMake, instead of precompiling it beforehand and just linking it at compile-time. I can afford to do this as the Dear ImGui and ImPlot code is not that large and can be compiled in a few seconds using ``ninja``, compared to the FFmpeg source code, which can take a few minutes... The ``CMakeLists.txt`` file now looks like this:
+    
+      ```cmake
+      # Minimum CMake version
+      cmake_minimum_required(VERSION 3.31)
+      
+      # Project name and version
+      project(myprogram VERSION 1.0)
+      
+      # Set C++ standard
+      set(CMAKE_CXX_STANDARD 		 17)
+      set(CMAKE_CXX_STANDARD_REQUIRED YES)
+      set(CMAKE_CXX_EXTENSIONS	 ON)
+      
+      # CMake Build Type (Debug/Release)
+      set(CMAKE_BUILD_TYPE Release)
+      
+      # Specify the source files
+      set(SOURCES
+          src/main.cpp
+          src/glad.c
+      ) 
+      
+      # Include headers for FFmpeg and others
+      include_directories(
+          ${CMAKE_SOURCE_DIR}/include
+          ${CMAKE_SOURCE_DIR}/include/freetype2
+          ${CMAKE_SOURCE_DIR}/lib/GLFW
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg
+          ${CMAKE_SOURCE_DIR}/lib/freetype
+      )
+      
+      # Executable target
+      add_executable(${PROJECT_NAME} ${SOURCES})
+      
+      # Define the source and destination directories for shaders
+      set(SHADER_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
+      set(SHADER_DEST_DIR   ${CMAKE_BINARY_DIR}/shaders)
+      
+      # Create a custom command to copy shaders
+      add_custom_command(
+          TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${SHADER_SOURCE_DIR} ${SHADER_DEST_DIR}
+          COMMENT "Copying /shaders/ to build directory"
+      )
+      
+      # Define the source and destination directories for textures
+      set(TEXTURE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/textures)
+      set(TEXTURE_DEST_DIR   ${CMAKE_BINARY_DIR}/textures)
+      
+      # Create a custom command to copy textures
+      add_custom_command(
+          TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_directory
+              ${TEXTURE_SOURCE_DIR} ${TEXTURE_DEST_DIR}
+          COMMENT "Copying /textures/ to build directory"
+      )
+      
+      # Add the ImGui library
+      add_library(imgui STATIC
+          third_party/imgui/imgui.cpp 
+          third_party/imgui/imgui_draw.cpp 
+          third_party/imgui/imgui_tables.cpp 
+          third_party/imgui/imgui_widgets.cpp
+          third_party/imgui/imgui_impl_opengl3.cpp
+          third_party/imgui/imgui_impl_glfw.cpp
+          third_party/imgui/imgui_demo.cpp
+      )
+      
+      # Set the target properties for imgui (where libimgui.a will be created)
+      set_target_properties(imgui PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/imgui)
+      
+      # Add the ImPlot library
+      add_library(implot STATIC 
+          third_party/implot/implot.cpp
+          third_party/implot/implot_items.cpp
+          third_party/implot/implot_demo.cpp
+      )
+      
+      # Set the target properties for implot (where libimplot.a will be created)
+      set_target_properties(implot PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/implot)
+      
+      # Include headers
+      target_include_directories(imgui PUBLIC 
+          ${CMAKE_SOURCE_DIR}/include/imgui
+      )
+      target_include_directories(implot PUBLIC
+          ${CMAKE_SOURCE_DIR}/include/implot
+      )
+      
+      # Link ImPlot to ImGui
+      target_link_libraries(implot PUBLIC imgui)  # ImPlot depends on ImGui
+      
+      # Link all the found libraries
+      target_link_libraries(${PROJECT_NAME}
+          imgui  # ImGui static library from CMake
+          implot # ImPlot static library from CMake
+      
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavformat.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavcodec.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libavutil.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswscale.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libswresample.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libpthread.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libm.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libws2_32.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libiconv.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/liblzma.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libole32.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libbcrypt.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libuuid.a
+          ${CMAKE_SOURCE_DIR}/lib/ffmpeg/libstrmiids.a
+      
+          ${CMAKE_SOURCE_DIR}/lib/GLFW/libglfw3.a
+          
+          ${CMAKE_SOURCE_DIR}/lib/freetype/libfreetype.a
+          ${CMAKE_SOURCE_DIR}/lib/freetype/libharfbuzz.a
+          ${CMAKE_SOURCE_DIR}/lib/freetype/libgraphite2.a
+          ${CMAKE_SOURCE_DIR}/lib/freetype/libpng.a
+          ${CMAKE_SOURCE_DIR}/lib/freetype/libz.a
+          ${CMAKE_SOURCE_DIR}/lib/freetype/libbz2.a
+          ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlidec.a
+          ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlienc.a
+          ${CMAKE_SOURCE_DIR}/lib/freetype/libbrotlicommon.a
+          ${CMAKE_SOURCE_DIR}/lib/freetype/librpcrt4.a
+          ${CMAKE_SOURCE_DIR}/lib/freetype/libgdi32.a
+      
+          ${CMAKE_SOURCE_DIR}/lib/libopengl32.a  # OpenGL
+      )
+          
+      
+      # Set output directory for the executable
+      set_target_properties(${PROJECT_NAME} PROPERTIES
+          RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+      )
+      ```
+</details>
+
+<details><summary> Encoder namespace </summary>
+
+  ### Encoder namespace
+  * Moved FFmpeg encoder functions from ``main.cpp`` to a separate ``encoder.cpp`` file, wrapping them in a namespace, and accessing them in ``main.cpp`` via the header ``encoder.h``.
+
+  * Here is ``encoder.cpp``, you can notice I use an anonymous namespace to encapsulate state information, I might decide to change this from a namespace to a class in the future.
+
+    ```cpp
+    #include <learnopengl/encoder.h>
+    #include <iostream>                 // for std::cin/cout/cerr
+    
+    // FFmpeg
+    // ------
+    extern "C" {
+    #include <libavformat/avformat.h>
+    #include <libavcodec/avcodec.h>
+    #include <libavutil/opt.h>
+    #include <libswscale/swscale.h>
+    #include <libavutil/log.h>
+    }
+    
+    namespace Encoder {
+    
+        namespace {     // anonymous namespace (encapsulation)
+    
+            // FFmpeg
+            // ------
+            AVFormatContext* formatCtx = nullptr;
+            AVCodecContext* codecCtx = nullptr;
+            AVStream* videoStream = nullptr;
+            SwsContext* swsCtx = nullptr;
+            AVFrame* frameX = nullptr;
+            AVPacket pkt = {};  // Zero-initialize the struct
+            // std::ofstream logFile;
+            // std::mutex logMutex;
+        }
+    
+        // Function to initialize FFmpeg encoder
+        bool initializeEncoder(const char* filename) {
+            // Set up ffmpeg's log callback
+            // av_log_set_callback(custom_ffmpeg_log_callback);
+    
+            // Optional: Set log level (AV_LOG_DEBUG=full logs, AV_LOG_INFO=default, AV_LOG_WARNING=only warnings, AV_LOG_ERROR=only errors)
+            // av_log_set_level(AV_LOG_INFO);
+    
+            avformat_alloc_output_context2(&formatCtx, nullptr, "mp4", filename);
+            if (!formatCtx) {
+                printf("Could not create output context\n");
+                return false;
+            }
+    
+            // Find the H.264 encoder
+            const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+            if (!codec) {
+                printf("H.264 encoder not found\n");
+                return false;
+            }
+    
+            // Create a new stream
+            videoStream = avformat_new_stream(formatCtx, codec);
+            if (!videoStream) {
+                printf("Could not create video stream\n");
+                return false;
+            }
+    
+            // Set up the codec context
+            int FPS = static_cast<int>(framerate);
+            codecCtx = avcodec_alloc_context3(codec);
+            codecCtx->width = SCR_WIDTH;
+            codecCtx->height = SCR_HEIGHT;
+            codecCtx->time_base = (AVRational){1, FPS*1000};  // Frame rate
+            codecCtx->framerate = (AVRational){FPS, 1};
+            codecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
+            codecCtx->bit_rate = 60000000;  // 60 Mbps
+            codecCtx->gop_size = 10;
+            codecCtx->max_b_frames = 1;
+            // codecCtx->rc_max_rate = codecCtx->bit_rate;  // Set maximum bitrate limit
+            // codecCtx->rc_buffer_size = codecCtx->bit_rate;  // Set buffer size to match bitrate
+    
+            // Set H.264 options
+            av_opt_set(codecCtx->priv_data, "preset", "slow", 0);
+            av_opt_set(codecCtx->priv_data, "crf", "18", 0);
+            // av_opt_set(codecCtx->priv_data, "bitrate", "30000k", 0);   // Set bitrate to 5000 kbps
+            // av_opt_set(codecCtx->priv_data, "maxrate", "30000k", 0);   // Max bitrate
+            // av_opt_set(codecCtx->priv_data, "bufsize", "30000k", 0);   // Buffer size
+            // av_opt_set(codecCtx->priv_data, "profile", "high", 0);     // Set profile to "high" for better quality
+            av_opt_set(codecCtx->priv_data, "pix_fmt", "yuv420p", 0);  // Try using yuv422p or yuv444p for better quality
+    
+    
+            // Open the encoder
+            if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
+                printf("Could not open codec\n");
+                return false;
+            }
+    
+            // Assign codec to stream
+            videoStream->codecpar->codec_id = AV_CODEC_ID_H264;
+            avcodec_parameters_from_context(videoStream->codecpar, codecCtx);
+    
+            // Make sure that your AVStream has the same time_base
+            videoStream->time_base = codecCtx->time_base;
+            // Force the output stream to interpret it as CFR (Constant Frame Rate)
+            // videoStream->avg_frame_rate = (AVRational){60, 1};  // Force the output to exactly 60 FPS
+            // av_dict_set(&formatCtx->metadata, "video-cfr", "1", 0);
+    
+            // Open output file
+            if (!(formatCtx->oformat->flags & AVFMT_NOFILE)) {
+                if (avio_open(&formatCtx->pb, filename, AVIO_FLAG_WRITE) < 0) {
+                    printf("Could not open output file\n");
+                    return false;
+                }
+            }
+    
+            // Write header
+            if (avformat_write_header(formatCtx, nullptr) < 0) {
+                std::cerr << "Error writing header to output file!" << std::endl;
+                return false;  // Handle failure
+            }
+    
+            // Allocate frame and conversion context
+            frameX = av_frame_alloc();
+            frameX->format = AV_PIX_FMT_YUV420P;
+            frameX->width = SCR_WIDTH;
+            frameX->height = SCR_HEIGHT;
+            av_frame_get_buffer(frameX, 32);
+    
+            swsCtx = sws_getContext(SCR_WIDTH, SCR_HEIGHT, AV_PIX_FMT_RGB24,
+                                    SCR_WIDTH, SCR_HEIGHT, AV_PIX_FMT_YUV420P,
+                                    SWS_BILINEAR, nullptr, nullptr, nullptr);
+            return true;
+        }
+    
+        // Encode frame using FFmpeg
+        bool encodeFrame(const uint8_t* rgbData, float crntTime) {
+            // Convert RGB to YUV420P
+            uint8_t* inData[1] = {(uint8_t*)rgbData};  // Input RGB data
+            int inLinesize[1] = {3 * SCR_WIDTH};          // Input stride
+            sws_scale(swsCtx, inData, inLinesize, 0, SCR_HEIGHT, frameX->data, frameX->linesize);
+    
+            frameX->pts = static_cast<int64_t>(crntTime * 60 * 1000); //* AV_TIME_BASE);
+            // frameX->pts = 1000 * frameIndex; // Simple frame count to force 60 FPS
+            // frameIndex++;
+            
+            // Encode the frame
+            if (avcodec_send_frame(codecCtx, frameX) < 0) {
+                printf("Error sending frame to encoder\n");
+                return false;
+            }
+    
+            // Retrieve the encoded packet
+            pkt.data = nullptr;
+            pkt.size = 0;
+            // pkt.dts = (frameX->pts < pkt.dts) ? pkt.dts + 1 : frameX->pts;
+            pkt.dts = frameX->pts;
+    
+            while (avcodec_receive_packet(codecCtx, &pkt) == 0) {
+                pkt.stream_index = videoStream->index;
+                av_interleaved_write_frame(formatCtx, &pkt);
+                av_packet_unref(&pkt);
+            }
+    
+            return true;
+        }
+    
+        // Finalize encoding and close files
+        void finalizeEncoder() {
+            avcodec_send_frame(codecCtx, nullptr);
+            while (avcodec_receive_packet(codecCtx, &pkt) == 0) {
+                pkt.stream_index = videoStream->index;
+                av_interleaved_write_frame(formatCtx, &pkt);
+                av_packet_unref(&pkt);
+            }
+    
+            // Close log file at the end
+            // if (logFile.is_open())
+            // {
+            //     logFile.close();
+            // }
+    
+            av_write_trailer(formatCtx);
+            avcodec_free_context(&codecCtx);
+            avformat_free_context(formatCtx);
+            sws_freeContext(swsCtx);
+            av_frame_free(&frameX);
+        }
+    
+    }
+    ```
+
+  * And here is ``encoder.h``:
+
+    ```cpp
+    #ifndef ENCODER_H    // #include guard
+    #define ENCODER_H
+    
+    #include <stdint.h>     // for uint8_t
+    
+    extern const unsigned int  SCR_WIDTH;
+    extern const unsigned int  SCR_HEIGHT;
+    extern       unsigned int  framerate;
+    
+    namespace Encoder {
+        bool initializeEncoder(const char* filename);
+        bool encodeFrame(const uint8_t* rgbData, float crntTime);
+        void finalizeEncoder();
+    }
+    
+    #endif /* ENCODER_H */
+    ```
+
+  * In order to compile and link the separate ``encoder.cpp`` file and ``encoder.h`` header, add this to ``CMakeLists.txt``:
+
+    ```cmake
+    # Add the FFmpeg function library
+    add_library(encoder STATIC
+        src/encoder.cpp
+    )
+    # Set the target properties for encoder (where libencoder.a will be created)
+    set_target_properties(encoder PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
+
+    # Link all the found libraries
+    target_link_libraries(${PROJECT_NAME}
+        encoder
+        ...
+    )
+    ```
+</details>
+
+## Progress update 11 - Updated text rendering with Font, FontManager, and TextRenderer classes - 09/04/25
+
+<details><summary> Progress update 11 - Updated text rendering with Font, FontManager, and TextRenderer classes - 09/04/25 </summary>
+
+  * Delaying implementing **Lighting** yet again.
+  * Currently I am loading fonts, creating a texture atlas, and rendering the text all inside ``text.h`` using the ``Text`` class. This is not optimal as it means each text instance has its own texture atlas, even though multiple instances may share the same font and thus could share the same texture atlas. A better design would be to have a ``Font`` class which handles loading the font and creating a texture atlas for it, a ``FontManager`` class (only one instance needed) which manages all the fonts created and could act as the interface, and a ``TextRenderer`` class (also only one instance needed) which can take the ``FontManager`` class as an input and act as an interface but for rendering text and texture atlases.
+
+    <details><summary> font.cpp and font.h </summary>
+      
+      * Here is ``font.cpp``:
+    
+        ```cpp
+        #include <glad/glad.h>
+        #include <learnopengl/font.h>
+        #include <iostream>
+        #include <iomanip>
+        #include <map>
+        #include <vector>
+        #include <cstring>
+        
+        Font::Font(const std::string& name, int size) {
+            loadFont(name, size);
+            createTextureAtlas();
+        
+            FT_Done_Face(face);
+            FT_Done_FreeType(ft);
+        }
+        
+        Font::~Font() {
+            glDeleteTextures(1, &textureAtlasID);
+        }
+        
+        void Font::loadFont(const std::string& name, int size) {
+            std::cout << "[Font] Constructor called for " << name << ", size " << size << "\n";
+            std::cout << "Loading font...\n";
+        
+            // LOAD FONT
+            // ---------
+            if (FT_Init_FreeType(&ft)) {
+                std::cerr << "Could not initialize FreeType Library" << std::endl;
+                return;
+            }
+            std::string fontPath = "C:/WINDOWS/FONTS/" + name + ".TTF";
+            if (FT_New_Face(ft, fontPath.c_str(), 0, &face)) {
+                std::cerr << "Failed to load font face from: " << fontPath << std::endl;
+                return;
+            }
+            if (!face) {
+                std::cerr << "Failed to load the font face. Ensure the file path is correct." << std::endl;
+                return;
+            }
+            if (FT_Select_Charmap(face, FT_ENCODING_UNICODE)) {
+                std::cerr << "Failed to set Unicode character map." << std::endl;
+                return;
+            }
+            // Set the pixel size for glyphs
+            if (FT_Set_Pixel_Sizes(face, 0, size)) {
+                std::cerr << "ERROR::FREETYPE: Failed to set pixel size." << std::endl;
+                return;
+            }
+            else {
+                std::cout << "FreeType successfully loaded font!" << std::endl;
+                // disable byte-alignment restriction
+                glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+                return;
+            }
+        }
+        
+        void Font::createTextureAtlas() {
+            // CREATE TEXTURE ATLAS
+            // --------------------
+            std::cout << "Creating texture atlas..." << std::endl;
+        
+            // Calculate texture atlas size (simplified)
+            atlasWidth = 512;
+            atlasHeight = 512;
+        
+            // Variables for positioning glyphs in the atlas
+            int offsetX         = 0;
+            int offsetY         = 0;
+            int padding         = 1;
+            int rowHeight       = 0;
+            // Variables for calculating area used/wasted
+            int maxWidth        = 0;
+            int totalglyphArea  = 0;
+            int wastedArea      = 0;
+            int minWastedArea   = 0;
+        
+            // int maxAscent, maxDescent = 0;
+            glyphs.clear();
+        
+            // Create the texture atlas
+            glGenTextures(1, &textureAtlasID);
+            glBindTexture(GL_TEXTURE_2D, textureAtlasID);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlasWidth, atlasHeight, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+            
+            GLenum error = glGetError();
+            if (error != GL_NO_ERROR) {
+                std::cerr << ":D OpenGL Error after glTexImage2D: " << error << std::endl;
+                return;
+            }
+            // Set texture filtering and wrapping
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            
+            // Iterate over all printable ASCII characters
+            for (unsigned char c = 32; c < 127; ++c) {
+                // std::cout << "Processing character: " << c << std::endl;
+                unsigned int glyphIndex = FT_Get_Char_Index(face, c);
+                if (glyphIndex == 0) {
+                    std::cerr << "Character not found in font: " << c << " (" << static_cast<int>(c) << ")" << std::endl;
+                    continue;
+                }
+                if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+                    std::cerr << "Failed to load character: " << c << " (" << static_cast<int>(c) << ")" << std::endl;
+                    continue;
+                }
+                FT_GlyphSlot g = face->glyph;
+                if (g->bitmap.buffer == nullptr || g->bitmap.width == 0 || g->bitmap.rows == 0) {
+                    // std::cerr << "Warning: Glyph '" << c << "' has no valid bitmap data!" << std::endl;
+                    // continue; // Skip this character (comment out to allow for spaces)
+                }
+                if (glyphs.find(c) != glyphs.end()) {
+                    std::cerr << "Error: Character " << c << " already exists in glyph map!" << std::endl;
+                    break;
+                }
+                // Check if character doesn't fit in the row
+                if (offsetX + g->bitmap.width > atlasWidth) {
+                    std::cerr << "REACHED ATLAS WIDTH LIMIT. STARTING NEW ROW. " << offsetX << " + " << g->bitmap.rows << " = " << offsetX + static_cast<int>(g->bitmap.width) << " >= " << atlasWidth << std::endl;
+                    maxWidth = std::max(maxWidth, offsetX);
+                    offsetX = 0;
+                    offsetY += rowHeight + padding;
+                    rowHeight = 0;
+                }
+                // Check if character doesn't fit in the atlas
+                if (offsetY + g->bitmap.rows > atlasHeight) {
+                    std::cerr << "Texture atlas too small!" << std::endl;
+                    break;
+                }
+        
+                FT_Bitmap &bitmap = face->glyph->bitmap;
+                // Flip the bitmap vertically before uploading
+                std::vector<unsigned char> flippedBitmap(bitmap.width * bitmap.rows);
+                for (int y = 0; y < (int)bitmap.rows; ++y) {
+                    std::memcpy(
+                        &flippedBitmap[y * bitmap.width],
+                        &bitmap.buffer[(bitmap.rows - 1 - y) * bitmap.width],
+                        bitmap.width);
+                }
+        
+                // Copy glyph bitmap to the atlas
+                glTexSubImage2D(GL_TEXTURE_2D, 0,
+                                offsetX, offsetY,
+                                g->bitmap.width, g->bitmap.rows,
+                                GL_RED, GL_UNSIGNED_BYTE, flippedBitmap.data()
+                );
+                // float scale = fontSize / (float) face->units_per_EM;
+                // float ascenderPx = face->ascender * scale;
+                // float descenderPx = face->descender * scale;
+        
+                // Store glyph information
+                glyphs[c] = Glyph{
+                    static_cast<float>(offsetX) / (float)atlasWidth,        // TextureX
+                    static_cast<float>(offsetY) / (float)atlasHeight,       // TextureY
+                    static_cast<float>(g->bitmap.width),                    // width
+                    static_cast<float>(g->bitmap.rows),                     // height
+                    static_cast<float>(g->bitmap_left),                     // OffsetX
+                    static_cast<float>(g->bitmap_top),                      // OffsetY
+                    static_cast<unsigned int>(g->advance.x)                 // AdvanceX
+                };
+                // glyphs[c].offsetY = (ascenderPx - g->bitmap_top);// - (g->bitmap.rows - descenderPx);
+                // maxAscent = int(face->ascender * (face->size->metrics.y_scale / 65536.0)) >> 6;
+                // maxDescent = int(abs(face->descender * (face->size->metrics.y_scale / 65536.0))) >> 6;
+                totalglyphArea += static_cast<int>(g->bitmap.width) * static_cast<int>(g->bitmap.rows);
+                offsetX += g->bitmap.width + padding;
+                rowHeight = std::max(rowHeight, static_cast<int>(g->bitmap.rows));
+        
+                // std::cout << "Loaded character: " << c << " (" << static_cast<int>(c) << ") Asc: " << ascenderPx << " Desc: " << descenderPx << std::endl;
+                // std::cout << "Successfully loaded glyph: " << c << std::endl;
+            }
+            
+            glBindTexture(GL_TEXTURE_2D, 0);
+        
+            wastedArea = atlasWidth * atlasHeight - totalglyphArea;
+            minWastedArea = wastedArea - (atlasHeight*(atlasWidth-maxWidth)) - (maxWidth*(atlasHeight-offsetY));
+            
+            std::cout << " | Texture atlas created: " << atlasWidth << "x" << atlasHeight
+                    << " | Wasted area: " << wastedArea*100/(atlasWidth*atlasHeight) << "%"
+                    << " | Minimum size: " << maxWidth << "x" << offsetY
+                    << " | Minimum wasted area: " << minWastedArea*100/(maxWidth*offsetY) << "% |"
+                    << std::endl;
+        
+            // Format output in columns: https://stackoverflow.com/a/49295288
+            for (const auto& [key, glyph] : glyphs) {
+                std::cout.precision(5);
+                // std::cout << std::fixed;
+                std::cout << " | " << "Glyph: "                     << static_cast<char>(key)   << " | "
+                                   << "TextureX: "  << std::setw(9) << glyph.textureX           << " | "
+                                   << "TextureY: "  << std::setw(9) << glyph.textureY           << " | "
+                                   << "Width: "     << std::setw(2) << glyph.width              << " | "
+                                   << "Height: "    << std::setw(2) << glyph.height             << " | "
+                                   << "OffsetX: "   << std::setw(2) << glyph.offsetX            << " | "
+                                   << "OffsetY: "   << std::setw(2) << glyph.offsetY            << " | "
+                                   << "AdvanceX: "  << std::setw(5) << (glyph.advanceX >> 6)    << " | "
+                                   << std::endl;
+            }
+        }
+        
+        const Glyph& Font::getGlyph(char c) const {
+            auto it = glyphs.find(c);
+            if (it != glyphs.end()) {
+                return it->second;
+            }
+        
+            static Glyph fallback {};  // a default zero glyph
+            std::cerr << "Warning: Glyph not found for character '" << c << "' (" << static_cast<int>(c) << ")" << std::endl;
+            return fallback;
+        }
+        ```
+    
+      * And ``font.h``:
+    
+        ```cpp
+        #ifndef FONT_H
+        #define FONT_H
+        
+        #include <map>
+        #include <string>
+        #include <glad/glad.h>
+        #include <glm/glm.hpp>
+        #include <ft2build.h>
+        #include FT_FREETYPE_H
+        
+        struct Glyph {
+            float textureX, textureY; // Position in texture atlas
+            float width, height;      // Glyph size
+            float offsetX, offsetY;   // Offset from baseline
+            unsigned int advanceX;    // Advance to next character
+        };
+        
+        class Font {
+        private:
+            std::map<char, Glyph> glyphs;
+            GLuint textureAtlasID;
+            int atlasWidth, atlasHeight;
+            FT_Library ft;
+            FT_Face face;
+        
+            void loadFont(const std::string& name, int size);
+            void createTextureAtlas();
+        
+        public:
+            // constructor and destructor
+            Font(const std::string& name, int size);
+            ~Font();
+        
+            // getters
+            const Glyph& getGlyph(char c) const;
+            GLuint getTextureAtlas() const { return textureAtlasID; }
+            int getAtlasWidth() const { return atlasWidth; }
+            int getAtlasHeight() const { return atlasHeight; }
+        };
+        
+        #endif // FONT_H
+        ```
+    </details>
+
+    <details><summary> fontmanager.cpp and fontmanager.h </summary>
+
+      * Here is ``fontmanager.cpp``:
+      
+        ```cpp
+        #include <learnopengl/fontmanager.h>
+        #include <learnopengl/shader_s.h>
+        #include <iostream>
+        
+        FontManager::~FontManager() {
+            for (auto& pair : fonts) {
+                delete pair.second;
+            }
+        }
+        
+        bool FontManager::loadFont(const std::string& name, int size) {
+            if (fonts.find(name) != fonts.end()) {
+                std::cerr << "Font " << name << " already loaded.\n";
+                return false;
+            }
+        
+            fonts[name] = new Font(name, size);
+            std::cout << "New font created: " << name << ", size " << size << std::endl;
+        
+            return true;
+        }
+        
+        Font* FontManager::getFont(const std::string& name) {
+            if (fonts.find(name) != fonts.end()) {
+                // std::cout << "Font found: " << name << std::endl;
+                return fonts[name];
+            }
+            return nullptr;
+        }
+        ```
+    
+      * And ``fontmanager.h``:
+    
+        ```cpp
+        #ifndef FONTMANAGER_H
+        #define FONTMANAGER_H
+        
+        #include <learnopengl/font.h>
+        #include <map>
+        
+        class FontManager {
+        private:
+            std::map<std::string, Font*> fonts;
+        public:
+            ~FontManager();
+            
+            bool loadFont(const std::string& name, int size);
+            Font* getFont(const std::string& name);
+        };
+        
+        #endif // FONTMANAGER_H
+        ```
+    </details>
+
+    <details><summary> textrenderer.cpp and textrenderer.h </summary>
+    
+      * And here is ``textrenderer.cpp``:
+      
+        ```cpp
+        #include <glad/glad.h>
+        #include <learnopengl/textrenderer.h>
+        #include <learnopengl/shader_s.h>
+        #include <iostream>
+        
+        TextRenderer::TextRenderer(FontManager &fm)
+            : fontManager(fm),
+              textShader("text_shader.vert", "text_shader.frag"),
+              atlasShader("atlas.vert", "atlas.frag")
+        {
+            // set up vertex data (and buffer(s)) and configure vertex attributes
+            glGenVertexArrays(1, &textVAO);
+            glGenBuffers(1, &textVBO);
+        
+            glBindVertexArray(textVAO);
+            
+            glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+            
+            // Position and texture attribute
+            glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+            glEnableVertexAttribArray(0);
+        
+            glGenVertexArrays(1, &quadVAO);
+            glGenBuffers(1, &quadVBO);
+        }
+        
+        TextRenderer::~TextRenderer()
+        {
+            textShader.Delete();
+            atlasShader.Delete();
+            glDeleteVertexArrays(1, &textVAO);
+            glDeleteVertexArrays(1, &quadVAO);
+            glDeleteBuffers(1, &textVBO);
+            glDeleteBuffers(1, &quadVBO);
+        }
+        
+        void TextRenderer::renderText(const std::string &text, float x, float y, float scale, glm::vec3 color, const std::string &fontName) {
+            Font *font = fontManager.getFont(fontName);
+            if (!font) {
+                std::cerr << "Font " << fontName << " not found.\n";
+                return;
+            }
+        
+            int atlasWidth = font->getAtlasWidth();
+            int atlasHeight = font->getAtlasHeight();
+        
+            // Use text rendering shader
+            textShader.use();
+            textShader.setVec3("textColor", color);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, font->getTextureAtlas());
+            textShader.setInt("textTextureAtlas", 0);
+        
+            // Enable 2D rendering
+            glEnable(GL_BLEND); // enable transparency
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        
+            // Set up the transformation matrix for the text position
+            glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
+            textShader.setMat4("projection", projection);
+        
+            glBindVertexArray(textVAO);
+            glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+        
+            // Iterate through characters
+            for (const char &c : text) {
+                // Skip characters that do not exist in the glyph map
+                // if (glyphs.find(c) == glyphs.end()) {
+                //     continue;
+                // }
+        
+                // Retrieve glyph
+                const Glyph &glyph = font->getGlyph(c);
+        
+                // Calculate position and size of quad
+                float xpos = x + glyph.offsetX * scale;
+                float ypos = y + (glyph.offsetY - glyph.height) * scale;
+                float w = glyph.width * scale;
+                float h = glyph.height * scale;
+        
+                // Update VBO
+                float tx = glyph.textureX;
+                float ty = glyph.textureY; 
+                float tw = glyph.width / atlasWidth;
+                float th = glyph.height / atlasHeight;
+        
+                float vertices[6][4] = {
+                // positions          // texture coords
+                    { xpos,     ypos + h,   tx,      ty + th }, // Top-left
+                    { xpos,     ypos,       tx,      ty      }, // Bottom-left
+                    { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
+        
+                    { xpos,     ypos + h,   tx,      ty + th }, // Top-left
+                    { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
+                    { xpos + w, ypos + h,   tx + tw, ty + th }  // Top-right
+                };
+        
+                glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);            // ideal for small subset updates
+                // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW); // better for reallocating and initializing large buffers
+        
+                // Render quad
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+        
+                // Advance cursor
+                x += (glyph.advanceX >> 6) * scale; // Advance in pixels (1/64th units) to next character
+            }
+        
+            // Cleanup
+            glBindVertexArray(0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
+        
+        void TextRenderer::renderAtlas(const std::string &fontName) {
+            Font *font = fontManager.getFont(fontName);
+            if (!font) {
+                std::cerr << "Font " << fontName << " not found.\n";
+                return;
+            }
+        
+            atlasShader.use();
+            // Enable 2D rendering
+            glEnable(GL_BLEND); // enable transparency
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            // bind VAO
+            glBindVertexArray(quadVAO);
+            glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        
+            // Bind the texture (the texture atlas in this case)
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, font->getTextureAtlas()); // atlasTextureId is the texture containing the atlas
+            atlasShader.setInt("screenTexture", 0);
+            glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
+            atlasShader.setVec3("textColor", color);
+        
+            // Draw the full-screen triangle
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+        
+            // Cleanup
+            glBindVertexArray(0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        }
+        ```
+    
+      * And ``textrenderer.h``:
+    
+        ```cpp
+        #ifndef TEXTRENDERER_H
+        #define TEXTRENDERER_H
+        
+        #include <glad/glad.h>
+        #include <learnopengl/fontmanager.h>
+        #include <learnopengl/shader_s.h>
+        
+        extern const unsigned int  SCR_WIDTH;
+        extern const unsigned int  SCR_HEIGHT;
+        
+        class TextRenderer {
+        private:
+            FontManager& fontManager;
+            GLuint textVAO, textVBO;
+            GLuint quadVAO, quadVBO;
+            Shader textShader;
+            Shader atlasShader;
+        public:
+            TextRenderer(FontManager& fm);
+            ~TextRenderer();
+            
+            void renderText(const std::string& text, float x, float y, float scale, glm::vec3 color, const std::string& fontName);
+            void renderAtlas(const std::string &fontName);
+        };
+        
+        #endif // TEXTRENDERER_H
+        ```
+    </details>
+
+  * And here is what is added to ``CMakeLists.txt``:
+
+    ```cmake
+    # Add the custom text function library
+    add_library(text STATIC
+        src/font.cpp
+        src/fontmanager.cpp
+        src/textrenderer.cpp
+    )
+    # Set the target properties for text (where libtext.a will be created)
+    set_target_properties(text PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/)
+
+    # Link all the found libraries
+    target_link_libraries(${PROJECT_NAME}
+        text
+        ...
+    )
+    ```
+
+  * Inside ``main.cpp``, the code to render text looks like this:
+
+    Include headers
+    ```cpp
+    #include <learnopengl/fontmanager.h>    // Custom Font Manager
+    #include <learnopengl/textrenderer.h>   // Custom Text Renderer
+    ```
+
+    Before the render loop
+    ```cpp
+    FT_UInt fontSize = 48;
+    // Render FPS text at the top-left corner
+    float scale = static_cast<float>(SCR_WIDTH)*0.3f/800.0f;
+    glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
+    FontManager fontManager;
+    fontManager.loadFont("ARIAL", 48);
+    TextRenderer textRenderer(fontManager);
+    ```
+
+    Inside the render loop
+    ```cpp
+    textRenderer.renderText(fpsText, x, y, scale, color, "ARIAL");
+    textRenderer.renderAtlas("ARIAL");
+    ```
+    
+</details>
+
+## Progress update 12 - Phong lighting, render text in single draw call, and Linux compatibility - 25/04/25
+
+<details><summary> Phong lighting </summary>
+
+  ### Phong lighting
+  
+  * Finally implementing **Lighting**. Phong lighting is a method of implementing lighting in the fragment shader. Phong lighting uses 3 steps: ambient, diffuse, and specular lighting. For a better explanation see [learnopengl.com](https://learnopengl.com/Lighting/Basic-Lighting).
+
+    [![Phong_components_version_4](https://github.com/user-attachments/assets/310edfe3-8a8a-4530-a1c7-aa9b26f60a65)](https://en.wikipedia.org/wiki/Phong_reflection_model)
+
+  * Ambient lighting is the simplest (independent of light objects):
+
+    ```cpp
+    void main()
+    {
+        float ambientStrength = 0.1;
+        vec3 ambient = ambientStrength * lightColor;
+    
+        vec3 result = ambient * objectColor;
+        FragColor = vec4(result, 1.0);
+    }  
+    ```
+
+    ![ambient_lighting](https://github.com/user-attachments/assets/440c520a-4309-4f8b-8bf1-321cfa261227)
+
+  * Diffuse lighting is what produces directional lighting from light objects, for this we need to update the vertex data array of the cube to contain the normal vectors for each face. And specular lighting is what produces the glints of light you'd get when the light bounces into the camera, for that we need the light position, camera position and view direction.
+
+    Updated vertex data array:
+
+    ```cpp
+    // set up vertex data (and buffer(s)) and configure vertex attributes
+    // ------------------------------------------------------------------
+    // 3D cube without EBO (6 faces * 2 triangles * 3 vertices each = 36 vertices. 8 unique vertices. 78% redundancy) (each face has its own unique texture coords)
+    //      3------2
+    //     /|  Y  /|
+    //    7------6 | X
+    //    | 0----|-1
+    //    |/ Z   |/
+    //    4------5
+    float vertices[] = {
+      // positions            normal              texture coords
+        // -Z face
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f,   // (-,-,-) 0
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f,   // (+,-,-) 1
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f,   // (+,+,-) 2
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f,   // (+,+,-) 2
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f,   // (-,+,-) 3
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f,   // (-,-,-) 0
+
+        // +Z face
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f,   // (-,-,+) 4
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f,   // (+,-,+) 5
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f,   // (+,+,+) 6
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f,   // (+,+,+) 6
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f,   // (-,+,+) 7
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f,   // (-,-,+) 4
+
+        // -X face
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f,   // (-,+,+) 7
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f,   // (-,+,-) 3
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f,   // (-,-,-) 0
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f,   // (-,-,-) 0
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f,   // (-,-,+) 4
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f,   // (-,+,+) 7
+
+        // +X face
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f,   // (+,+,+) 6
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f,   // (+,+,-) 2
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f,   // (+,-,-) 1
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f,   // (+,-,-) 1
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f,   // (+,-,+) 5
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f,   // (+,+,+) 6
+
+        // -Y face
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f,   // (-,-,-) 0
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f,   // (+,-,-) 1
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,   // (+,-,+) 5
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,   // (+,-,+) 5
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f,   // (-,-,+) 4
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f,   // (-,-,-) 0
+
+        // +Y face
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f,   // (-,+,-) 3
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f,   // (+,+,-) 2
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f,   // (+,+,+) 6
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f,   // (+,+,+) 6
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f,   // (-,+,+) 7
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f    // (-,+,-) 3
+    };
+
+    GLuint VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+    // once a VAO is bound, any subsequent vertex attribute calls will be stored inside that VAO. (only have to make the calls once)
+    glBindVertexArray(VAO);
+
+    // copy our vertices array in a buffer for OpenGL to use
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // normal attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    // texture coord attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    ```
+
+    In the vertex shader:
+
+    ```glsl
+    #version 430 core
+    layout (location = 0) in vec3 aPos;
+    layout (location = 1) in vec3 aNormal;
+    layout (location = 2) in vec2 aTexCoord;
+    out vec3 FragPos;
+    out vec3 Normal;
+
+    out vec2 TexCoord;
+
+    uniform mat4 transform;
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+    
+    void main()
+    {
+    	gl_Position = projection * view * model * transform * vec4(aPos, 1.0);
+    
+    	FragPos = vec3(model * transform * vec4(aPos, 1.0));
+    	Normal = mat3(model) * aNormal;
+    	// Normal = aNormal;
+    	// Normal = mat3(transpose(inverse(model))) * aNormal;  // inversing matrices is a costly operation
+    }
+    ```
+
+    In the fragment shader:
+
+    ```glsl
+    #version 430 core
+    in vec3 FragPos;
+    in vec3 Normal;
+    in vec2 TexCoord;
+
+    out vec4 FragColor;
+    
+    uniform float mixValue;
+    
+    uniform vec3 lightPos;
+    uniform vec3 lightColor;
+    uniform vec3 objectColor;
+    uniform vec3 viewPos;
+    
+    void main()
+    {
+    	// Ambient lighting
+    	float ambientStrength = 0.1;
+    	vec3 ambient = ambientStrength * lightColor;
+    
+    	// Diffuse lighting
+    	vec3 norm = normalize(Normal);
+    	vec3 lightDir = normalize(lightPos - FragPos);
+    	float diff = max(dot(norm, lightDir), 0.0);
+    	vec3 diffuse = diff * lightColor;
+    
+      // Specular
+      float specularStrength = 1.0;
+      vec3 viewDir = normalize(viewPos - FragPos);
+      vec3 reflectDir = reflect(-lightDir, norm);
+      float spec = pow(max(dot(viewDir, reflectDir), 0.0), 256);
+      vec3 specular = specularStrength * spec * lightColor;
+    
+    	vec3 result = (ambient + diffuse + specular) * objectColor;
+    
+    	FragColor = mix(texture(texture1, vec2(TexCoord.x, TexCoord.y)),
+    					        texture(texture2, vec2(TexCoord.x, TexCoord.y)),
+    					        mixValue)
+    				      * vec4(result, 1.0);
+    }
+    ```
+</details>
+
+<details><summary> Render text in single draw call </summary>
+
+  * Batched vertex data for all characters in text and used just one draw call. Went from ~2ms → ~0.2ms, 10x improvement, but doesn't correlate to an actual 10x improvement in FPS as 2ms is quite quick anyway, but when using a slower machine like my laptop, those time savings are very welcome.
+
+    The old way:
+    
+    ```cpp
+    // multiple draw calls for each character in text
+    void TextRenderer::renderText(const std::string &text, float x, float y, float scale, glm::vec3 color, const std::string &fontName) {
+        Font *font = fontManager.getFont(fontName);
+        if (!font) {
+            std::cerr << "Font " << fontName << " not found.\n";
+            return;
+        }
+    
+        int atlasWidth = font->getAtlasWidth();
+        int atlasHeight = font->getAtlasHeight();
+    
+        // Use text rendering shader
+        textShader.use();
+        textShader.setVec3("textColor", color);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, font->getTextureAtlas());
+        textShader.setInt("textTextureAtlas", 0);
+    
+        // Enable 2D rendering
+        glEnable(GL_BLEND); // enable transparency
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+        // Set up the transformation matrix for the text position
+        glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
+        textShader.setMat4("projection", projection);
+    
+        glBindVertexArray(textVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+    
+        // Iterate through characters
+        for (const char &c : text) {
+            // Skip characters that do not exist in the glyph map
+            // if (glyphs.find(c) == glyphs.end()) {
+            //     continue;
+            // }
+    
+            // Retrieve glyph
+            const Glyph &glyph = font->getGlyph(c);
+    
+            // Calculate position and size of quad
+            float xpos = x + glyph.offsetX * scale;
+            float ypos = y + (glyph.offsetY - glyph.height) * scale;
+            float w = glyph.width * scale;
+            float h = glyph.height * scale;
+    
+            // Update VBO
+            float tx = glyph.textureX;
+            float ty = glyph.textureY; 
+            float tw = glyph.width / atlasWidth;
+            float th = glyph.height / atlasHeight;
+    
+            float vertices[6][4] = {
+            // positions          // texture coords
+                { xpos,     ypos + h,   tx,      ty + th }, // Top-left
+                { xpos,     ypos,       tx,      ty      }, // Bottom-left
+                { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
+    
+                { xpos,     ypos + h,   tx,      ty + th }, // Top-left
+                { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
+                { xpos + w, ypos + h,   tx + tw, ty + th }  // Top-right
+            };
+    
+            glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);            // ideal for small subset updates
+            // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW); // better for reallocating and initializing large buffers
+    
+            // Render quad
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+    
+            // Advance cursor
+            x += (glyph.advanceX >> 6) * scale; // Advance in pixels (1/64th units) to next character
+        }
+    
+        // Cleanup
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    ```
+
+    The new way:
+
+    ```cpp
+    // single draw call (~10x faster)
+    void TextRenderer::renderTextFast(const std::string &text, float x, float y, float scale, glm::vec3 color, const std::string &fontName) {
+        Font *font = fontManager.getFont(fontName);
+        if (!font) {
+            std::cerr << "Font " << fontName << " not found.\n";
+            return;
+        }
+    
+        int atlasWidth = font->getAtlasWidth();
+        int atlasHeight = font->getAtlasHeight();
+    
+        // Use text rendering shader
+        textShader.use();
+        textShader.setVec3("textColor", color);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, font->getTextureAtlas());
+        textShader.setInt("textTextureAtlas", 0);
+    
+        // Enable 2D rendering
+        glEnable(GL_BLEND); // enable transparency
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+        // Set up the transformation matrix for the text position
+        glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
+        textShader.setMat4("projection", projection);
+    
+        std::vector<float> vertexData;
+        vertexData.reserve(text.size() * 6 * 4);
+    
+        glBindVertexArray(textVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+    
+        // Iterate through characters
+        for (const char &c : text) {
+            // Skip characters that do not exist in the glyph map
+            // if (glyphs.find(c) == glyphs.end()) {
+            //     continue;
+            // }
+    
+            // Retrieve glyph
+            const Glyph &glyph = font->getGlyph(c);
+    
+            // Calculate position and size of quad
+            float xpos = x + glyph.offsetX * scale;
+            float ypos = y + (glyph.offsetY - glyph.height) * scale;
+            float w = glyph.width * scale;
+            float h = glyph.height * scale;
+    
+            // Update VBO
+            float tx = glyph.textureX;
+            float ty = glyph.textureY; 
+            float tw = glyph.width / atlasWidth;
+            float th = glyph.height / atlasHeight;
+    
+            float quad[6][4] = {
+            // positions          // texture coords
+                { xpos,     ypos + h,   tx,      ty + th }, // Top-left
+                { xpos,     ypos,       tx,      ty      }, // Bottom-left
+                { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
+    
+                { xpos,     ypos + h,   tx,      ty + th }, // Top-left
+                { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
+                { xpos + w, ypos + h,   tx + tw, ty + th }  // Top-right
+            };
+    
+            for (auto &v : quad)
+                vertexData.insert(vertexData.end(), v, v + 4);
+    
+            // glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);            // ideal for small subset updates
+            // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW); // better for reallocating and initializing large buffers
+    
+            // Render quad
+            // glDrawArrays(GL_TRIANGLES, 0, 6);
+    
+            // Advance cursor
+            x += (glyph.advanceX >> 6) * scale; // Advance in pixels (1/64th units) to next character
+        }
+    
+        // Upload vertex buffer data in one call
+        glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_DYNAMIC_DRAW);
+    
+        // Draw all characters with a single draw call
+        glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertexData.size() / 4));
+    
+        // Cleanup
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    ```
+
+  * The main takeaway is that instead of calling ``glDrawArrays(GL_TRIANGLES, 0, 6)`` for each character, I am batching the vertex data of all the characters using:
+   
+    ```cpp
+    std::vector<float> vertexData;
+    vertexData.reserve(text.size() * 6 * 4);
+
+    // Iterate through characters
+    for (const char &c : text) {
+        ...
+        float quad[6][4] = {
+        // positions          // texture coords
+            { xpos,     ypos + h,   tx,      ty + th }, // Top-left
+            { xpos,     ypos,       tx,      ty      }, // Bottom-left
+            { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
+
+            { xpos,     ypos + h,   tx,      ty + th }, // Top-left
+            { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
+            { xpos + w, ypos + h,   tx + tw, ty + th }  // Top-right
+        };
+
+        for (auto &v : quad)
+            vertexData.insert(vertexData.end(), v, v + 4);
+        ...
+    }
+
+    // Upload vertex buffer data in one call
+    glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_DYNAMIC_DRAW);
+
+    // Draw all characters with a single draw call
+    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertexData.size() / 4));
+    ```
+
+</details>
+
+<details><summary> Linux compatibility </summary>
+
+  ### Linux compatibility
+
+  * Made the program build in Linux, might as well as OpenGL GLFW was designed to be cross-compatible. I can't use the static libraries I precompiled on Windows like FFmpeg and FreeType, so instead I set these as dependencies that CMake will check for. This is what was added to ``CMakeLists.txt``, I found that copying the shader files from project root to ``/build/`` is simpler in Linux with ``rsync`` compared to ``robocopy`` in Windows.
+
+    ```cmake
+    # Shader copy target
+    if(UNIX)
+        add_custom_target(sync_assets ALL
+            COMMAND rsync -a --delete ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
+            COMMAND rsync -a --delete ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}
+            COMMENT "Syncing assets and shaders using rsync"
+        )
+    endif(UNIX)
+
+    if(UNIX)
+        find_package(OpenGL REQUIRED)
+        find_package(glfw3 REQUIRED)
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
+            libavcodec
+            libavformat
+            libavutil
+            libswscale
+        )
+        pkg_check_modules(FREETYPE2 REQUIRED IMPORTED_TARGET
+            freetype2
+        )
+        target_link_libraries(${PROJECT_NAME}
+            config # don't even need to link as config already linked to encoder and text, but no harm in including again
+            imgui  # ImGui static library from CMake (don't even need to link as ImPlot already linked to ImGui, but no harm in including again)
+            implot # ImPlot static library from CMake
+            encoder
+            text
+            OpenGL::GL
+            glfw
+            PkgConfig::FFMPEG
+            PkgConfig::FREETYPE2
+        )
+    endif(UNIX)
+    ```
+</details>
+
+## Progress update 13 - Multithreading (5x performance improvement), custom Timer namespace, Flip shader, and smooth button toggling - 10/05/25
+
+<details><summary> Multithreading (5x performance improvement) </summary>
+  
+  * Added an encoder thread that works concurrently with the main (render) thread and a shared Frame queue. Can toggle ON and OFF by pressing <kbd>P</kbd>. With CPU: i7 4790 and GPU: RX550, went from ~100FPS->500FPS. Used std::thread, std::mutex, std::queue, std::condition_variable, std::atomic, std::unique_lock, and std::lock_guard.
+  
+    Include headers
+    ```cpp
+    #include <thread>
+    #include <mutex>
+    #include <queue>
+    #include <condition_variable>
+    #include <atomic>
+    ```
+  
+    Encoder thread with a [lambda expression](https://learn.microsoft.com/en-us/cpp/cpp/lambda-expressions-in-cpp?view=msvc-170) that handles the encoding process
+    ```cpp
+    // FrameData holds a copy of the frame and its timestamp
+    struct FrameData {
+        // std::vector<uint8_t> pixels;  // Make a deep copy of PBO data
+        unsigned char *frame;
+        double pts;
+        GLuint pboIndex;
+    };
+  
+    // A lock-free queue is overkill here — simple mutex + condition_variable works well
+    std::queue<FrameData> frameQueue;
+    std::mutex queueMutex;
+    std::condition_variable queueCond;
+    std::atomic<bool> recordingNew = true;
+    const size_t MAX_QUEUE_SIZE = 8;
+  
+    // std::mutex encoderMutex;
+    std::mutex coutMutex;
+    Timer::init();
+    std::chrono::high_resolution_clock::time_point t;
+  
+    std::thread encoderThread([&]() {
+        glfwMakeContextCurrent(sharedContextWindow);  // Make encoder's context current here
+        gladLoadGL(); // Needed again in this thread!
+        try {
+            // Step 1: Initialize encoder
+            if (!Encoder::initializeEncoder("../output/output.mp4")) {
+                std::cerr << "Failed to initialize encoder in thread\n";
+                return;
+            }
+    
+            // Step 2: Process frame queue
+            while (recordingNew || !frameQueue.empty()) {
+                std::unique_lock<std::mutex> lock(queueMutex);
+                queueCond.wait(lock, [&]() {
+                    return !frameQueue.empty() || !recordingNew;
+                });
+    
+                while (!frameQueue.empty()) {
+                    FrameData frame = std::move(frameQueue.front());
+                    frameQueue.pop();
+                    
+                    if (!pbo) {
+                        lock.unlock();  // unlock while processing
+                        if (!flip_shader) {
+                            Timer::startTimer(t);
+                            flipFrameVertically(frame.frame);
+                            {
+                                std::lock_guard<std::mutex> lock(coutMutex);
+                                Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                            }
+                        }
+                        // lock.lock(); // relock for logging
+                        {
+                            std::lock_guard<std::mutex> encoderLock(Encoder::encoderMutex);
+                            Timer::startTimer(t);
+                            // Encoder::encodeFrame(frame.pixels.data(), frame.pts);
+                            Encoder::encodeFrame(frame.frame, frame.pts);
+                            {
+                                std::lock_guard<std::mutex> lock(coutMutex);
+                                Timer::endTimer(Timer::ENCODE, t);
+                            }
+                        }
+                        // lock.unlock();  // unlock
+                        lock.lock(); // relock for queue
+                    }
+  
+                    if (pbo) {
+                        lock.unlock();  // unlock while processing
+                        // Wait for sync to be ready
+                        int index = frame.pboIndex;
+                        if (pboFences[index]) {
+                            // GLenum waitReturn = glClientWaitSync(pboFences[index], 0, GL_TIMEOUT_IGNORED);
+                            GLenum waitReturn = glClientWaitSync(pboFences[index], GL_SYNC_FLUSH_COMMANDS_BIT, 1'000'000'000); // 1s timeout
+                            if (waitReturn == GL_ALREADY_SIGNALED || waitReturn == GL_CONDITION_SATISFIED) {
+                                glDeleteSync(pboFences[index]);
+                                pboFences[index] = nullptr;
+                            } else {
+                                std::cerr << "[encoderThread] glClientWaitSync timeout or error\n";
+                                continue;
+                            }
+                        }
+  
+                        // Map and copy pixels from PBO
+                        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[index]);
+                        GLubyte* ptr = (GLubyte*)glMapBufferRange(
+                            GL_PIXEL_PACK_BUFFER, 0, DATA_SIZE,
+                            GL_MAP_READ_BIT
+                        );
+  
+                        if (ptr) {
+                            glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+                            glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+  
+                            if (!flip_shader) {
+                                Timer::startTimer(t);
+                                flipFrameVertically(ptr);
+                                {
+                                    std::lock_guard<std::mutex> lock(coutMutex);
+                                    Timer::endTimer(Timer::FLIP_FUNCTION, t);
+                                }
+                            }
+                            // lock.lock(); // relock for logging
+                            {
+                                std::lock_guard<std::mutex> encoderLock(Encoder::encoderMutex);
+                                Timer::startTimer(t);
+                                // Encoder::encodeFrame(frame.pixels.data(), frame.pts);
+                                Encoder::encodeFrame(ptr, frame.pts);
+                                {
+                                    std::lock_guard<std::mutex> lock(coutMutex);
+                                    Timer::endTimer(Timer::ENCODE, t);
+                                }
+                            }
+                            // lock.unlock();  // unlock
+                        }
+                        lock.lock(); // relock for queue
+                    }
+                }
+            }
+  
+            {
+                std::lock_guard<std::mutex> encoderLock(Encoder::encoderMutex);
+                Encoder::finalizeEncoder();
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Encoder thread crashed: " << e.what() << std::endl;
+        }
+    });
+    ```
+</details>
+
+<details><summary> Custom Timer namespace </summary>
+
+  * Made a custom Timer namespace using std::chrono::high_resolution_clock, for debugging.
+  * What I didn't realise at the time was that printing to the terminal the time taken of a hot function in the render loop every cycle makes the performance drop a LOT. I commented it out, but it may be useful to enable for debugging. Instead I just aggregate the timings and print the averages at the end of the program.
+
+  * ``timer.cpp``:
+    
+      ```cpp
+      #include <chrono>
+      #include <array>
+      #include <iostream>                     // for std::cin/cout/cerr
+      #ifdef _WIN32
+      #include <Windows.h>
+      #endif /* _WIN32 */
+      #include <learnopengl/timer.h>
+      
+      namespace Timer {
+          namespace {     // anonymous namespace (encapsulation)
+              constexpr int NUM_TIMERS = 14;
+      
+              const char* names[NUM_TIMERS] = {
+                  "[encoder] encodeFrame",
+                  "[main] Rendering scene",
+                  "[main] Blitting MSAA to non-MSAA FBO",
+                  "[main] Rendering text",
+                  "[main] Rendering ImGui/ImPlot",
+                  "[main] Blitting non-MSAA FBO to screen",
+                  "[main] Flip shader",
+                  "[encoder] flipFrameVertically",
+                  "[main] glClientWaitSync",
+                  "[main] glMapBufferRange",
+                  "[main] glReadPixels (PBO ON)",
+                  "[main] glReadPixels (PBO OFF)",
+                  "[main] queue push+wait (PBO ON)",
+                  "[main] queue push+wait (PBO OFF)"
+              };
+      
+              std::array<double, NUM_TIMERS> totalTimes = {};
+              std::array<double, NUM_TIMERS> minTimes = {};
+              std::array<double, NUM_TIMERS> minTimeCount = {};
+              std::array<double, NUM_TIMERS> maxTimes = {};
+              std::array<double, NUM_TIMERS> maxTimeCount = {};
+              std::array<int, NUM_TIMERS> counts = {};
+          }
+      
+          void init() {
+              minTimes.fill(1e6); // sets every value in the array to 1e6
+          }
+      
+          void startTimer(std::chrono::high_resolution_clock::time_point& tp) {
+              tp = std::chrono::high_resolution_clock::now();
+          }
+          
+          void endTimer(TimerType type, const std::chrono::high_resolution_clock::time_point& start) {
+              auto end = std::chrono::high_resolution_clock::now();
+              std::chrono::duration<double, std::milli> elapsed = end - start;
+              totalTimes[type] += elapsed.count();
+              counts[type]++;
+          
+              constexpr int WARMUP_SAMPLES = 5; // avoid sampling at the beginning when encoding is slow
+              if (counts[type] >= WARMUP_SAMPLES) {
+                  if (elapsed.count() < minTimes[type]) {
+                      minTimes[type] = elapsed.count();
+                      minTimeCount[type] = counts[type];
+                  }
+                  if (elapsed.count() > maxTimes[type]) {
+                      maxTimes[type] = elapsed.count();
+                      maxTimeCount[type] = counts[type];
+                  }   
+              }
+              // print timings every cycle (heavily drops fps and spams terminal, only for debugging)
+              // if (type == ENCODE) {
+              //     std::cout << names[type] << " took " << elapsed.count() << " ms\n";
+              // }
+          }
+          
+          void printAverages() {
+              for (int i = 0; i < NUM_TIMERS; ++i) {
+                  if (counts[i] > 0) {
+                      #ifdef _WIN32
+                      SetConsoleOutputCP(CP_UTF8);
+                      #endif /* _WIN32 */
+                      if (i == ENCODE) {
+                          std::cout << names[i] << " max: " << maxTimes[i] << "ms (" << maxTimeCount[i] << ") min: " << minTimes[i] << "ms (" << minTimeCount[i] << ") (" << counts[i] << " samples)\n";
+                      }
+                      // std::cout << names[i] << " avg: " << (totalTimes[i] / counts[i]) <<  " ms ± maxtime: " << maxTimes[i] << " (" << maxTimeCount[i] << ") mintime: " << minTimes[i] << " (" << minTimeCount[i] << ") (" << counts[i] << " samples)\n";
+                      std::cout << names[i] << " took avg: " << (totalTimes[i] / counts[i]) <<  " ms ± " << (maxTimes[i] - minTimes[i]) / 2.0 << "ms (" << counts[i] << " samples)\n";
+                  }
+              }
+          }
+      }
+      ```
+
+  * ``timer.h``:
+    
+      ```cpp
+      #ifndef TIMER_H    // #include guard
+      #define TIMER_H
+      
+      #include <chrono>
+      
+      namespace Timer {
+          enum TimerType {
+              ENCODE = 0,
+              RENDER_SCENE = 1,
+              BLIT_MSAA = 2,
+              RENDER_TEXT = 3,
+              RENDER_GUI = 4,
+              BLIT_TO_SCREEN = 5,
+              FLIP_SHADER = 6,
+              FLIP_FUNCTION = 7,
+              GL_CLIENT_WAIT_SYNC = 8,
+              GL_MAP_BUFFER_RANGE = 9,
+              GLREADPIXELS_PBO_ON = 10,
+              GLREADPIXELS_PBO_OFF = 11,
+              QUEUE_PUSH_WAIT_PBO_ON = 12,
+              QUEUE_PUSH_WAIT_PBO_OFF = 13,
+          };
+      
+          void init();
+          void startTimer(std::chrono::high_resolution_clock::time_point& tp);
+          void endTimer(TimerType type, const std::chrono::high_resolution_clock::time_point& start);
+          void printAverages();
+      }
+      
+      #endif /* TIMER_H */
+      ```
+
+  * Example of using my custom Timer namespace:
+ 
+    * Before the render loop:
+      
+      ```cpp
+      Timer::init();
+      std::chrono::high_resolution_clock::time_point t;
+      ```
+
+    * Inside the render loop, wrapping the function(s) you want to time:
+   
+      ```cpp
+      Timer::startTimer(t);
+      textRenderer.renderText(fpsText, x, y, scale, color, "Arial");
+      textRenderer.renderAtlas("Arial");
+      {
+          // std::lock_guard<std::mutex> lock(coutMutex);  // only needed if you're printing to the terminal at run-time.
+          Timer::endTimer(Timer::RENDER_TEXT, t);
+      }
+      ```
+
+    * At the end, outside the render loop:
+
+      ```cpp
+      Timer::printAverages();
+      ```
+    
+</details>
+
+<details><summary> Flip shader </summary>
+
+  * Added a flip shader to flip the framebuffer for video encoding on the GPU. Using the custom Timer namespace, I can see that the flip function (CPU) takes ~0.5ms, while the flip shader (GPU) takes ~0.006ms. On the surface, this is an 83x improvement, but it leads to no visible improvement in FPS, as 0.5ms is still very fast. However, for lower-end machines like my laptop, and especially when using battery-saver mode, using the flip function can lead to jittery video recording, which the flip shader fixes.
+  * ``flip.vert``:
+    
+    ```glsl
+    #version 430 core
+    
+    out vec2 TexCoord;                          // Pass texture coordinates to fragment shader
+    
+    void main()
+    {
+        // full-screen triangle: https://stackoverflow.com/a/59739538/7875204
+        vec2 vertices[3] = vec2[3](vec2(-1,-1), vec2(3,-1), vec2(-1,3));
+        gl_Position = vec4(vertices[gl_VertexID], 0, 1);
+        TexCoord = 0.5 * gl_Position.xy + vec2(0.5);
+    }
+    ```
+  * ``flip.frag``:
+    
+    ```glsl
+    #version 430 core
+    in vec2 TexCoord;
+    out vec4 FragColor;
+    
+    uniform sampler2D screenTexture;
+    
+    void main() {
+        // Flip vertically
+        FragColor = texture(screenTexture, vec2(TexCoord.x, 1.0 - TexCoord.y));
+    }
+    ```
+  * Inside ``main.cpp``, before the render loop:
+    
+    ```cpp
+    // flip shader
+    // -----------
+    GLuint fboFlip, fboFlipTexture, dummyVAO;
+    glGenFramebuffers(1, &fboFlip);
+    glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
+
+    glGenVertexArrays(1, &dummyVAO);
+
+    // Create the texture to attach to fboFlip
+    glGenTextures(1, &fboFlipTexture);
+    glBindTexture(GL_TEXTURE_2D, fboFlipTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fboFlipTexture, 0);
+
+    // Check framebuffer status
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cerr << "ERROR: fboFlip is not complete!\n";
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    Shader flipShader("flip.vert", "flip.frag");
+    ```
+  * Inside the render loop, just after rendering on-screen and before glReadPixels():
+    
+    ```cpp
+    if (flip_shader) {
+        Timer::startTimer(t);
+        glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
+        flipShader.use();
+        glBindVertexArray(dummyVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, fboTexture);
+        flipShader.setInt("screenTexture", 0);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindVertexArray(0);
+        glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
+        {
+            std::lock_guard<std::mutex> lock(coutMutex);
+            Timer::endTimer(Timer::FLIP_SHADER, t);
+        }
+    }
+    ```
+
+</details>
+
+<details><summary> CMake fixes </summary>
+
+  * Fixed a CMake GLOB_RECURSE issue using CONFIGURE_DEPENDS
+ 
+    ```cmake
+    # Recursively find all files to track for rebuilds
+    file(GLOB_RECURSE ASSET_FILES CONFIGURE_DEPENDS RELATIVE ${ASSETS_SOURCE_DIR} "${ASSETS_SOURCE_DIR}/*")
+    file(GLOB_RECURSE SHADER_FILES CONFIGURE_DEPENDS RELATIVE ${SHADERS_SOURCE_DIR} "${SHADERS_SOURCE_DIR}/*")
+    ```
+
+</details>
+
+<details><summary> Smoother button toggling </summary>
+
+  * Smoother button press toggling using a simple bool if(pressed) check.
+  * Top of ``main.cpp``:
+ 
+    ```cpp
+    bool press = 0;
+    ```
+    
+  * In ``processInput()``:
+
+    ```cpp
+    // PBO
+    // ---
+    if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) && (!press))
+    {
+        press = 1;
+        Config::TogglePBO();
+        pbo = Config::GetPBO();
+        // std::cout << "Toggled PBO: " << !pbo << "->" << pbo << std::endl;
+    }
+    if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) && (press))
+    {
+        press = 0;
+    }
+    // Flip Shader
+    // -----------
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
+    {
+        Config::ToggleFlipShader();
+        flip_shader = Config::GetFlipShader();
+        // std::cout << "Toggled PBO: " << !pbo << "->" << pbo << std::endl;
+    }
+    ```
+
+  * This works well for one key, but doesn't work nicely when implementing it for other keys at the same time.
+
+</details>
+
+## Progress update 14 - Getters/setters→inline functions, flip shader fix, and made light move - 26/05/25
+
+<details><summary> Getters/setters→inline functions </summary>
+
+  * I was previously using getters/setters in ``Config.cpp`` like so:
+
+    ```cpp
+    namespace {     // anonymous namespace (encapsulation)
+        bool                pbo             =  0;
+        ...
+    }
+    namespace Config {
+        void TogglePBO() {
+            if (pbo)    { pbo = 0; }
+            else        { pbo = 1; }
+        }
+        ...
+        bool                GetPBO() { return pbo; }
+        ...
+    }
+    ```
+
+    however, this just meant ugly verbose boilerplate bloat code every time I wanted to set and access the variable in ``main.cpp``, on top of keeping track of a duplicate set of variables local to ``main.cpp``:
+
+    ```cpp
+    namespace {     // anonymous namespace (encapsulation)
+        bool                pbo;
+        ...
+    }
+
+    void ProcessInput(GLFWwindow *window) {
+        if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) && (!pboPressed)) {
+            pboPressed = true;
+            Config::TogglePBO();      // updating Config's pbo variable
+            pbo = Config::GetPBO();   // updating main.cpp's pbo variable
+            ...
+        }
+        ...
+    }
+    ```
+
+  * Also I was watching this video and he explains it well (albiet a little angrily, but understandably):
+
+    [![Watch the video](https://img.youtube.com/vi/_xLgr6Ng4qQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=_xLgr6Ng4qQ)
+
+  * So I switched to using simple inline functions in ``Settings.h``:
+
+    ```cpp
+    namespace Settings {
+        extern bool                     pbo;
+        ...
+        inline void TogglePBO() { pbo = !pbo; }
+        ...
+    }
+    ```
+
+    defining the variable in ``Settings.cpp``:
+
+    ```cpp
+    namespace Settings {
+        bool                    pbo             =  0;
+        ...
+    }
+    ```
+
+    setting the variable in ``main.cpp`` by doing:
+
+    ```cpp
+    void ProcessInput(GLFWwindow *window) {
+        if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) && (!pboPressed)) {
+            pboPressed = true;
+            Settings::TogglePBO();    // updating Settings's pbo variable
+            ...
+        }
+        ...
+    }
+    ```
+
+    and getting the variable in ``main.cpp`` by simply doing:
+
+    ```cpp
+    std::cout << Settings::pbo << "\n";
+    ```
+
+    or:
+
+    ```cpp
+    using namespace Settings;
+    std::cout << pbo << "\n";
+    ```
+
+  * The reason I define the variables in ``Settings.cpp`` and not ``Settings.h`` is that when I want to change the value of the variable, only ``Settings.cpp`` needs to be recompiled, rather than changing the value in ``Settings.h`` leading to **every** cpp file that includes ``Settings.h`` needing to be recompiled.
+    
+</details>
+
+<details><summary> Made light move </summary>
+
+* Made the light cube move, quite simple, just moved the cube around in spherical coordinates, combined with some modulation to produce interesting behaviour.
+
+  ```cpp
+  // light
+  // -----
+  float radius = 8.0f;
+  float theta = crntTime * 0.5f; // slower rotation (Y-axis)
+  float phi = glm::radians(90.0f + sin(crntTime * 0.6f) * 90.0f); // varies between 0° and 180°
+  
+  lightPos.x = radius * sin(phi) * cos(theta);
+  // lightPos.y = radius * cos(phi);
+  lightPos.y = 1.5f + glm::sin(crntTime * 0.7f) * 2.0f; // modulate the height
+  lightPos.z = radius * sin(phi) * sin(theta);
+  
+  // simple circle in XZ plane
+  // lightPos.x = glm::cos(crntTime) * 8.0f;
+  // lightPos.y = 1.5f;
+  // lightPos.z = glm::sin(crntTime) * 8.0f;
+  
+  ourShader.setVec3("lightPos", lightPos);
+  ```
+
+</details>
+
+## Progress update 15 - Minimal FreeType and FFmpeg with libx264, more input keys, and no longer using /.vscode/tasks.json - 30/05/25
+
+<details><summary> Minimal FreeType </summary>
+
+  * IN MSYS2 MINGW64 console (first go to ``C:/``) or on Linux, run:
+
+    ```shell
+    mkdir freetype_build
+    cd freetype_build
+    git clone https://gitlab.freedesktop.org/freetype/freetype.git
+    cd freetype
+    ```
+        
+    The next 2 commands take a while, you will see ``cat: config.h: No such file or directory`` after running ``make -j$(nproc)``, this is normal.
+
+    ```shell
+    ./autogen.sh
+    ./configure --prefix=$(cd .. && pwd) \
+                --without-zlib \
+                --without-bzip2 \
+                --without-png \
+                --without-harfbuzz \
+                --without-brotli \
+                --with-pic
+    make -j
+    make install
+    ```
+
+    this will create two folders, ``/lib/`` and ``/include/`` in ``/freetype_build/``, which contain the static library (.a) and headers (.h) for x264.
+
+</details>
+
+<details><summary> Minimal FFmpeg with libx264 </summary>
+
+  * IN MSYS2 MINGW64 console (first go back to ``C:\``) or on Linux, run:
+
+    ```shell
+    mkdir ffmpeg_build
+    cd ffmpeg_build
+    git clone --depth 1 https://code.videolan.org/videolan/x264.git
+    cd x264
+    ```
+    
+    The next 2 commands take a while, you will see ``cat: config.h: No such file or directory`` after running ``make -j$(nproc)``, this is normal.
+
+    ```shell
+    ./configure --prefix="$(cd .. && pwd)" --enable-static --disable-opencl
+    make -j$(nproc)
+    make install
+    ```
+
+    you may get errors on low RAM machines, if so, run:
+
+    ```shell
+    make clean
+    make V=1
+    make install
+    ```
+    
+    this will create two folders, ``/lib/`` and ``/include/`` in ``/ffmpeg_build``, which contain the static library (.a) and headers (.h) for x264.
+
+  * Now compile a minimal FFmpeg static library that supports x264:
+
+    ```shell
+    cd ..
+    git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
+    cd ffmpeg
+    ```
+
+    Next command takes a while, (minimal FFmpeg build, without zlib, bzlib, lzma, iconv):
+
+    ```shell
+    PKG_CONFIG_PATH="$(cd .. && pwd)/lib/pkgconfig" \
+    ./configure \
+      --disable-everything \
+      \
+      --prefix="$(cd .. && pwd)" \
+      --pkg-config-flags="--static" \
+      --extra-cflags="-I$(cd .. && pwd)/include" \
+      --extra-ldflags="-L$(cd .. && pwd)/lib" \
+      \
+      --enable-gpl \
+      --enable-nonfree \
+      --enable-libx264 \
+      --enable-encoder=libx264 \
+      --enable-encoder=h264_mf \
+      \
+      --enable-muxer=mp4 \
+      --enable-protocol=file \
+      \
+      --enable-avcodec \
+      --enable-avformat \
+      --enable-avutil \
+      --enable-swscale \
+      \
+      --enable-static \
+      --disable-shared \
+      --disable-programs \
+      --disable-doc \
+      --disable-debug \
+      \
+      --disable-zlib \
+      --disable-bzlib \
+      --disable-lzma \
+      --disable-iconv \
+      \
+      --disable-sdl2 \
+      --disable-schannel \
+      --disable-avdevice \
+      --disable-avfilter \
+      --disable-swresample
+    ```
+
+    Note: ``--disable-everything`` NEEDS to be at the top, flags are read in order.
+    
+    Then build (this can take a while):
+    
+    ```shell
+    make -j$(nproc)
+    ```
+    
+    and compile:
+    
+    ```shell
+    make install
+    ```
+
+    The ``/include/`` and ``/lib/`` folders will be inside ``/ffmpeg_build/``. Copy the contents into the project's ``/include/`` and ``/lib/`` folders.
+
+  * There is just 3 more static libraries we need to include for the program to run on Windows: ``libstrmiids.a``, ``libws2_32.a``, and ``libbcrypt.a``. When you install GCC using ``pacman -S mingw-w64-x86_64-gcc``, these 3 libraries will be installed as well, and can be found in ``C:\msys64\mingw64\lib``. Just copy the 3 static libraries into the project ``/lib/ffmpeg/`` folder and you're done.
+
+  * I was getting an error when trying to compile the program on my laptop, ``undefined reference to clock_gettime64``, ``undefined reference to nanosleep64``. It took me a while to figure out what the issue was. My PC had GCC **15**.1.0 (2025, recent, up to date), but my laptop was using GCC **14**.2.0 (2024), my FFmpeg static libraries (.a files) were compiled on my PC (GCC 15.1.0), and I was trying to link those .a files on my laptop (GCC 14.2.0). ``libavutil.a`` (and possibly others) contain symbols that GCC 14.2.0 doesn't recognise, particularly ``clock_gettime64`` and ``nanosleep64``. Using an older version of GCC, in particular an older major version, can lead to errors when compiling and linking static libraries that were compiled with a different version of GCC. Which is why I have decided to add a ``lib_build_info.txt`` file that shows the GCC version that was used to compile the FFmpeg and FreeType source files to static libraries, as well as the operating system that was used. To see what version of GCC you are using, just run:
+
+    ```shell
+    g++ --version
+    ``` 
+
+</details>
+
+<details><summary> More input keys </summary>
+
+  * Was finally able to get smooth button toggling for multiple input keys to work. I had to give each input key its own bool checking if the key was pressed, for some reason using a shared ``pressed`` bool didn't work.
+
+    Global pressed bools:
+    
+    ```cpp
+    // button press
+    // ------------
+    bool pboPressed = false;
+    bool flipPressed = false;
+    bool wireframePressed   = false;
+    bool imguiPressed       = false;
+    bool atlasPressed       = false;
+    ...
+    ```
+
+    Inside ``processInput()``:
+    
+    ```cpp
+    // PBO
+    // ---
+    if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) && (!pboPressed)) {
+        pboPressed = true;
+        TogglePBO();
+        std::cout << "[main] P key pressed. Press = " << pboPressed << " Time: " << crntTime << "\n";
+        // std::cout << "P key pressed: " << !pbo << "->" << pbo << " Press: " << !pboPressed << "->" << pboPressed << " Time: " << crntTime << "\n";
+    }
+    if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) && (pboPressed)) {
+        pboPressed = false;
+        std::cout << "[main] P key released. Press = " << pboPressed << " Time: " << crntTime << "\n";
+    }
+    // Flip Shader
+    // -----------
+    if ((glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) && (!flipPressed))
+    {
+        flipPressed = true;
+        ToggleFlipShader();
+        std::cout << "[main] F key pressed. Press = " << flipPressed << " Time: " << crntTime << "\n";
+        // std::cout << "Toggled PBO: " << !pbo << "->" << pbo << "\n";
+    }
+    if ((glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) && (flipPressed)) {
+        flipPressed = false;
+        std::cout << "[main] F key released. Press = " << flipPressed << " Time: " << crntTime << "\n";
+    }
+    // Wireframe
+    // ---------
+    if ((glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS) && (!wireframePressed))
+    {
+        wireframePressed = true;
+        ToggleWireframe();
+        if (wireframe) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            // glLineWidth(2.0f); // Only affects non-core-profile backends
+        } else
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        std::cout << "[main] M key pressed. Press = " << wireframePressed << " Time: " << crntTime << "\n";
+    }
+    if ((glfwGetKey(window, GLFW_KEY_M) == GLFW_RELEASE) && (wireframePressed)) {
+        wireframePressed = false;
+        std::cout << "[main] M key released. Press = " << wireframePressed << " Time: " << crntTime << "\n";
+    }
+    // ImGui
+    // -----
+    if ((glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) && (!imguiPressed))
+    {
+        imguiPressed = true;
+        ToggleImGui();
+        std::cout << "[main] N key pressed. Press = " << imguiPressed << " Time: " << crntTime << "\n";
+    }
+    if ((glfwGetKey(window, GLFW_KEY_N) == GLFW_RELEASE) && (imguiPressed)) {
+        imguiPressed = false;
+        std::cout << "[main] N key released. Press = " << imguiPressed << " Time: " << crntTime << "\n";
+    }
+    // Atlas
+    // -----
+    if ((glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS) && (!atlasPressed))
+    {
+        atlasPressed = true;
+        cycleTriState(currentTextMode);
+        std::cout << "[main] B key pressed. Press = " << atlasPressed << " Time: " << crntTime << "\n";
+    }
+    if ((glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE) && (atlasPressed)) {
+        atlasPressed = false;
+        std::cout << "[main] B key released. Press = " << atlasPressed << " Time: " << crntTime << "\n";
+    }
+    ...
+    ```
+
+    * You will notice that the <kbd>B</kbd> key toggles the font texture atlas, but in a tri-state. What this means is that it will cycle between the text at the top (FPS, etc.) and the font texture atlas both ON, just the text at the top ON, and both OFF.
+
+      In ``Settings.cpp``:
+      
+      ```cpp
+      namespace Settings {
+          TextTriState            currentTextMode = TextTriState::TextAndAtlasON;
+          ...
+      }
+      ```
+
+      In ``Settings.h``:
+      
+      ```cpp
+      namespace Settings {
+          enum class TextTriState : uint8_t {
+              TextAndAtlasOFF    = 0,
+              TextAndAtlasON     = 1,
+              TextONAtlasOFF     = 2
+          };
+          inline void cycleTriState(TextTriState& state) {
+              state = static_cast<TextTriState>((static_cast<uint8_t>(state) + 1) % 3);
+          }
+          extern TextTriState currentTextMode;
+          ...
+      }
+      ```
+
+      In the render loop in ``main.cpp``:
+
+      ```cpp
+      if (currentTextMode == TextTriState::TextAndAtlasON || currentTextMode == TextTriState::TextONAtlasOFF)
+          // textRenderer.renderText(fpsText, x, y, scale, color, font);
+          textRenderer.renderTextFast(fpsText, x, y, scale, color, font);
+      if (currentTextMode == TextTriState::TextAndAtlasON)
+          textRenderer.renderAtlas(font);
+      ```
+
+</details>
+
+<details><summary> No longer using /.vscode/tasks.json </summary>
+
+  * Stopped maintaining ``tasks.json``. It's been a long road, at the very start trying to get VSCode to work, and the pain of linking libraries inside ``tasks.json``, but now finally I have decided to stop using VSCode's ``tasks.json`` to build the program, as the program has become too complicated, and using ``CMakeLists.txt`` is just so much better. With VSCode's ``tasks.json``, I would have to precompile the ImGui and ImPlot source files, which I was using CMake to do anyway. CMake can compile source files to static libraries and link them to the executable, all in one command. So that means I can remove the ``./vsocde/`` folder from the repository.
+  
+</details>
+
+## Progress update 16 - Toggleable screen recording, GUI namespace, multithreading and PBOs separate toggles, flip shader fix, and CMake custom targets (cache clear and zip) - 03/06/25
+
+<details><summary> Toggleable screen recording </summary>
+
+  * Changed encoder.cpp from an Encoder namespace to a class, which handles instancing.
+  * Can now toggle recording ON and OFF with the R key, and can record multiple times. Recorded videos will have the date and time as the title. Needed to change the encoder thread structure to allow this.
+
+    In ``main.cpp``:
+
+    ```cpp
+    bool recordPressed      = false;
+
+    // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+    // ---------------------------------------------------------------------------------------------------------
+    void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::unique_ptr<Encoder> &encoder) {
+        // Recording
+        // ---------
+        if ((glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) && (!recordPressed))
+        {
+            recordPressed = true;
+            recording = !recording;
+            queueCond.notify_one();  // Wake encoder thread if asleep
+            std::cout << "[main] R key pressed. Press = " << recordPressed << " Time: " << crntTime << "\n";
+        }
+        if ((glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) && (recordPressed)) {
+            recordPressed = false;
+            std::cout << "[main] R key released. Press = " << recordPressed << " Time: " << crntTime << "\n";
+        }
+        ...
+    }
+    ```
+    
+    In ``encoder.cpp``, to get date and time as the title:
+    
+    ```cpp
+    std::string Encoder::getTimestampedFilename() {
+        auto now = std::chrono::system_clock::now();
+        std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
+        std::tm localTime;
+        #ifdef _WIN32
+        localtime_s(&localTime, &nowTime);
+        #else
+        localtime_r(&nowTime, &localTime);
+        #endif
+    
+        std::ostringstream oss;
+        oss << "../output/"
+            << std::put_time(&localTime, "%Y.%m.%d - %H.%M.%S")
+            << ".mp4";
+        return oss.str();
+    }
+    ```
+    
+  * Added a shuttingDown bool which is used in the outer while loop in the encoder thread, this gets turned to true at the very end when the program is closed by the user (clicking ESC instead of gracefully turning recording off first, then closing the program).
+  
+</details>
+
+<details><summary> GUI namespace </summary>
+
+  * Moved all the code that handles ImGui and ImPlot into a separate ``gui.cpp`` file. It's a bit too big to paste here, but the general outline is as follows:
+
+    ```cpp
+    // ImGui
+    // -----
+    #include <imgui/imgui.h>
+    #include <imgui/imgui_impl_glfw.h>
+    #include <imgui/imgui_impl_opengl3.h>
+    // ImPlot
+    // ------
+    #include <implot/implot.h>
+    // Settings
+    // --------
+    #include <learnopengl/Settings.h>
+    #include <learnopengl/encoder.h>
+    
+    namespace GUI {
+        // initialization: text, window position, etc.
+        namespace { // anonymous namespace (encapsulation) evaluated once at program startup
+            ...
+        }
+
+        // before the render loop
+        void Init(GLFWwindow *window) {
+            ...
+        }
+
+        // at the top of the render loop
+        void NewFrame() {
+            ...
+        }
+    
+        // hot function, used in render loop
+        void Render(Encoder *encoder) {
+            ...
+        }
+
+        // after the render loop, at the end of main()
+        void Exit() {
+            ...
+        }
+    }
+    ```
+
+  * This is much better than cluttering ``main.cpp`` with functions that could be in their own cpp file. It makes files smaller, self-contained, quicker to compile, and easier to read.
+ 
+  * Now in ``main.cpp`` just have to include ``gui.h`` and use the ``GUI`` namespace functions like so:
+
+    Include ``gui.h``:
+    
+    ```cpp
+    #include <learnopengl/gui.h>            // GUI
+    ```
+
+    Before the render loop:
+
+    ```cpp
+    GUI::Init(window);
+    ```
+
+    Inside the render loop at the top:
+
+    ```cpp
+    GUI::NewFrame();
+    ```
+
+    Inside the render loop, render the GUI:
+
+    ```cpp
+    GUI::Render(encoder.get());
+    ```
+
+    After the render loop, at the end of ``main()``:
+
+    ```cpp
+    GUI::Exit();
+    ```
+
+  * You may notice I am passing a raw pointer of the ``Encoder`` class to ``GUI``'s ``Render()`` function.
+    * Pass a raw pointer (``Encoder *encoder``) when just accessing, not owning.
+    * Pass a ``unique_ptr``/``shared_ptr`` (``std::unqiue_ptr<Encoder>``) when transferring ownership.
+  * As I am just needing to access the value of the ``isEncoding`` bool in the ``Encoder`` class instance, and not needing to transfer ownership of the instance, it's better to just pass a raw pointer, using ``encoder.get()``.
+    
+  * Can now select the encoder settings (crf, preset, framerate, etc.) when recording is OFF with drop-down menus, sliders, and checkboxes. The menu becomes disabled when recording is ON.
+ 
+    Inside ``Render()`` in ``gui.cpp``:
+
+    ```cpp
+    if (isEncoding) ImGui::BeginDisabled();
+    {
+        bool isLibx264 = Settings::libx264;
+        bool isH264mf = !Settings::libx264;
+        // Custom checkbox logic for h264_mf
+        ImGui::Bullet();
+        ImGui::SameLine();
+        bool h264mfClicked = ImGui::Checkbox("h264_mf", &isH264mf);
+        if (h264mfClicked && !Settings::recording && Settings::libx264) {
+            Settings::libx264 = false;
+            encoderChanged = true;
+        }
+        // Custom checkbox logic for libx264
+        ImGui::Bullet();
+        ImGui::SameLine();
+        bool libx264Clicked = ImGui::Checkbox("libx264", &isLibx264);
+        if (libx264Clicked && !Settings::recording && !Settings::libx264) {
+            Settings::libx264 = true;
+            encoderChanged = true;
+        }
+
+        // --- Encoder-specific settings ---
+        if (Settings::libx264) {
+            // --- libx264 settings ---
+
+            // Match g_preset to index
+            // static int presetIdx = 0;
+            for (int i = 0; i < IM_ARRAYSIZE(presets); ++i) {
+                if (Settings::g_preset == presets[i]) {
+                    presetIdx = i;
+                    break;
+                }
+            }
+
+            ImGui::PushItemWidth(100.0f); // Set desired width in pixels
+            if (ImGui::Combo("Preset", &presetIdx, presets, IM_ARRAYSIZE(presets))) {
+                Settings::g_preset = std::string(presets[presetIdx]);
+            }
+
+            // Convert crf string to int (only once unless changed)
+            static int crf = std::stoi(Settings::g_crf);
+            if (ImGui::SliderInt("CRF", &crf, 17, 30)) {
+                Settings::g_crf = std::to_string(crf);
+            }
+
+        } else {
+            // h264_mf settings
+            static int gopSize = Settings::g_gop_size; // e.g. 10–120 // smaller GOP=>more I-frames: better seeking/error recovery, faster previewing, but larger file size. for real-time/streaming: GOP = 2 x framerate.
+            static int maxBFrames = Settings::g_max_b_frames; // 0–5
+            
+            ImGui::PushItemWidth(100.0f); // Set desired width in pixels
+            int mbps = static_cast<int>(Settings::g_bit_rate / 1'000'000); // Convert to Mbps
+            if (ImGui::SliderInt("Bitrate (Mbps)", &mbps, 10, 100, "%d", ImGuiSliderFlags_AlwaysClamp)) {
+                Settings::g_bit_rate = static_cast<int64_t>(mbps) * 1'000'000; // Convert back to bps
+            }
+
+            if (ImGui::SliderInt("GOP Size", &gopSize, 10, 120)) {
+                Settings::g_gop_size = gopSize;
+            }
+
+            if (ImGui::SliderInt("Max B-frames", &maxBFrames, 0, 5)) {
+                Settings::g_max_b_frames = maxBFrames;
+            }
+        }
+
+        // --- Framerate dropdown (shared between encoders) ---
+        if (ImGui::Combo("Framerate", &selectedFramerateIdx, framerates, IM_ARRAYSIZE(framerates))) {
+            Settings::framerate = (selectedFramerateIdx == 0) ? 30 : 60;
+        }
+        
+        // bool isLaptopMode = Settings::laptop_mode;
+        ImGui::Checkbox("Laptop mode (deep copy frames, thread-safe)", &Settings::laptop_mode);
+    }
+    if (isEncoding) ImGui::EndDisabled();
+    ```
+
+</details>
+
+<details><summary> Multithreading and PBOs separate toggles </summary>
+
+  * Multithreading (encoder thread) and asynchronous PBO readback are now separate toggles. I didn't do this earlier as I had trouble separating them before.
+
+    Global pressed bools in ``main.cpp``:
+
+    ```cpp
+    // button press
+    // ------------
+    bool pboPressed         = false;
+    bool encoderPressed     = false;
+    ...
+    ```
+
+    ``processInput()`` in ``main.cpp``:
+
+    ```cpp
+    // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+    // ---------------------------------------------------------------------------------------------------------
+    void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::unique_ptr<Encoder> &encoder) {
+        using namespace Settings; // compile-time instruction (no runtime overhead)
+        std::ostringstream oss;
+        // PBO
+        // ---
+        if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) && (!pboPressed)) {
+            pboPressed = true;
+            TogglePBO();
+            std::lock_guard<std::mutex> coutLock(coutMutex);
+            std::cout << "[main] P key pressed. Press = " << pboPressed << " Time: " << crntTime << "\n";
+            // std::cout << "P key pressed: " << !pbo << "->" << pbo << " Press: " << !pboPressed << "->" << pboPressed << " Time: " << crntTime << "\n";
+        }
+        if ((glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) && (pboPressed)) {
+            pboPressed = false;
+            std::cout << "[main] P key released. Press = " << pboPressed << " Time: " << crntTime << "\n";
+        }
+        // Encoder thread
+        // --------------
+        if ((glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) && (!encoderPressed))
+        {
+            encoderPressed = true;
+            encoder_thread.store(!encoder_thread.load(std::memory_order_acquire), std::memory_order_release);
+            encoder->queueCond.notify_all();  // Wake encoder thread if asleep
+            std::lock_guard<std::mutex> coutLock(coutMutex);
+            oss << "[main] T key pressed. Press = " << encoderPressed << " Time: " << crntTime << "\n";
+        }
+        if ((glfwGetKey(window, GLFW_KEY_T) == GLFW_RELEASE) && (encoderPressed)) {
+            encoderPressed = false;
+            std::lock_guard<std::mutex> coutLock(coutMutex);
+            oss << "[main] T key released. Press = " << encoderPressed << " Time: " << crntTime << "\n";
+        }
+        ...
+    }
+    ```
+    
+
+</details>
+
+<details><summary> Flip shader fix </summary>
+
+  * I just realised I was calling the flip shader for **every** cycle of the render loop, when I only needed to call it when actually encoding a frame (every 30th or 60th of a second, depending on if encoding at 30fps or 60fps). I had a similar experience when I realised I was encoding frames for every cycle of the render loop... This was a simple fix, just putting the flip shader code inside Step 4 of the render loop, just before encoding.
+
+    Previously, I was doing the flip shader code before Step 4, outside of ``if (vsync || (encodeDiff >= 1.0 / framerate)) { ... }``, but now I am doing it inside Step 4, calling it only when it's needed.
+  
+    ```cpp
+    // Step 4: Read pixels from the resolved FBO for off-screen encoding
+    // -----------------------------------------------------------------
+    encodeDiff = crntTime - encodeTime;
+    if (vsync || (encodeDiff >= 1.0 / framerate)) {
+        // fbo first needs to be flipped for encoding
+        if (flip_shader) {
+            Timer::startTimer(t);
+            glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
+            flipShader.use();
+            glBindVertexArray(quadVAO);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, fboTexture);
+            flipShader.setInt("screenTexture", 0);
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+            glBindVertexArray(0);
+            glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
+            {
+                // std::lock_guard<std::mutex> lock(coutMutex);
+                Timer::endTimer(Timer::FLIP_SHADER, t);
+            }
+        }
+        ...
+    }
+    ```
+
+    * Fixed an issue where the screen went black in the recording when flip shader was ON and wireframe mode was enabled, this was due to the fact that the flip shader draws the non-MSAA FBO texture as a fullscreen triangle, and wireframe is a global OpenGL rasterization stage, so it turned the fullscreen triangle hollow.
+
+    ```cpp
+    // Step 4: Read pixels from the resolved FBO for off-screen encoding
+    // -----------------------------------------------------------------
+    encodeDiff = crntTime - encodeTime;
+    if (vsync || (encodeDiff >= 1.0 / framerate)) {
+        // fbo first needs to be flipped for encoding
+        if (flip_shader) {
+            if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe for this pass
+            Timer::startTimer(t);
+            glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
+            flipShader.use();
+            glBindVertexArray(quadVAO);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, fboTexture);
+            flipShader.setInt("screenTexture", 0);
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+            glBindVertexArray(0);
+            glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
+            {
+                // std::lock_guard<std::mutex> lock(coutMutex);
+                Timer::endTimer(Timer::FLIP_SHADER, t);
+            }
+            if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Restore wireframe
+        }
+        ...
+    }
+    ```
+    
+</details>
+
+<details><summary> CMake custom targets (cache clear and zip) </summary>
+
+  * Made a CMake custom target that you can use to delete ``CMakeCache.txt`` which seems to fix the issue of the "Rechecking globbed directories..." infinite loop when running ``ninja`` sometimes. And another custom target that compresses only the essentials (``/assets/``, ``/shaders/``, ``/bin/``) into a zip folder for Release.
+
+    ```cmake
+    # Delete the CMakeCache.txt file (fixes "Rechecking globbed directories..." infinite loop issue when running "ninja" sometimes)
+    # Run inside build/: cmake --build . --target clear
+    add_custom_target(clear
+        COMMAND ${CMAKE_COMMAND} -E rm -f "${CMAKE_BINARY_DIR}/CMakeCache.txt"
+        COMMENT "Clearing CMake cache..."
+        VERBATIM
+    )
+    
+    # Run inside build/: ninja zip OR cmake --build . --target zip
+    set(PACKAGE_NAME "OpenGL-3D-Render-Recorder-v1.2.0-Windows-x86_64")
+    # set(PACKAGE_NAME "OpenGL-3D-Render-Recorder-v1.2.0-Arch-Linux-x86_64")
+    set(PACKAGE_DIR "${CMAKE_BINARY_DIR}/${PACKAGE_NAME}")
+    set(PACKAGE_ZIP "${CMAKE_BINARY_DIR}/${PACKAGE_NAME}.zip")
+    # Uncomment ALL to make CMake run this target by default (always makes ZIP file)
+    add_custom_target(zip #ALL
+        # Clean previous packaging folder if it exists
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${PACKAGE_DIR}"
+    
+        # Create directory structure
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_DIR}/bin"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_DIR}/shaders"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_DIR}/assets"
+    
+        # Copy binaries except imgui.ini
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_BINARY_DIR}/bin" "${PACKAGE_DIR}/bin"
+        COMMAND ${CMAKE_COMMAND} -E rm -f "${PACKAGE_DIR}/bin/imgui.ini"
+    
+        # Copy shaders and assets
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/shaders" "${PACKAGE_DIR}/shaders"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/assets" "${PACKAGE_DIR}/assets"
+    
+        # Create the ZIP archive (bin, shaders, assets under PACKAGE_NAME/)
+        COMMAND ${CMAKE_COMMAND} -E tar "cfv" "${PACKAGE_ZIP}" --format=zip -- "${PACKAGE_NAME}"
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    
+        COMMENT "Packaging into ${PACKAGE_NAME}.zip with top-level folder"
+    
+        # Delete unzipped packaging folder
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${PACKAGE_DIR}"
+    
+        VERBATIM
+    )
+    ```
+
+</details>
+
+## Progress update 17 - Merge branch 'encoder-feature' - 21/06/25
+
+<details><summary> Merge branch 'encoder-feature' </summary>
+
+  * In the spirit of moving all code to separate cpp files like with the GUI code, I have tasked myself with moving all encoder logic that is still in ``main.cpp``, like the encoder thread, to ``encoder.cpp``.
+  * I also wanted to do all commits on a separate branch, and only when finally finished, merge to main, which is what Git was intended for. This also means I can switch back to the working main branch whenever I want.
+
+  <ins>How to use git to do temp branches</ins>
+
+  1. Make sure you're on <ins>``main``</ins>
+
+     ```console
+     git checkout main
+     ```
+
+     (Make sure work is committed or stashed before switching branches, Git will warn you anyway)
+     
+  2. Create and switch to a temporary branch
+
+     ```console
+     git checkout -b temp-feature
+     ```
+
+  3. Work and commit incrementally
+
+     As you make changes
+     
+     ```console
+     git add .
+     git commit -m "Write commit message here"
+     ```
+
+     or just use ``git commit`` to open the text editor for longer commit messages
+
+  4. Switch back to ``main`` anytime
+
+     ```console
+     git checkout main
+     ```
+
+     And go back:
+
+     ```console
+     git checkout temp-feature
+     ```
+
+  6. Push branch to GitHub (remote)
+
+     ```console
+     git push -u origin temp-feature
+     ```
+
+     ``-u`` stands for ``--set-upstream``. For the very first push to remote, need to add ``-u``, it:
+
+       * Pushes branch to remote
+       * Links local branch to remote branch, so can just type ``git pull``/``git push`` next time.
+    
+     Remember when you're on another branch to ``push``/``pull`` to that branch, **NOT** to ``main``.
+
+     Do this:
+
+     ```console
+     git pull origin temp-feature
+     ```
+
+     **NOT** this:
+
+     ```console
+     git pull origin main
+     ```
+
+     If you accidentally make a wrong commit, do:
+
+     ```console
+     git log --oneline -n 5
+     ```
+
+     to get the ID (e.g. ``abcd123``) of the last commit you want to undo.
+
+     Then do:
+
+     ```console
+     git reset --hard abcd123
+     ```
+
+     to remove that commit.
+
+  8. To switch to a remote branch from another machine, do:
+
+     Fetch all remote branches
+     
+     ```console
+     git fetch
+     ```
+
+     Confirm it's available remotely
+     
+     ```console
+     git branch -r
+     ```
+
+     Checkout the remote branch and track it locally
+    
+     ```console
+     git checkout -b temp-feature origin temp-feature
+     ```
+
+       * Creates a local branch called ``temp-feature``
+       * Sets it to track ``origin/temp-feature`` (remote)
+
+     Notice you don't need to add ``-u`` (``--set-upstream``), as that is only when creating a **new** branch locally and you want to set it to track a remote branch when pushing for the first time.
+
+     This will list all **local** branches
+
+     ```console
+     git branch
+     ```
+
+     Use this to get more details about all the local branches
+
+     ```console
+     git branch -vv
+     ```
+     
+    
+  8. If you have half-changes that you don't want to commit, but want to save so you can switch to another branch, then use:
+
+     ```console
+     git stash
+     ```
+
+     to stash the changes. You can see your list of stashes using:
+
+     ```console
+     git stash list
+     ```
+
+     When you switch to another branch and come back, your stashed changes won't appear immediately, it will display your last commit to that branch. To make your stashed changes visible again, use:
+
+     ```console
+     git stash pop    // reapply and remove stash
+     ```
+
+     or
+
+     ```console
+     git stash apply  // reapply but keep stash 
+     ```
+
+     I prefer to do ``git stash pop`` as it promotes not cluttering the stash list, and forces you to remember to use ``git stash`` again when you want to switch branches again.
+
+     Make sure to run ``git stash list`` and ``git stash pop`` if there is a stash saved. Then later ``git stash`` to save.
+     
+  10. When the feature is complete and tested
+
+      ```console
+      git commit -m "Fished temp-feature"          // final commit
+      git checkout main
+      git pull origin main                         // pull any changes to main from remote
+      git merge --no-commit --no-ff temp-feature 
+      ```
+
+      ``git merge --no-commit --no-ff temp-feature`` is better than ``git merge temp-feature``, ``--no-commit`` means it doesn't commit with the merge, it will just do a dry run to show what merge conflicts there are, and gives you the option to commit or abort. And ``--no-ff`` prevents git from fast forward merging, if main didn't diverge from the feature branch, git will fast forward merge, merging as if there never was a branch.
+
+      If there are any merge conflicts, manually fix them by keeping/removing the code you want/don't want. Git will show where the conflicts are with markers showing which is from main and which is from the temp-branch. All you have to do is delete the code you don't want, as well as the markers that Git adds, and keep the code you want.
+
+      Once you're done and there are no more merge conflicts, commit your changes
+
+      ```console
+      git commit
+      ```
+
+      or abort
+
+      ```console
+      git merge --abort
+      ```
+
+      This will commit the merge to main or abort the merge if you chose that option. If you commited with the merge, all that's left is to push the merge to remote, and optionally add a tag with a version number
+
+      ```console
+      git push origin main
+      git tag -a v1.2.0 -m "..."
+      git push origin v1.2.0
+      ``` 
+
+      And optionally delete the branch
+
+      ```console
+      git branch -d temp-feature             // delete local branch
+      git push origin --delete temp-feature  // delete remote branch
+      ```
+      
+</details>
+
+<details><summary> Fix messy terminal output </summary>
+
+  * I noticed that lines printed to the terminal would sometimes get messed up, appearing at the end or in the middle of other lines rather than on their own separate line.
+  * The cause is that ``std::cout`` is buffered but not thread-safe for <ins>interleaved</ins> output from multiple threads. Even with a ``std::lock_guard``, if one thread writes a long log in multiple statements or prints without a newline, it can clash with other threads.
+  * The fix is to build your full message in a local string first. Instead of:
+
+    ```cpp
+    std::lock_guard<std::mutex> coutLock(coutMutex);
+    std::cout << "[Timer] encodeFrame avg: " << time << "\n";
+    ```
+
+    Do this:
+
+    ```cpp
+    std::ostringstream oss;
+    oss << "[Timer] encodeFrame avg: << time << "\n";
+    {
+        std::lock_guard<std::mutex> coutLock(coutMutex);
+        std::cout << oss.str();
+    }
+    ```
+
+    This ensures ``std::cout`` is only touched <ins>once</ins> under the lock.
+
+</details>
+
+<details><summary> Mysterious crashing issues </summary>
+
+  * The program was mysteriously crashing when hard exiting from the program (clicking <kbd>Esc</kbd>) with the encoder thread ON.
+    * The issue, which I figured out, was that at the end of the program I was deleting the VAO, PBO, buffers, etc., and **then** stopping encoding.
+    * The fix was simply to stop encoding first, and delete the buffers at the very end.
+
+  * The program was also crashing when PBOs was ON. This was partly fixed by moving ``encoder->stop()`` in ``main.cpp`` <ins>before</ins> VBO, VAO, etc. deletion (as mentioned before), but the program still stalled despite encoding the video properly, which I did not like as it used to exit cleanly and immediately before. Any crash means there was an issue.
+    * This took me a while to figure out the issue, and this is something that no LLM can help with. The issue was calling ``delete[] frame;`` at the end of ``main()``. For some reason this was causing the issue. Likely the encoder thread was still using the items that frame pointed to. I wasn't having this issue on my PC, but on my laptop with a slower CPU I had this issue, which supports the idea that the encoder thread was still using the data in ``frame`` which had been deleted. But I joined the encoder thread with the main thread before deleting the frame data, so I'm not sure why that would be an issue.
+    * I am slightly concerned about writing to a ``frame`` buffer in the main thread, and reading/encoding from it in the encoder thread at the same time. Seems like a race condition waiting to happen. I think I got lucky as the time between each frame being rendered, 16.6ms (60fps), was longer than ``glReadPixels()`` and ``encodeFrame()``, the time it took to read the pixel data and encode the frame, which was ~10ms max on my PC. However, on my laptop ``glReadPixels()`` and ``encodeFrame()`` are not as fast, and that would explain why I was getting glitchy/jittery video recordings on my laptop, as the encoder thread could be reading from the frame buffer while the main thread was writing new data to it.
+    * To fix this, I added a circular/ring buffer.
+
+      Instead of doing this:
+
+      ```cpp
+      unsigned char* frame = NULL;
+      frame = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 3];
+      ```
+
+      I do this:
+
+      In ``Settings.h``:
+   
+      ```cpp
+      namespace Settings {
+          constexpr std::size_t           BUFFER_COUNT    =  5;
+          ...
+      }
+      ```
+   
+      In ``main.cpp``:
+      
+      ```cpp
+      #include <learnopengl/Settings.h>       // Settings
+
+      int main() {
+          ...
+          std::array<std::unique_ptr<uint8_t[]>, BUFFER_COUNT> frameBuffers;
+          int currentWriteIndex = 0;
+          for (int i = 0; i < static_cast<int>(BUFFER_COUNT); ++i) {
+              frameBuffers[i] = std::make_unique<uint8_t[]>(DATA_SIZE);
+          }
+      ```
+   
+      In the render loop, to get the raw pointer:
+   
+      ```cpp
+      uint8_t *buffer = frameBuffers[currentWriteIndex].get(); // get raw pointer
+      ```
+
+      and to cycle between each frame buffer:
+
+      ```cpp
+      currentWriteIndex = (currentWriteIndex + 1) % BUFFER_COUNT;
+      ```
+
+</details>
+
 <!-- ADD BIBLIOGRAPHY -->
 <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
 <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
+<!-- EXPLAIN BETTER GOING FROM 2D to 3D WITH TRANSFORMATIONS AND SHADERS -->
 ## License
 GNU General Public License v3.0
