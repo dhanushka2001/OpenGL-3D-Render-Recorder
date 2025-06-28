@@ -143,7 +143,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
 * Info on OpenGL
   <details><summary>Information on OpenGL and Vulkan</summary>
-  
+
+    * Here's a really nice video on the different graphics APIs (OpenGL, Vulkan, etc.) and GPGPU (general-purpose computing on the GPU) APIs (CUDA, OpenCL, etc.):
+
+      [![Watch the video](https://img.youtube.com/vi/9-DiGrnz8l8/maxresdefault.jpg)](https://www.youtube.com/watch?v=9-DiGrnz8l8)
+      
     * "In OpenGL getting something on the screen is by far easier. Even without classic fixed function, just rendering full-screen effects or image-processing takes only few lines of code. Vulkan’s level of verbosity to get to the first pixel on the screen is far higher. As hinted in the previous blog posts on resource bindings or memory management, these additional complexities will require more code to be written. Especially for people new to graphics, it may be better to use OpenGL or rendering middleware that hides this complexity and focus on the actual task."[^12]
     * "Fixed-function OpenGL: Pre-assembled toy car, fun out of the box, not much room for customization. Modern AZDO (Approaching [Zero Driver Overhead](https://www.reddit.com/r/GraphicsProgramming/comments/2y9w93/zero_driver_overhead_misleading/)) OpenGL with Programmable Shaders: LEGO Kit, you build it yourself, comes with plenty of useful, pre-shaped pieces. Vulkan: Pine Wood Derby Kit, you build it yourself to race from raw materials, power tools used to assemble, adult supervision highly recommended."[^13]
     * "The fixed-function pipeline is as the name suggests — the functionality is fixed. So someone wrote a list of different ways you'd be permitted to transform and rasterise geometry, and that's everything available. In broad terms, you can do linear transformations and then rasterise by texturing, interpolate a colour across a face, or by combinations and permutations of those things. But more than that, the fixed pipeline enshrines certain deficiencies. For example, it was obvious at the time of design that there wasn't going to be enough power to compute lighting per pixel. So lighting is computed at vertices and linearly interpolated across the face. [...] the programmable pipeline lets you do whatever you want at each stage, giving you complete flexibility. In the first place that allowed better lighting, then better general special effects (ripples on reflective water, imperfect glass, etc), and more recently has been used for things like deferred rendering that flip the pipeline on its end. All support for the fixed-functionality pipeline is implemented by programming the programmable pipeline on hardware of the last decade or so. The programmable pipeline is an advance on its predecessor, afforded by hardware improvements."[^14]
@@ -1510,7 +1514,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
 ## Progress update 8 - 3D, Coordinate Systems, Camera, and Dear ImGui - 19/01/25
 
-<details><summary> Progress update 8 - 3D, Coordinate Systems, Camera, and Dear ImGui - 19/01/25 </summary>
+<details><summary> 3D and Coordinate Systems </summary>
 
   * For some reason the program would display a white window for a brief second and immediately close with no error message, this happened when I increased the dimensions of the window. It turned out the issue was due to a segfault,[^54] I didn't allocate enough memory for the FFmpeg frame buffer, I was experimenting with it earlier as mentioned above noticing that I could allocate less than the number of pixels and it would work just fine, however just to be safe I put it back to normal and it works fine again.
   
@@ -1628,6 +1632,10 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     #endif  /* RENDER_3D==1 */
     ```
 
+</details>
+
+<details><summary> Camera </summary>
+
   * I also implemented a Camera header which _LearnOpenGL.com_ provides, containing a camera class that allows us to control the camera's position, yaw, and pitch. For some reason, I can't use my laptop's touchpad and the keyboard at the same time to move the camera in OpenGL, however, when using a separate mouse, I can use the keyboard simultaneously. 
   
   * The _LearnOpenGL.com_ Camera chapter uses a weird if statement in the mouse callback function to check if this is the first use of the callback function and sets the ``xpos`` and ``ypos`` of the cursor to the centre of the screen, the reason being to avoid the whiplash cursor jump effect you would otherwise get, as the cursor is not initialized to the centre of the screen. A much cleaner alternative as mentioned by someone in the comments is to just use the GLFW function ``glfwSetCursorPos(window, lastX,lastY);`` before the while/render loop,[^56] where ``lastX`` and ``lastY`` are set to ``SCR_WIDTH / 2.0f`` and ``SCR_HEIGHT / 2.0f`` respectively, and remove the if statement in the mouse callback function. Another important point is to make sure ``YAW`` is initialized to ``-90.0f``.
@@ -1652,8 +1660,12 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   * [This](https://lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update) (nicely coded) article explains a way to stop OpenGL from pausing when resizing/moving the window, involving multithreading.[^63]
   
     [^63]: Luke Arcamo. "GLFW: Prevent freezing on window update" _lukearcamo.github.io_, 22 July 2021, [lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update](https://lukearcamo.github.io/articles/coding/glfw-prevent-freezing-on-window-update).
+
+</details>
+
+<details><summary> Header guards and centering the viewport </summary>
   
-  * I only just now learned about #include/header guards, which are used in headers to prevent creating duplicate copies of the header when unintentionally including the header more than once (this can happen sneakily when you include headers that include other headers you may already have included in your main.cpp file). This can be done two ways, using ``#ifndef``; ``#define``; and ``#endif``, or ``#pragma once``.[^64][^65] You will notice most header files use one or the other, all C++ standard library files have them, making it safe to include libraries in multiple files without the worry of duplicate code being generated.[^66]
+  * I only just now learned about include/header guards, which are used in headers to prevent creating duplicate copies of the header when unintentionally including the header more than once (this can happen sneakily when you include headers that include other headers you may already have included in your main.cpp file). This can be done two ways, using ``#ifndef``; ``#define``; and ``#endif``, or ``#pragma once``.[^64][^65] You will notice most header files use one or the other, all C++ standard library files have them, making it safe to include libraries in multiple files without the worry of duplicate code being generated.[^66]
   
     [^64]: Brian R. Bondy. "#pragma once vs include guards?" _Stack Overflow_, 17 July 2009, [stackoverflow.com/a/1143958/7875204](https://stackoverflow.com/a/1143958/7875204).
     [^65]: Alex Kremer. "What does #pragma once mean in C?" _Stack Overflow_, 25 Apr. 2011, [stackoverflow.com/a/5777009](https://stackoverflow.com/a/5777009).
@@ -1836,7 +1848,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     However, upon further testing, it seems you don't even need to add this code and it will give a black background anyway.
   
     [^70]: Diego Macario. "How to keep the aspect ratio of an OpenGL window constant when it's resized" _diegomacario.github.io_, 23 Apr. 2021, [diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html](https://diegomacario.github.io/2021/04/23/how-to-keep-the-aspect-ratio-of-an-opengl-window-constant.html).
-  
+
+</details>
+
+<details><summary> Pausing and Dear ImGui </summary>
+
   * I implemented a PAUSE button that allows the user to gain access to the mouse, which I felt would be needed in the future as I would like to also add a GUI.
   
     Global variables:
@@ -2277,6 +2293,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     ```
   
   https://github.com/user-attachments/assets/4be425a8-0235-4756-8a57-1acb1ff23ade
+  
 </details>
 
 ## Progress update 9 - FFmpeg CLI→API, asynchronous readback with PBOs, and CMake - 30/01/25
@@ -3258,6 +3275,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
   * Delaying implementing **Lighting** yet again.
   * Currently I am loading fonts, creating a texture atlas, and rendering the text all inside ``text.h`` using the ``Text`` class. This is not optimal as it means each text instance has its own texture atlas, even though multiple instances may share the same font and thus could share the same texture atlas. A better design would be to have a ``Font`` class which handles loading the font and creating a texture atlas for it, a ``FontManager`` class (only one instance needed) which manages all the fonts created and could act as the interface, and a ``TextRenderer`` class (also only one instance needed) which can take the ``FontManager`` class as an input and act as an interface but for rendering text and texture atlases.
+  * You may notice I also added a ``padding`` term, which simply leaves a 1px gap between the glyphs in the texture atlas, which fixed the issue of the characters in the text being rendered with some artefacts.
 
     <details><summary> font.cpp and font.h </summary>
       
@@ -5399,7 +5417,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     }
     ```
 
-    * Fixed an issue where the screen went black in the recording when flip shader was ON and wireframe mode was enabled, this was due to the fact that the flip shader draws the non-MSAA FBO texture as a fullscreen triangle, and wireframe is a global OpenGL rasterization stage, so it turned the fullscreen triangle hollow.
+  * Fixed an issue where the screen went black in the recording when flip shader was ON and wireframe mode was enabled, this was due to the fact that the flip shader draws the non-MSAA FBO texture as a fullscreen triangle, and wireframe is a global OpenGL rasterization stage, it affects **all** draw calls, includign post-processing shaders like my ``flipShader``, so wireframe mode was turning the fullscreen triangle hollow. Which also explained the 1px border on the edges I was seeing in the recordings. The fix was simply to disable wireframe mode temporarily during the ``flipShader``; easy.
 
     ```cpp
     // Step 4: Read pixels from the resolved FBO for off-screen encoding
@@ -5516,7 +5534,15 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
      or just use ``git commit`` to open the text editor for longer commit messages
 
-  4. Switch back to ``main`` anytime
+     To see changes before ``git commit``, run:
+
+     ```console
+     git diff
+     ```
+
+     press <kbd>q</kbd> to exit.
+
+  5. Switch back to ``main`` anytime
 
      ```console
      git checkout main
@@ -5674,7 +5700,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       git branch -d temp-feature             // delete local branch
       git push origin --delete temp-feature  // delete remote branch
       ```
-      
+
+      ![what-is-a-merge-1](https://github.com/user-attachments/assets/c223609a-c12f-4c63-82ec-81cb05779593)
+
+      ![what-is-a-fast-forward](https://github.com/user-attachments/assets/621c3c2c-047f-464c-b750-05196bd7858e)
+
 </details>
 
 <details><summary> Fix messy terminal output </summary>
@@ -5692,7 +5722,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
     ```cpp
     std::ostringstream oss;
-    oss << "[Timer] encodeFrame avg: << time << "\n";
+    oss << "[Timer] encodeFrame avg: " << time << "\n";
     {
         std::lock_guard<std::mutex> coutLock(coutMutex);
         std::cout << oss.str();
@@ -5757,6 +5787,157 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
       ```cpp
       currentWriteIndex = (currentWriteIndex + 1) % BUFFER_COUNT;
       ```
+
+</details>
+
+<details><summary> extern vs inline, and definition vs declaration </summary>
+
+  * Say you wanted to have a variable that you could access across multiple .cpp files (translation units), you may think you can just define the variable in a ``Settings.h`` file and include the header in all cpp files that need the variable, but actually, it is not allowed in C++ to simply write in ``Settings.h``:
+
+    ```cpp
+    // Settings.h
+    int a = 5;   // this is NOT allowed
+    ```
+
+    C++ will not allow you to include Settings.h in multiple .cpp files (translation units) with this line due to the One Definition Rule (ODR).
+
+  * For variables I need access to in multiple .cpp files, what I do instead is declare them in ``Settings.h`` using ``extern`` and define them in ``Settings.cpp``, like so:
+
+    ```cpp
+    // Settings.h
+    extern int a;
+    ```
+
+    ```cpp
+    // Settings.cpp
+    int a = 5;
+    ```
+
+  * ``extern`` says "this variable exists somewhere else, find it at link time". It informs the compiler about the variable, but doesn't define it; no storage was allocated.
+  * A variable is defined the moment it's given storage.
+  * A function is defined when it has a body, i.e. instructions.
+  * Doing ``std::mutex coutMutex`` may seem like a declaration and not a definition, as it has no "value" defined, but it is actually a definition. In C++, a declaration of an object means it allocates storage. Even if you don't explicitly assign a value, it causes the variable to exist and take up memory; it's a definition, it constructs the mutex using its default constructor.
+  * Then you might ask, "doesn't ``int a;`` auto assign to 0? Doesn't that mean it's a definition and not a declaration then?", and the answer is surprisingly yes, apparently ``int a;`` is a definition. In global scope, ``int a;`` is equivalent to ``int a = 0;``.
+  * It allocates storage and makes ``a`` exist ⇒ definition.
+  * ``int a;`` in local scope is uninitialized, and given a garbage value, but it still allocates storage, the variable exists with memory allocated ⇒ definition.
+  * All definitions are declarations, but the reverse is not true.
+  * What you can do instead of declaring in ``Settings.h`` with extern and defining in ``Settings.cpp`` is to define in ``Settings.h`` using ``inline``:
+  
+    ```cpp
+    // Settings.h
+    inline int a = 5;    // this is allowed (C++17 and later)
+    ```
+
+    ``inline`` (C++17 and later) is a definition, but it also tells the compiler "this can be defined in multiple .cpp files (translation units), but don't treat it as a multiple definition", which means it doesn't disobey the One Definition Rule (ODR).
+    
+  * For things like ``std::mutex coutMutex`` I defined them in ``Settings.h``using ``inline``, as it is just an object definition and will never need to be changed. However, for most other variables that could be changed, the reason I don't define them in ``Settings.h`` is that, if I ever want to change the value, I would need to recompile **every** cpp file that includes ``Settings.h``, whereas by defining it in ``Settings.cpp``, only ``Settings.cpp`` needs to be recompiled.
+  * However, upon further reading, it is actually better to declare ``std::mutex coutMutex`` with ``extern`` and define once in ``Settings.cpp``, rather than using ``inline``, as ``std::mutex`` is a mutable runtime object, not a constant.
+  * If you put an inline std::mutex coutMutex; in a header, each TU will share it correctly (C++17 guarantees this), but:
+    * Mutexes are stateful.
+    * Modifying them from multiple TUs tightly couples those TUs, which can lead to hard-to-trace bugs if someone changes the header later.
+    * Mutexes are usually best treated like singletons — one instance owned by one .cpp file.
+  * So, best practice is to actually do:
+
+    ```cpp
+    // Settings.h
+    extern std::mutex coutMutex;
+    
+    // Settings.cpp
+    std::mutex coutMutex;
+    ```
+    
+  * So what should ``inline`` be used for?
+    * Constants:
+
+      ```cpp
+      inline constexpr float Pi = 3.1415f;
+      ```
+      
+    * Configuration-style values (rarely change, used widely):
+
+      ```cpp
+      inline int screenWidth = 1920;
+      ```
+      
+    * Stateless, shared objects (if safe and small):
+
+      ```cpp
+      inline const std::string appName = "MyApp";
+      ```
+      
+  * But not for:
+    * Runtime mutable state like std::mutex, std::atomic, or logging streams.
+
+  | Aspect                   |   ``extern`` declaration in ``Settings.h`` and definition in ``Settings.cpp``           | ``inline`` definition in ``Settings.h``                                                                   |
+  | ------------------------ | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+  | Recompilation on change  | ✅ Only ``Settings.cpp``                                                               | ❌ All ``.cpp`` files that include ``Settings.h``                                                         |
+  | Code simplicity          | ❌ Needs ``.h`` + ``.cpp``                                                             | ✅ Header-only, single line                                                                               |
+  | C++ version              | ✅ Works in all versions                                                               | ❌ C++17 or newer only                                                                                    |
+  | ODR safety               | ✅ One definition by default                                                           | 	✅ Guaranteed via ``inline``                                                                            |
+  | Best for                 | 	Mutable or frequently changing globals, runtime mutable state objects (``std::mutex``) | 	Constants, config-style values (rarely changed), or stateless shared objects (if safe and small)         |
+
+</details>
+
+<details><summary> Initializing an array in a hot function </summary>
+
+  * I have a hot function (gets called *very* frequently) called ``GetFPSText()``, inside I was initializing an array, which I thought was not a good idea:
+
+    ```cpp
+    std::string GetFPSText(...) {
+        char buffer[250];
+        snprintf(buffer, sizeof(buffer), "...");
+        return std::string(buffer);
+    }
+    ```
+
+  * So I moved the array allocation outside and passed the array as a pointer:
+
+    ```cpp
+    char buffer[250];
+    std::string GetFPSText(char *buffer, ...) {
+        snprintf(buffer, sizeof(buffer), "...");
+        return std::string(buffer);
+    }
+    ```
+
+    But I only saw 7 characters being displayed, why?
+
+  * The issue was that ``sizeof()`` only gives array size if it's a real array in current scope. Once passed to a function, it decays to a pointer, 8 bytes on 64-bit architecture, and 1 byte used for the null terminator (``'\0'``).
+  * Surprisingly, it is actually better to create the array inside the hot function, as it's stack allocated (very fast), and small size (250).
+
+</details>
+
+<details><summary> How to block indent and comment in Vim </summary>
+
+  * To block indent in Vim:
+
+    <kbd>5</kbd> **+** <kbd>></kbd> 
+    <br/>or<br/>
+    <kbd>v</kbd>/<kbd>Shift</kbd>+<kbd>v</kbd>/<kbd>Ctrl</kbd>+<kbd>v</kbd>  **+**  <kbd>↑↓</kbd>/<kbd>j</kbd>/<kbd>k</kbd>  **+**  <kbd>></kbd>
+
+    * <kbd>5</kbd>: Number of rows
+    * <kbd>v</kbd>/<kbd>Shift</kbd>+<kbd>v</kbd>/<kbd>Ctrl</kbd>+<kbd>v</kbd>: Visual/Visual Line/Visual Block mode
+    * <kbd>></kbd>: Indent
+   
+  * To block comment:
+    * Move the cursor to the start of the first line
+    * Use Visual Block mode: <kbd>Ctrl</kbd> + <kbd>v</kbd>
+    * <kbd>↑↓</kbd>/<kbd>j</kbd>/<kbd>k</kbd> to go to the start of the last line
+    * Enter Insert mode: <kbd>Shift</kbd> + <kbd>i</kbd> (this will let you insert text at the start of the first line)
+    * Type ``// ``, then press <kbd>Esc</kbd>
+
+  * To uncomment:
+    * Move the cursor to the start of the first line
+    * Use Visual Block mode: <kbd>Ctrl</kbd> + <kbd>v</kbd>
+    * <kbd>↑↓</kbd>/<kbd>j</kbd>/<kbd>k</kbd> to go to the start of the last line
+    * (<kbd>Shift</kbd> + ) <kbd>⇆</kbd>/<kbd>h</kbd>/<kbd>l</kbd> to go left/right to highlight the comment syntax ``// ``
+    * <kbd>d</kbd> to delete
+    * Type ``// ``, then press <kbd>Esc</kbd>
+
+  * To save (write out), type: ``:w``
+  * To save and exit, type: ``:wq``
+  * To quit without saving, type: ``:q!``
+ 
 
 </details>
 
