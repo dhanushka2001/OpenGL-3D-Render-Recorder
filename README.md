@@ -3986,28 +3986,28 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
     void main()
     {
     	// Ambient lighting
-    	float ambientStrength = 0.1;
-    	vec3 ambient = ambientStrength * lightColor;
+    	float   ambientStrength   = 0.1;
+    	vec3    ambient           = ambientStrength * lightColor;
     
     	// Diffuse lighting
-    	vec3 norm = normalize(Normal);
-    	vec3 lightDir = normalize(lightPos - FragPos);
-    	float diff = max(dot(norm, lightDir), 0.0);
-    	vec3 diffuse = diff * lightColor;
+    	vec3    norm              = normalize(Normal);
+    	vec3    lightDir          = normalize(lightPos - FragPos);
+    	float   diff              = max(dot(norm, lightDir), 0.0);
+    	vec3    diffuse           = diff * lightColor;
     
-      // Specular
-      float specularStrength = 1.0;
-      vec3 viewDir = normalize(viewPos - FragPos);
-      vec3 reflectDir = reflect(-lightDir, norm);
-      float spec = pow(max(dot(viewDir, reflectDir), 0.0), 256);
-      vec3 specular = specularStrength * spec * lightColor;
+    	// Specular
+    	float   specularStrength  = 1.0;
+    	vec3    viewDir           = normalize(viewPos - FragPos);
+    	vec3    reflectDir        = reflect(-lightDir, norm);
+    	float   spec              = pow(max(dot(viewDir, reflectDir), 0.0), 256);
+    	vec3    specular          = specularStrength * spec * lightColor;
     
-    	vec3 result = (ambient + diffuse + specular) * objectColor;
+    	vec3    result            = (ambient + diffuse + specular) * objectColor;
     
     	FragColor = mix(texture(texture1, vec2(TexCoord.x, TexCoord.y)),
-    					        texture(texture2, vec2(TexCoord.x, TexCoord.y)),
-    					        mixValue)
-    				      * vec4(result, 1.0);
+    	                texture(texture2, vec2(TexCoord.x, TexCoord.y)),
+    	                mixValue)
+    	            * vec4(result, 1.0);
     }
     ```
 </details>
@@ -5947,3 +5947,5 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 <!-- EXPLAIN BETTER GOING FROM 2D to 3D WITH TRANSFORMATIONS AND SHADERS -->
 ## License
 GNU General Public License v3.0
+
+## Citations
