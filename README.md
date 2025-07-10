@@ -108,7 +108,7 @@ or manually delete ``CMakeCache.txt`` in ``/build/``, and rerun ``ninja``.
 
 ## Introduction
 * Learning to use OpenGL (GLFW) so I can do high-performance scientific computing and modelling on the GPU.
-* You may come across things like GLFW, GLUT, GLAD, GLEW, ..., a lot of 4-letter names beginning with "GL", or heard about other OpenGL APIs like SFML, I'll give sources explaining what they are below.
+* You may come across things like GLFW, GLUT, GLAD, GLEW, ..., a lot of 4-letter names beginning with "GL", or heard about other OpenGL APIs like SFML, I'll give sources explaining what they are below. Using www.learnopengl.com as my main resource.
   
   <details><summary>Information on GLFW and GLAD</summary>
 
@@ -171,8 +171,30 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
     
   </details>
+
+* Useful C/C++ resources
   
-* Using www.learnopengl.com as my main resource.
+  <details><summary>Information on C/C++</summary>
+
+    * [Building your own C application](https://www.opengl-tutorial.org/miscellaneous/building-your-own-c-application/) web tutorial with nice visuals and outlining all the steps; compilation, linking, runtime, cmake.
+ 
+      <img width="813" height="544" alt="image" src="https://github.com/user-attachments/assets/f5b40722-3c40-4c30-8a86-e52f40e064af" />
+
+      <img width="483" height="254" alt="image" src="https://github.com/user-attachments/assets/bed0cf0d-1b4c-4971-86dd-269fb218e007" />
+
+    * [External vs internal linkage](https://stackoverflow.com/a/1358622)
+    * [Correct way to define C++ namespace methods in .cpp file](https://stackoverflow.com/questions/8681714/correct-way-to-define-c-namespace-methods-in-cpp-file)
+    * [Anonymous namespace inside namespace for private members](https://www.internalpointers.com/post/c-namespaces-private-members)
+    * [Using extern](https://stackoverflow.com/questions/10422034/when-to-use-extern-in-c)
+    * [Should we declare the variables in the .c or .h file?](https://www.reddit.com/r/C_Programming/comments/6vxnzp/should_we_declare_the_variables_in_the_c_or_h_file/)
+    * [typedef struct vs struct definitions](https://stackoverflow.com/questions/1675351/typedef-struct-vs-struct-definitions)
+    * [What are the conventions around library distributions?](https://www.reddit.com/r/cpp_questions/comments/1b27jud/what_are_the_conventions_around_library/)
+    * [CMake and order dependent linking of shared libraries](https://stackoverflow.com/a/12204953)
+    * [When to use a Namespace vs a Class for encapsulating data/methods?](https://www.reddit.com/r/cpp_questions/comments/dcjdn5/when_to_use_a_namespace_vs_a_class_for/)
+    * [Namespaces (C++) Microsoft guide](https://learn.microsoft.com/en-us/cpp/cpp/namespaces-cpp)
+    * 
+
+  </details>
 
 ## Progress update 1 - Hello Triangle - 30/06/24
 
@@ -4415,6 +4437,11 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
         }
     });
     ```
+
+    For more info on C++ lambda expressions, read the Microsoft guide in the link, and watch this video by The Cherno:
+
+    [![Watch the video](https://img.youtube.com/vi/mWgmBBz0y8c/maxresdefault.jpg)](https://www.youtube.com/watch?v=mWgmBBz0y8c)
+    
 </details>
 
 <details><summary> Custom Timer namespace </summary>
@@ -5451,7 +5478,9 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
 <details><summary> CMake custom targets (cache clear and zip) </summary>
 
-  * Made a CMake custom target that you can use to delete ``CMakeCache.txt`` which seems to fix the issue of the "Rechecking globbed directories..." infinite loop when running ``ninja`` sometimes. And another custom target that compresses only the essentials (``/assets/``, ``/shaders/``, ``/bin/``) into a zip folder for Release.
+  * Made a CMake custom target that you can use to delete ``CMakeCache.txt`` which fixed the issue of the "Rechecking globbed directories..." infinite loop when running ``ninja`` sometimes. And another custom target that compresses only the essentials (``/assets/``, ``/shaders/``, ``/bin/``) into a zip folder for Release.
+
+    [^75]: Jean Davy. "Looking for a 'cmake clean' command to clear up CMake output" _Stack Overflow_, 14 Aug. 2014, [stackoverflow.com/a/24352423](https://stackoverflow.com/a/24352423).
 
     ```cmake
     # Delete the CMakeCache.txt file (fixes "Rechecking globbed directories..." infinite loop issue when running "ninja" sometimes)
