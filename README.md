@@ -3293,7 +3293,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
 ## Progress update 11 - Updated text rendering with Font, FontManager, and TextRenderer classes - 09/04/25
 
-<details><summary> Progress update 11 - Updated text rendering with Font, FontManager, and TextRenderer classes - 09/04/25 </summary>
+<details><summary> Updated text rendering with Font, FontManager, and TextRenderer classes </summary>
 
   * Delaying implementing **Lighting** yet again.
   * Currently I am loading fonts, creating a texture atlas, and rendering the text all inside ``text.h`` using the ``Text`` class. This is not optimal as it means each text instance has its own texture atlas, even though multiple instances may share the same font and thus could share the same texture atlas. A better design would be to have a ``Font`` class which handles loading the font and creating a texture atlas for it, a ``FontManager`` class (only one instance needed) which manages all the fonts created and could act as the interface, and a ``TextRenderer`` class (also only one instance needed) which can take the ``FontManager`` class as an input and act as an interface but for rendering text and texture atlases.
@@ -5126,7 +5126,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
 <details><summary> No longer using /.vscode/tasks.json </summary>
 
-  * Stopped maintaining ``tasks.json``. It's been a long road, at the very start trying to get VSCode to work, and the pain of linking libraries inside ``tasks.json``, but now finally I have decided to stop using VSCode's ``tasks.json`` to build the program, as the program has become too complicated, and using ``CMakeLists.txt`` is just so much better. With VSCode's ``tasks.json``, I would have to precompile the ImGui and ImPlot source files, which I was using CMake to do anyway. CMake can compile source files to static libraries and link them to the executable, all in one command. So that means I can remove the ``./vsocde/`` folder from the repository.
+  * Stopped maintaining ``tasks.json``. It's been a long road, at the very start trying to get VSCode to work, and the pain of linking libraries inside ``tasks.json``, but now finally I have decided to stop using VSCode's ``tasks.json`` to build the program, as the program has become too complicated, and using ``CMakeLists.txt`` is just so much better. With VSCode's ``tasks.json``, I would have to precompile the ImGui and ImPlot source files, which I was using CMake to do anyway. CMake can compile source files to static libraries and link them to the executable, all in one command. So that means I can remove the ``/.vscode/`` folder from the repository.
   
 </details>
 
