@@ -1,5 +1,11 @@
 #version 430 core
 
+struct Material {
+	sampler2D diffuse;
+	vec3 	  specular;
+	float     shininess;
+};
+
 in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoord;

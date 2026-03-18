@@ -57,7 +57,8 @@ namespace Settings {
     }
     extern TextTriState currentTextMode;
 
-    inline std::mutex coutMutex;
+    // inline std::mutex coutMutex;
+    extern std::mutex coutMutex;
 }
 
 #endif /* SETTINGS_H */

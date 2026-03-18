@@ -13,6 +13,11 @@
 #include <learnopengl/timer.h>          // Timer
 #include <learnopengl/gui.h>            // GUI
 #include <learnopengl/Settings.h>       // Settings
+#include <learnopengl/browser.h>        // Browser
+
+// Ultralight
+// ----------
+#include <Ultralight/Ultralight.h>
 
 // I/O and filesystem
 // ------------------
@@ -495,10 +500,10 @@ int main()
     // flip shader
     // -----------
     Shader flipShader("flip.vert", "flip.frag");
-    GLuint fboFlip, fboFlipTexture, quadVAO;// quadVBO;
+    GLuint fboFlip, fboFlipTexture, dummyVAO;// quadVBO;
     glGenFramebuffers(1, &fboFlip);
     glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
-    glGenVertexArrays(1, &quadVAO);
+    glGenVertexArrays(1, &dummyVAO);
     // Create the texture to attach to fboFlip
     glGenTextures(1, &fboFlipTexture);
     glBindTexture(GL_TEXTURE_2D, fboFlipTexture);
@@ -561,6 +566,64 @@ int main()
     float encodeDiff, encodeTime = 0.0f;    // for encoding frames
     float crntTime = 0.0f;                  // current time (used by all)
 
+    // BROWSER
+    // -------
+    float quadVertices[] = {
+        // positions          // texCoords
+        -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+    
+        -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  0.0f,  1.0f, 1.0f
+    };
+    
+    GLuint quadVAO, quadVBO;
+    
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    
+    glBindVertexArray(quadVAO);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+    
+    // position
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    // texCoord
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    glBindVertexArray(0);
+
+    GLuint browserTex;
+    glGenTextures(1, &browserTex);
+    glBindTexture(GL_TEXTURE_2D, browserTex);
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                 1024, 768,
+                 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+    
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+    Browser browser;
+    browser.init(1024, 768, "https://example.com");
+
+    glm::mat4 model_browser = glm::mat4(1.0f);
+    
+    // Move in front of camera
+    model_browser = glm::translate(model_browser, glm::vec3(0.0f, 0.0f, -3.0f));
+    
+    // Scale to window-like shape
+    model_browser = glm::scale(model_browser, glm::vec3(1.6f, 1.0f, 1.0f));
+
+    Shader browserShader("browser.vert", "browser.frag");
+
 
     // render loop
     // -----------
@@ -615,6 +678,42 @@ int main()
         // Update timing info for FPS text
         UpdateFPS(fps, ms, crntTime, lastTime, frameCountFPS);
         std::string fpsText = GetFPSText(fps, ms, crntTime);
+
+	// BROWSER
+	// --------------------------------------------
+	browser.update();
+	browser.render();
+	
+	unsigned char* pixels = browser.getPixels();
+	
+	if (pixels) {
+	    glBindTexture(GL_TEXTURE_2D, browserTex);
+	
+	    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+	                    browser.getWidth(),
+	                    browser.getHeight(),
+	                    GL_BGRA, GL_UNSIGNED_BYTE,
+	                    pixels);
+	
+	    browser.unlockPixels();
+	}
+	
+	// --- Render quad ---
+	browserShader.use();
+	
+	browserShader.setMat4("model", model_browser);
+	browserShader.setMat4("view", view);
+	browserShader.setMat4("projection", projection);
+	
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, browserTex);
+	browserShader.setInt("browserTexture", 0);
+	
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glBindVertexArray(0);
+	// ----------------------------------------------
+
 
         // recording ON
         if (recording)
@@ -722,7 +821,7 @@ int main()
                         Timer::startTimer(t);
                         glBindFramebuffer(GL_FRAMEBUFFER, fboFlip);
                         flipShader.use();
-                        glBindVertexArray(quadVAO);
+                        glBindVertexArray(dummyVAO);
                         glActiveTexture(GL_TEXTURE0);
                         glBindTexture(GL_TEXTURE_2D, fboTexture);
                         flipShader.setInt("screenTexture", 0);
@@ -886,6 +985,7 @@ int main()
         glfwPollEvents();           // take care of all GLFW events
         glfwSwapInterval(vsync);    // vsync
     }
+
     // std::cout << "[main] Setting recording to false\n";
     recording = false;
     // need to stop encoder BEFORE deleting VAO/VBO/frame etc.
@@ -938,9 +1038,10 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::uniqu
     std::ostringstream oss;
     // Exit
     // ----
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
-
+        std::cout << "[main] Esc key pressed. Exiting from program. Time: " << crntTime << "\n";
+    }
     // Control crate
     // -------------
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)

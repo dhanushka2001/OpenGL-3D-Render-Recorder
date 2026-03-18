@@ -3,6 +3,7 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoord;
+
 out vec3 FragPos;
 out vec3 Normal;
 out vec2 TexCoord;
@@ -20,10 +21,12 @@ void main()
 	
 	FragPos = vec3(model * transform * vec4(aPos, 1.0)); // world-space
 	// FragPos = vec3(view * model * transform * vec4(aPos, 1.0)); // view-space
+
 	// Normal = mat3(model) * aNormal;
 	// Normal = aNormal;
 	Normal = mat3(transpose(inverse(model))) * aNormal;  // inversing matrices is a costly operation
 	// Normal = mat3(transpose(inverse(view * model))) * aNormal;  // inversing matrices is a costly operation (view-space)
+
 	// LightPos = vec3(view * vec4(lightPos, 1.0)); // Transform world-space light position to view-space light position
 	
 	TexCoord = vec2(aTexCoord.x, aTexCoord.y);

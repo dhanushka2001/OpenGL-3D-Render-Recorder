@@ -204,8 +204,6 @@ void Encoder::start(GLFWwindow *window) {
 
                     while (!frameQueue.empty()) frameQueue.pop();  // Clear any old frames from previous instance
 
-                    // Local instance for this session only
-                    // auto encoder = std::make_unique<FFmpegEncoder>();
                     if (!this->initialize(filename.c_str(), glfwGetTime())) {
                         std::cerr << "[encoderThread] ERROR: Failed to initialize encoder\n";
                         continue;

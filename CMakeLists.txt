@@ -22,12 +22,14 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(SOURCES
     src/main.cpp
     src/third_party/glad.c
+    src/browser.cpp
 )
 
 # Include headers for FFmpeg and others
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/freetype2
+    ${CMAKE_SOURCE_DIR}/include/ultralight
 )
 if(WIN32)
 include_directories(
@@ -52,6 +54,18 @@ if(UNIX)
         COMMAND rsync -a --delete ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
         COMMAND rsync -a --delete ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}
         COMMENT "Syncing assets and shaders using rsync"
+    )
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/bin
+        ${CMAKE_BINARY_DIR}/bin
+    )
+    
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/resources
+        ${CMAKE_BINARY_DIR}/bin/resources
     )
 endif(UNIX)
 
@@ -105,6 +119,20 @@ if(WIN32)
         DEPENDS ${ASSETS_COPY_STAMP} ${SHADERS_COPY_STAMP}
     )
 
+    # Copy Ultralight DLLs
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/lib/ultralight/windows/bin
+        ${CMAKE_BINARY_DIR}/bin
+    )
+    
+    # Copy Ultralight resources
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/lib/ultralight/windows/resources
+        ${CMAKE_BINARY_DIR}/bin/resources
+    )
+
     # # Always-run resource copy target
     # add_custom_target(sync_resources ALL
     #     COMMAND cmd /c robocopy "${ASSETS_SRC_NATIVE}" "${ASSETS_DST_NATIVE}" /MIR /NJH /NJS /NFL /NDL /NS /NC /NP || exit 0
@@ -114,11 +142,18 @@ if(WIN32)
     # )
 endif(WIN32)
 
+# # Add the browser function library
+# add_library(browser STATIC
+#     src/browser.cpp
+# )
+# # Set the target properties for browser (where libbrowser.a will be created)
+# set_target_properties(browser PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
+
 # Add the custom timer function library
 add_library(timer STATIC
     src/timer.cpp
 )
-# Set the target properties for text (where libtext.a will be created)
+# Set the target properties for text (where libtimer.a will be created)
 set_target_properties(timer PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
 
 # Add the custom text function library
@@ -141,7 +176,7 @@ set_target_properties(encoder PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE
 add_library(gui STATIC
     src/gui.cpp
 )
-# Set the target properties for encoder (where libencoder.a will be created)
+# Set the target properties for encoder (where libgui.a will be created)
 set_target_properties(gui PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/learnopengl)
 
 # Add the ImGui library
@@ -217,7 +252,11 @@ if(UNIX)
     )
     message(STATUS "FFMPEG include dirs: ${FFMPEG_INCLUDE_DIRS}")
     message(STATUS "X264 include dirs: ${X264_INCLUDE_DIRS}")
+    target_link_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/lib
+    )
     target_link_libraries(${PROJECT_NAME}
+	# browser
         timer
         gui      # gui depends on imgui and implot
         implot   # ImPlot static library from CMake
@@ -230,6 +269,9 @@ if(UNIX)
         PkgConfig::FFMPEG
         PkgConfig::X264
         PkgConfig::FREETYPE2
+        Ultralight
+        WebCore
+        AppCore
     )
 endif(UNIX)
 
@@ -242,6 +284,7 @@ if(WIN32)
         text
         timer
         gui
+	browser
 
         ${CMAKE_SOURCE_DIR}/lib/GLFW/libglfw3.a
         ${CMAKE_SOURCE_DIR}/lib/OpenGL/libopengl32.a  # OpenGL
@@ -260,6 +303,11 @@ if(WIN32)
 
         # Freetype
         ${CMAKE_SOURCE_DIR}/lib/freetype/libfreetype.a
+
+	# Ultralight
+	${CMAKE_SOURCE_DIR}/lib/ultralight/windows/lib/Ultralight.lib
+	${CMAKE_SOURCE_DIR}/lib/ultralight/windows/lib/WebCore.lib
+	${CMAKE_SOURCE_DIR}/lib/ultralight/windows/lib/AppCore.lib
     )
 endif(WIN32)
 

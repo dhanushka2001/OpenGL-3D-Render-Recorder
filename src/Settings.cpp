@@ -28,4 +28,5 @@ namespace Settings {
     // libx264
     std::string             g_preset        = "ultrafast";
     std::string             g_crf           = "23";
+    std::mutex 		    coutMutex;
 }
