@@ -48,9 +48,15 @@ set(SHADERS_DEST_DIR   ${CMAKE_BINARY_DIR})
 
 # Shader copy target
 if(UNIX)
+    find_program(RSYNC_EXE rsync) # Removed REQUIRED to handle the error ourselves
+
+    if(NOT RSYNC_EXE)
+        message(FATAL_ERROR "rsync not found. Please install it (e.g. 'sudo pacman -S rsync') to build this project.")
+    endif()
+    
     add_custom_target(sync_assets ALL
-        COMMAND rsync -a --delete ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
-        COMMAND rsync -a --delete ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}
+        COMMAND ${RSYNC_EXE} -a --delete ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
+        COMMAND ${RSYNC_EXE} -a --delete ${SHADERS_SOURCE_DIR} ${SHADERS_DEST_DIR}
         COMMENT "Syncing assets and shaders using rsync"
     )
 endif(UNIX)
@@ -196,7 +202,16 @@ target_link_libraries(gui PUBLIC implot)
 
 if(UNIX)
     find_package(OpenGL REQUIRED)
-    find_package(glfw3 REQUIRED)
+    find_package(glfw3 QUIET)
+    if(NOT glfw3_FOUND)
+        include(FetchContent)
+        FetchContent_Declare(
+            glfw
+            GIT_REPOSITORY https://github.com/glfw/glfw
+            GIT_TAG 3.4
+        )
+        FetchContent_MakeAvailable(glfw)
+    endif()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
         libavcodec

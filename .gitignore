@@ -17,3 +17,6 @@
 /lib/imgui/
 /lib/implot/
 /lib/learnopengl/
+
+# Ignore temp folder
+/temp/
