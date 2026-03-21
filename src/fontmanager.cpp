@@ -15,7 +15,7 @@ bool FontManager::loadFont(const std::string& name, int size) {
     }
 
     fonts[name] = new Font(name, size);
-    std::cout << "[FontManager] New font created: " << name << ", size " << size << "\n";
+    std::cout << "[FontManager] New font added: " << name << ", size " << size << "\n";
 
     return true;
 }

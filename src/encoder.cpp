@@ -17,12 +17,6 @@ Encoder::Encoder() {
     av_log_set_level(AV_LOG_INFO);
 }
 
-Encoder::~Encoder() {
-    // recording = false;
-    // std::cout << "Finalizing encoder in encoder destructor\n";
-    // this->finalize();  // auto-cleanup if not already called
-    // this->stop();
-}
 
 const AVCodec* Encoder::chooseEncoder() {
     using namespace Settings;
@@ -47,6 +41,7 @@ const AVCodec* Encoder::chooseEncoder() {
 
     return codec;
 }
+
 
 bool Encoder::initialize(const char* filename, double recordingStartTime) {
     using namespace Settings;
@@ -120,6 +115,7 @@ bool Encoder::initialize(const char* filename, double recordingStartTime) {
     return swsCtx != nullptr;
 }
 
+
 bool Encoder::encodeFrame(const uint8_t* rgbData, float currentTime) {
     using namespace Settings;
     // std::lock_guard<std::mutex> lock(encoderMutex); // use a mutex just in case as encodeFrame() can be called from main thread and encoder thread (but shouldn't be at the same time)
@@ -147,6 +143,7 @@ bool Encoder::encodeFrame(const uint8_t* rgbData, float currentTime) {
     return true;
 }
 
+
 void Encoder::finalize() {
     // std::lock_guard<std::mutex> lock(encoderMutex);
     if (!codecCtx) return;
@@ -170,6 +167,7 @@ void Encoder::finalize() {
     swsCtx = nullptr;
     frameX = nullptr;
 }
+
 
 void Encoder::start(GLFWwindow *window) {
     using namespace Settings;
@@ -255,6 +253,7 @@ void Encoder::start(GLFWwindow *window) {
     });
 }
 
+
 void Encoder::pushFrame(uint8_t* frame, double timestamp, size_t DATA_SIZE) {
     using namespace Settings;
     std::lock_guard<std::mutex> lock(queueMutex);
@@ -266,6 +265,7 @@ void Encoder::pushFrame(uint8_t* frame, double timestamp, size_t DATA_SIZE) {
     }
     queueCond.notify_all();
 }
+
 
 void Encoder::stop() {
     using namespace Settings;
@@ -304,6 +304,7 @@ std::string Encoder::getTimestampedFilename() {
         << ".mp4";
     return oss.str();
 }
+
 
 // Flip the frame vertically
 void Encoder::flipFrameVertically(unsigned char* frame) {

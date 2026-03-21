@@ -31,7 +31,6 @@ extern "C" {
 class Encoder {
 public:
     Encoder();
-    ~Encoder();
 
     bool initialize(const char* filename, double recordingStartTime);
     bool encodeFrame(const uint8_t* rgbData, float currentTime);

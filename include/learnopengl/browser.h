@@ -15,6 +15,13 @@ public:
     int getWidth() const { return width; }
     int getHeight() const { return height; }
 
+    void fireMouseEvent(const ultralight::MouseEvent& evt);
+    void fireKeyEvent(const ultralight::KeyEvent& evt);
+    void fireScrollEvent(const ultralight::ScrollEvent& evt);
+
+    void GoBack();
+    void GoForward();
+
 private:
     ultralight::RefPtr<ultralight::Renderer> renderer;
     ultralight::RefPtr<ultralight::View> view;

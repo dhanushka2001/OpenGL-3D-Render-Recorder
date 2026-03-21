@@ -1,10 +1,10 @@
 #version 430 core
-out vec4 FragColor;
-
 in vec2 TexCoord;
+out vec4 FragColor;
 
 uniform sampler2D browserTexture;
 
 void main() {
-    FragColor = texture(browserTexture, TexCoord);
+    vec2 uv = vec2(TexCoord.x, 1.0 - TexCoord.y); // flip Y
+    FragColor = texture(browserTexture, uv);
 }

@@ -7,7 +7,7 @@ namespace Settings {
     unsigned int            SCR_WIDTH       =  0;
     unsigned int            SCR_HEIGHT      =  0;
     unsigned int            framerate       = 60;  // recording 30fps, 60fps, etc.
-    bool                    fullscreen      =  0;
+    bool                    fullscreen      =  1;
     int                     vsync           =  0;  // | 0 = V-Sync Off | 1 = V-Sync On | -1 = Adaptive V-Sync (V-Sync turns off if FPS<Hz) |
     bool                    msaa            =  1;  // | 0 = no anti-aliasing | 1 = 4xMSAA |
     std::atomic<bool>       recording       =  0;

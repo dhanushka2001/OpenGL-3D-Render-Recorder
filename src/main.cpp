@@ -18,6 +18,8 @@
 // Ultralight
 // ----------
 #include <Ultralight/Ultralight.h>
+#include <AppCore/Platform.h>
+using namespace ultralight;
 
 // I/O and filesystem
 // ------------------
@@ -50,11 +52,23 @@
 // --------------------
 void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::unique_ptr<Encoder> &encoder);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
+void cursor_pos_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void char_callback(GLFWwindow* window, unsigned int codepoint);
 std::string GetFPSText(float fps, float ms, float crntTime);
 void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime, int &frameCountFPS);
 void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::array<glm::vec3, 10>& cubePositions, glm::vec3 &lightPos, float crntTime);
+glm::vec3 getMouseRay(float mouseX, float mouseY,
+                      glm::mat4 projection, glm::mat4 view);
+bool intersectRayPlane(glm::vec3 rayOrigin,
+                       glm::vec3 rayDir,
+                       glm::vec3 planePoint,
+                       glm::vec3 planeNormal,
+                       glm::vec3& hitPoint);
+int glfwToUltralightKey(int key);
+
 
 #define IMGUI               1
 
@@ -101,6 +115,30 @@ int left, top, right, bottom;
 // --------
 int lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY = 0;
 
+// browser
+// -------
+struct AppState {
+    Browser* browser;
+
+    glm::mat4* view;
+    glm::mat4* projection;
+
+    glm::vec3 planePoint;
+    glm::vec3 planeNormal;
+
+    float quadWidth;
+    float quadHeight;
+};
+
+enum InputMode {
+    INPUT_GAME,
+    INPUT_BROWSER
+};
+
+InputMode inputMode = INPUT_GAME;
+
+
+
 int main()
 {
     // glfw: initialize and configure
@@ -121,10 +159,10 @@ int main()
     // Set window size (needs to be fixed when recording)
     // --------------------------------------------------
     using namespace Settings;
-    // GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-    // const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-    // SetScreenResolution(mode->width, mode->height);
-    SetScreenResolution(1600, 900); // if the resolution is too low, FPS could get too high (~1000fps) and program will crash
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+    SetScreenResolution(mode->width, mode->height);
+    // SetScreenResolution(1600, 900); // if the resolution is too low, FPS could get too high (~1000fps) and program will crash
     // SetScreenResolution(800, 450);
 
     lastX = SCR_WIDTH / 2;
@@ -158,10 +196,12 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetCursorPosCallback(window, cursor_pos_callback);
     glfwSetCursorPos(window, lastX,lastY);  // set cursor in centre of screen to remove whiplash cursor jump
     glfwSetScrollCallback(window, scroll_callback);
-
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetCharCallback(window, char_callback);
 
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -566,6 +606,7 @@ int main()
     float encodeDiff, encodeTime = 0.0f;    // for encoding frames
     float crntTime = 0.0f;                  // current time (used by all)
 
+    
     // BROWSER
     // -------
     float quadVertices[] = {
@@ -573,56 +614,90 @@ int main()
         -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
         -1.0f, -1.0f,  0.0f,  0.0f, 0.0f,
          1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-    
+
         -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
          1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
          1.0f,  1.0f,  0.0f,  1.0f, 1.0f
     };
-    
+
     GLuint quadVAO, quadVBO;
-    
+
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &quadVBO);
-    
+
     glBindVertexArray(quadVAO);
-    
+
     glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
-    
+
     // position
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    
+
     // texCoord
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
-    
+
     glBindVertexArray(0);
 
     GLuint browserTex;
     glGenTextures(1, &browserTex);
     glBindTexture(GL_TEXTURE_2D, browserTex);
-    
+
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
                  1024, 768,
                  0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
-    
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-
+    // --- Ultralight Platform Setup (DO THIS ONCE) ---
+    {
+        Config config;
+        config.user_stylesheet = "body { background: white; }";
+    
+        Platform::instance().set_config(config);
+    
+        Platform::instance().set_font_loader(GetPlatformFontLoader());
+        Platform::instance().set_file_system(GetPlatformFileSystem("./"));
+        Platform::instance().set_logger(GetDefaultLogger("ultralight.log"));
+    }
+    
     Browser browser;
-    browser.init(1024, 768, "https://example.com");
+    browser.init(1024, 768, "https://google.com");
 
     glm::mat4 model_browser = glm::mat4(1.0f);
-    
+
+    glm::vec3 planePoint = glm::vec3(0.0f, 0.0f, 3.0f);
+    glm::vec3 planeNormal = glm::vec3(0.0f, 0.0f, 1.0f); // facing camera
+
     // Move in front of camera
-    model_browser = glm::translate(model_browser, glm::vec3(0.0f, 0.0f, -3.0f));
-    
+    model_browser = glm::translate(model_browser, planePoint);
+
     // Scale to window-like shape
-    model_browser = glm::scale(model_browser, glm::vec3(1.6f, 1.0f, 1.0f));
+    float browser_width = 3.2f;
+    float browser_height = 2.0f;
+    model_browser = glm::scale(model_browser,
+                               glm::vec3(browser_width/2,
+                                         browser_height/2,
+                                         1.0f));
 
     Shader browserShader("browser.vert", "browser.frag");
+
+    AppState state;
+
+    state.browser = &browser;
+    state.view = &view;
+    state.projection = &projection;
+    
+    state.planePoint = planePoint;
+    state.planeNormal = planeNormal;
+    
+    state.quadWidth = browser_width;
+    state.quadHeight = browser_height;
+
+    // attach app state to window
+    glfwSetWindowUserPointer(window, &state);
 
 
     // render loop
@@ -679,41 +754,6 @@ int main()
         UpdateFPS(fps, ms, crntTime, lastTime, frameCountFPS);
         std::string fpsText = GetFPSText(fps, ms, crntTime);
 
-	// BROWSER
-	// --------------------------------------------
-	browser.update();
-	browser.render();
-	
-	unsigned char* pixels = browser.getPixels();
-	
-	if (pixels) {
-	    glBindTexture(GL_TEXTURE_2D, browserTex);
-	
-	    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-	                    browser.getWidth(),
-	                    browser.getHeight(),
-	                    GL_BGRA, GL_UNSIGNED_BYTE,
-	                    pixels);
-	
-	    browser.unlockPixels();
-	}
-	
-	// --- Render quad ---
-	browserShader.use();
-	
-	browserShader.setMat4("model", model_browser);
-	browserShader.setMat4("view", view);
-	browserShader.setMat4("projection", projection);
-	
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, browserTex);
-	browserShader.setInt("browserTexture", 0);
-	
-	glBindVertexArray(quadVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
-	// ----------------------------------------------
-
 
         // recording ON
         if (recording)
@@ -737,6 +777,42 @@ int main()
                 glm::vec3 translate = glm::vec3(xOffset, yOffset, zOffset);
                 RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture, cubePositions, lightPos, crntTime);
 
+            	// BROWSER
+            	// --------------------------------------------
+            	browser.update();
+            	browser.render();
+            
+            	unsigned char* pixels = browser.getPixels();
+            
+            	if (pixels) {
+            	    glBindTexture(GL_TEXTURE_2D, browserTex);
+            
+            	    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+            	                    browser.getWidth(),
+            	                    browser.getHeight(),
+            	                    GL_BGRA, GL_UNSIGNED_BYTE,
+            	                    pixels);
+            
+            	    browser.unlockPixels();
+            	}
+            	
+                // Render quad
+            	browserShader.use();
+            
+            	browserShader.setMat4("model", model_browser);
+            	browserShader.setMat4("view", view);
+            	browserShader.setMat4("projection", projection);
+            
+            	glActiveTexture(GL_TEXTURE0);
+            	glBindTexture(GL_TEXTURE_2D, browserTex);
+            	browserShader.setInt("browserTexture", 0);
+            
+            	glBindVertexArray(quadVAO);
+            	glDrawArrays(GL_TRIANGLES, 0, 6);
+            	glBindVertexArray(0);
+            	// ----------------------------------------------
+                
+            
                 // draw the light cube object
                 lightShader.use();
                 lightShader.setMat4("projection", projection);
@@ -760,14 +836,16 @@ int main()
                 Timer::startTimer(t);
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboId); 
                 glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
-                                0, 0, SCR_WIDTH, SCR_HEIGHT,           // dest rect
-                                        GL_COLOR_BUFFER_BIT,           // buffer mask
-                                                GL_LINEAR);           // scale filter
+                                  0, 0, SCR_WIDTH, SCR_HEIGHT,           // dest rect
+                                          GL_COLOR_BUFFER_BIT,           // buffer mask
+                                                   GL_LINEAR);           // scale filter
                 {
                     // std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::BLIT_MSAA, t);
                 }
 
+                // FPS TEXT AND ATLAS
+                // ----------------------------------------------
                 Timer::startTimer(t);
                 if (currentTextMode == TextTriState::TextAndAtlasON || currentTextMode == TextTriState::TextONAtlasOFF)
                     // textRenderer.renderText(fpsText, x, y, scale, color, font);
@@ -778,6 +856,7 @@ int main()
                     // std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::RENDER_TEXT, t);
                 }
+                // -----------------------------------------------
             
                 // IMGUI (visible in screen recording, messes up when window is resized)
                 // ---------------------------------------------------------------------
@@ -791,6 +870,8 @@ int main()
                     }
                 }
                 #endif /* IMGUI==1 */
+                // ---------------------------------------------------------------------
+
             }
 
             // Step 3: Render the scene on-screen using Blitting: https://stackoverflow.com/a/31487085
@@ -801,9 +882,9 @@ int main()
                 Timer::startTimer(t);
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
                 glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT,           // src rect
-                                0, 0, SCR_WIDTH, SCR_HEIGHT,           // dest rect
-                                        GL_COLOR_BUFFER_BIT,           // buffer mask
-                                                GL_NEAREST);           // scale filter
+                                  0, 0, SCR_WIDTH, SCR_HEIGHT,           // dest rect
+                                          GL_COLOR_BUFFER_BIT,           // buffer mask
+                                                  GL_NEAREST);           // scale filter
                 {
                     // std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::BLIT_TO_SCREEN, t);
@@ -944,6 +1025,41 @@ int main()
                 Timer::endTimer(Timer::RENDER_SCENE, t);
             }
 
+        	// BROWSER
+        	// --------------------------------------------
+        	browser.update();
+        	browser.render();
+        
+        	unsigned char* pixels = browser.getPixels();
+        
+        	if (pixels) {
+        	    glBindTexture(GL_TEXTURE_2D, browserTex);
+        
+        	    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+        	                    browser.getWidth(),
+        	                    browser.getHeight(),
+        	                    GL_BGRA, GL_UNSIGNED_BYTE,
+        	                    pixels);
+        
+        	    browser.unlockPixels();
+        	}
+        
+        	// Render quad
+        	browserShader.use();
+        
+        	browserShader.setMat4("model", model_browser);
+        	browserShader.setMat4("view", view);
+        	browserShader.setMat4("projection", projection);
+        
+        	glActiveTexture(GL_TEXTURE0);
+        	glBindTexture(GL_TEXTURE_2D, browserTex);
+        	browserShader.setInt("browserTexture", 0);
+        
+        	glBindVertexArray(quadVAO);
+        	glDrawArrays(GL_TRIANGLES, 0, 6);
+        	glBindVertexArray(0);
+        	// ----------------------------------------------
+
             // Render text in front: https://stackoverflow.com/a/5527249
             // glClear(GL_DEPTH_BUFFER_BIT);
             if (currentTextMode == TextTriState::TextAndAtlasON || currentTextMode == TextTriState::TextONAtlasOFF)
@@ -953,7 +1069,7 @@ int main()
                 textRenderer.renderAtlas(font);
 
             // IMGUI
-            // -----
+            // ----------------------------------------------------
             #if IMGUI==1
             if (imgui) {
                 Timer::startTimer(t);
@@ -964,6 +1080,7 @@ int main()
                 }
             }
             #endif /* IMGUI==1 */
+            // ----------------------------------------------------
         }
 
         // IMGUI (won't be visible in screen recording, but doesn't mess up when window is resized)
@@ -1031,11 +1148,20 @@ int main()
     return 0;
 }
 
+
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::unique_ptr<Encoder> &encoder) {
+    
+    // disable game controls (exc. pause) when browser active
+    // if ((inputMode != INPUT_GAME) && (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) != GLFW_PRESS))
+    if (inputMode != INPUT_GAME)
+        return; 
+
     using namespace Settings; // compile-time instruction (no runtime overhead)
+    
     std::ostringstream oss;
+    
     // Exit
     // ----
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
@@ -1381,6 +1507,7 @@ void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::uniqu
     }
 }
 
+
 // glfw: whenever window size changes (by OS or user) this callback function executes
 // ----------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -1417,16 +1544,31 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     
 }
 
+
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
+void cursor_pos_callback(GLFWwindow* window, double xposIn, double yposIn) {
     using namespace Settings;
-    // only update when unpaused
+
+    AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+    Browser* browser = state->browser;
+    
+    glm::mat4& view = *state->view;
+    glm::mat4& projection = *state->projection;
+    
+    glm::vec3 planePoint = state->planePoint;
+    glm::vec3 planeNormal = state->planeNormal;
+    
+    float quadWidth = state->quadWidth;
+    float quadHeight = state->quadHeight;
+
+    // mouse pos
+    float xpos = static_cast<float>(xposIn);
+    float ypos = static_cast<float>(yposIn);
+
+    // only update camera when unpaused
     if (!paused)
     {
-        float xpos = static_cast<float>(xposIn);
-        float ypos = static_cast<float>(yposIn);
-
         if (firstMouse)
         {
             lastX = xpos;
@@ -1442,24 +1584,272 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 
         camera.ProcessMouseMovement(xoffset, yoffset);
     }
+
+    // only update cursor pos for browser when paused
+    if (paused)
+    {
+        glm::vec3 rayDir = getMouseRay(xpos, ypos, projection, view);
+        
+        glm::vec3 hitPoint;
+        if (intersectRayPlane(camera.Position, rayDir, planePoint, planeNormal, hitPoint))
+        {
+            glm::vec3 local = hitPoint - planePoint;
+        
+            float u = (local.x / quadWidth) + 0.5f;
+            float v = (local.y / quadHeight) + 0.5f;
+            v = 1.0f - v;
+        
+            if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+            {
+                int px = (int)(u * browser->getWidth());
+                int py = (int)(v * browser->getHeight());
+        
+                ultralight::MouseEvent evt;
+                evt.type = ultralight::MouseEvent::kType_MouseMoved;
+                evt.x = px;
+                evt.y = py;
+                evt.button = ultralight::MouseEvent::kButton_None;
+        
+                browser->fireMouseEvent(evt);
+            }
+        }
+    }
 }
+
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-    camera.ProcessMouseScroll(static_cast<float>(yoffset));
+    // camera
+    if (inputMode == INPUT_GAME)
+        camera.ProcessMouseScroll(static_cast<float>(yoffset));
+
+    // browser
+    if (inputMode != INPUT_GAME) {
+        AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+        Browser* browser = state->browser;
+        
+        if (inputMode != INPUT_BROWSER) return;
+        if (!browser) return;
+        
+        ultralight::ScrollEvent evt;
+        evt.type = ultralight::ScrollEvent::kType_ScrollByPixel;
+        evt.delta_x = (int)xoffset * 50;  // tweak sensitivity
+        evt.delta_y = (int)yoffset * 50;
+        
+        browser->fireScrollEvent(evt);
+    }
 }
+
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+    
+    Browser* browser = state->browser;
+    
+    glm::mat4& view = *state->view;
+    glm::mat4& projection = *state->projection;
+    
+    glm::vec3 planePoint = state->planePoint;
+    glm::vec3 planeNormal = state->planeNormal;
+    
+    float quadWidth = state->quadWidth;
+    float quadHeight = state->quadHeight;
+ 
+
+
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    {
+        double mouseX, mouseY;
+        glfwGetCursorPos(window, &mouseX, &mouseY);
+    
+        glm::vec3 rayDir = getMouseRay(mouseX, mouseY, projection, view);
+    
+        glm::vec3 hitPoint;
+        
+        if (intersectRayPlane(camera.Position, rayDir, planePoint, planeNormal, hitPoint))
+        {
+            // Convert to local quad space
+            glm::vec3 local = hitPoint - planePoint;
+    
+            float u = (local.x / quadWidth) + 0.5f;
+            float v = (local.y / quadHeight) + 0.5f;
+    
+            // Flip Y for Ultralight
+            v = 1.0f - v;
+    
+            // Check inside quad
+            if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+            {
+                int px = (int)(u * browser->getWidth());
+                int py = (int)(v * browser->getHeight());
+    
+                ultralight::MouseEvent evt;
+                evt.type = ultralight::MouseEvent::kType_MouseDown;
+                evt.x = px;
+                evt.y = py;
+                evt.button = ultralight::MouseEvent::kButton_Left;
+    
+                browser->fireMouseEvent(evt);
+            }
+        }
+    }
+
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+    {
+        double mouseX, mouseY;
+        glfwGetCursorPos(window, &mouseX, &mouseY);
+    
+        glm::vec3 rayDir = getMouseRay(mouseX, mouseY,
+                                       projection, view);
+    
+        glm::vec3 hitPoint;
+        if (intersectRayPlane(camera.Position, rayDir, planePoint, planeNormal, hitPoint))
+        {
+            glm::vec3 local = hitPoint - planePoint;
+    
+            float u = (local.x / quadWidth) + 0.5f;
+            float v = (local.y / quadHeight) + 0.5f;
+            v = 1.0f - v;
+    
+            if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+            {
+                int px = (int)(u * browser->getWidth());
+                int py = (int)(v * browser->getHeight());
+    
+                ultralight::MouseEvent evt;
+                evt.type = ultralight::MouseEvent::kType_MouseUp;
+                evt.x = px;
+                evt.y = py;
+                evt.button = ultralight::MouseEvent::kButton_Left;
+    
+                browser->fireMouseEvent(evt);
+            }
+        }
+    }
+}
+
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    using namespace Settings;
+
+    AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+    Browser* browser = state->browser;
+
+    // --- GLOBAL KEYS (always work) ---
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, true);
+        return;
+    }
+
+    if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+        inputMode = (inputMode == INPUT_GAME) ? INPUT_BROWSER : INPUT_GAME;
+        return;
+    }
+
+    // Pause
+    // -----
+    if (key == GLFW_KEY_RIGHT_SHIFT && action == GLFW_PRESS && !pausePressed)
+    {
+        pausePressed = 1;
+
+        // pause -> unpause
+        if (paused)
+        {
+            firstMouse = true;
+            lastXpos = static_cast<double>(lastX);
+            lastYpos = static_cast<double>(lastY);
+            glfwSetCursorPos(window, lastXpos, lastYpos);  // remove whiplash cursor jump
+            // tell GLFW to capture our mouse
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            paused = 0;
+        }
+        // unpause -> pause
+        else
+        {
+            // tell GLFW to uncapture our mouse
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            paused = 1;
+        }
+    }
+    if (key == GLFW_KEY_RIGHT_SHIFT && action == GLFW_RELEASE && pausePressed) {
+        pausePressed = 0;
+    }
+
+
+
+
+    // --- ROUTE INPUT ---
+    if (inputMode == INPUT_BROWSER)
+    {
+        // Send to Ultralight
+        ultralight::KeyEvent evt;
+
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+            evt.type = ultralight::KeyEvent::kType_RawKeyDown;
+        } else if (action == GLFW_RELEASE) {
+            evt.type = ultralight::KeyEvent::kType_KeyUp;
+        } else return;
+
+        evt.virtual_key_code = glfwToUltralightKey(key);
+        evt.native_key_code = scancode;
+        evt.modifiers = 0;
+
+        ultralight::GetKeyIdentifierFromVirtualKeyCode(
+            evt.virtual_key_code, evt.key_identifier);
+
+        if (mods & GLFW_MOD_SHIFT) evt.modifiers |= ultralight::KeyEvent::kMod_ShiftKey;
+        if (mods & GLFW_MOD_CONTROL) evt.modifiers |= ultralight::KeyEvent::kMod_CtrlKey;
+        if (mods & GLFW_MOD_ALT) evt.modifiers |= ultralight::KeyEvent::kMod_AltKey;
+        if (key == GLFW_KEY_LEFT && (mods & GLFW_MOD_ALT)) {
+            browser->GoBack();
+        }
+        if (key == GLFW_KEY_RIGHT && (mods & GLFW_MOD_ALT)) {
+            browser->GoForward();
+        }
+
+        browser->fireKeyEvent(evt);
+    }
+}
+
+
+void char_callback(GLFWwindow* window, unsigned int codepoint)
+{
+    AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+    Browser* browser = state->browser;
+
+    if (inputMode != INPUT_BROWSER) return;
+    if (!browser) return;
+
+    char utf8[5] = {0};
+
+    if (codepoint <= 0x7F) {
+        utf8[0] = (char)codepoint;
+    }
+
+    ultralight::KeyEvent evt;
+    evt.type = ultralight::KeyEvent::kType_Char;
+    evt.text = ultralight::String(utf8);
+    evt.unmodified_text = ultralight::String(utf8);
+
+    browser->fireKeyEvent(evt);
+}
+
 
 std::string GetFPSText(float fps, float ms, float crntTime) {
     using namespace Settings;
+
     char buffer[250];   // small stack-allocated array (extremely fast, in CPU cache)
+    
     bool press = pboPressed || flipPressed || pausePressed || vsyncPressed || wireframePressed || imguiPressed || atlasPressed || recordPressed || encoderPressed;
-    // "FPS: %.1f | %.1f ms"
-    // "AaBbCcDdEeFfGg1!2£4$"
-    // "In the dream, they took me to the light. A beautiful lie."
+    
     snprintf(buffer, sizeof(buffer), "FPS: %u | %.3f ms | Time: %.1f s | mix(Q/E)=%.1f | FOV=%.1f | Encoder thread(T)=%s | PBO(P)=%s | Flip Shader(F)=%s | Vsync(V)=%s | Fullscreen(F11)=%s | PRESS=%s | pos=%.1f,%.1f,%.1f | cam=%.1f,%.1f,%.1f | YAW= %.1f | PITCH=%.1f | %s", static_cast<int>(fps), ms, crntTime, mixValue, camera.Zoom, encoder_thread ? "ON" : "OFF", pbo ? "ON" : "OFF", flip_shader ? "ON" : "OFF", vsync ? "ON" : "OFF", fullscreen ? "ON" : "OFF", press ? "YES" : "NO", xOffset, yOffset, zOffset, camera.Position.x, camera.Position.y, camera.Position.z, camera.Yaw, camera.Pitch, paused ? "PAUSED" : "");
+    
     return std::string(buffer);
 }
+
 
 void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime, int &frameCountFPS) {
     frameCountFPS++;
@@ -1472,6 +1862,7 @@ void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime, int &fram
         lastTime = crntTime;
     }
 }
+
 
 void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint crateTexture, GLuint awesomeTexture, const std::array<glm::vec3, 10>& cubePositions, glm::vec3 &lightPos, float crntTime) {
     using namespace Settings;
@@ -1553,4 +1944,63 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans, GLuint c
     // Cleanup
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+
+glm::vec3 getMouseRay(float mouseX, float mouseY,
+                      glm::mat4 projection, glm::mat4 view)
+{
+    using namespace Settings;
+
+    float x = (2.0f * mouseX) / SCR_WIDTH - 1.0f;
+    float y = 1.0f - (2.0f * mouseY) / SCR_HEIGHT;
+
+    glm::vec4 ray_clip = glm::vec4(x, y, -1.0f, 1.0f);
+    glm::vec4 ray_eye = glm::inverse(projection) * ray_clip;
+    ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0f, 0.0f);
+
+    glm::vec3 ray_world = glm::normalize(glm::vec3(glm::inverse(view) * ray_eye));
+    
+    return ray_world;
+}
+
+
+bool intersectRayPlane(glm::vec3 rayOrigin,
+                       glm::vec3 rayDir,
+                       glm::vec3 planePoint,
+                       glm::vec3 planeNormal,
+                       glm::vec3& hitPoint)
+{
+    float denom = glm::dot(rayDir, planeNormal);
+
+    if (abs(denom) < 0.0001f) return false;
+
+    float t = glm::dot(planePoint - rayOrigin, planeNormal) / denom;
+
+    if (t < 0) return false;
+
+    hitPoint = rayOrigin + t * rayDir;
+    return true;
+}
+
+int glfwToUltralightKey(int key)
+{
+    switch (key)
+    {
+        case GLFW_KEY_BACKSPACE: return 0x08; // VK_BACK
+        case GLFW_KEY_TAB:       return 0x09; // VK_TAB
+        case GLFW_KEY_ENTER:     return 0x0D; // VK_RETURN
+        case GLFW_KEY_ESCAPE:    return 0x1B; // VK_ESCAPE
+        case GLFW_KEY_SPACE:     return 0x20; // VK_SPACE
+
+        case GLFW_KEY_LEFT:  return 0x25; // VK_LEFT
+        case GLFW_KEY_UP:    return 0x26; // VK_UP
+        case GLFW_KEY_RIGHT: return 0x27; // VK_RIGHT
+        case GLFW_KEY_DOWN:  return 0x28; // VK_DOWN
+
+        case GLFW_KEY_DELETE: return 0x2E; // VK_DELETE
+
+        default:
+            return key; // works for A-Z, 0-9
+    }
 }

@@ -64,6 +64,7 @@ namespace GUI {
         ImGui::CreateContext();
         ImPlot::CreateContext();
         ImGuiIO& io = ImGui::GetIO(); (void)io;
+        io.IniFilename = "imgui.ini";
         ImGui::StyleColorsDark();
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 430");
@@ -84,7 +85,7 @@ namespace GUI {
         ImGui::SetNextWindowPos(ImVec2(padding, padding), ImGuiCond_Once);
         #endif /* _WIN32 */
         #ifdef __linux__
-        ImGui::SetNextWindowPos(ImVec2(padding, padding + imgui_height), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(padding, padding + imgui_height), ImGuiCond_FirstUseEver);
         #endif /* __linux__ */
         ImGui::SetNextWindowSize(ImVec2(imgui_width, imgui_height), ImGuiCond_Once);
         if (encoderChanged) {
@@ -190,7 +191,7 @@ namespace GUI {
         ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - implot_width, padding), ImGuiCond_Once);
         #endif /* _WIN32 */
         #ifdef __linux__
-        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - implot_width, padding + implot_height), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - implot_width, padding + implot_height), ImGuiCond_FirstUseEver);
         #endif /* __linux__ */
         ImGui::SetNextWindowSize(ImVec2(implot_width, implot_height), ImGuiCond_Once);
         if (ImGui::Begin("ImPlot Demo")) {
