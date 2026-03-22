@@ -36,7 +36,9 @@ Real-time 3D renderer in C++ with OpenGL (GLFW).
 * Custom text tendering using [FreeType](https://freetype.org/index.html) to rasterize TrueType (.ttf) vector fonts onto a texture atlas
 * GUI and real-time plots using [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot)
 * Screen recording using [FFmpeg](https://github.com/FFmpeg/FFmpeg), [x264](https://www.videolan.org/developers/x264.html) encoder, multithreading, and [asynchronous DMA readback with 2 PBOs](https://www.songho.ca/opengl/gl_pbo.html#pack). (Video heavily compressed to fit GitHub's 10MB filesize limit).
-* **NEW:** Interactive lightweight web-browser using [Ultralight](https://ultralig.ht/), rendered to a floating quad. (Only available on **Linux**, in ``web-browser`` branch. See [Progress Update 18](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder?tab=readme-ov-file#progress-update-18---add-ultralight-web-browser---220326)).
+* **NEW:** Interactive lightweight web-browser using [Ultralight](https://ultralig.ht/), rendered to a floating quad. (Only available on **Linux** in the ``web-browser`` branch. See [Progress Update 18](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder?tab=readme-ov-file#progress-update-18---add-ultralight-web-browser---220326)).
+
+  https://github.com/user-attachments/assets/42302c57-c271-4abd-94db-ce613ee547f0
 
 ## How to run
 
