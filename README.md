@@ -32,13 +32,15 @@ Real-time 3D renderer in C++ with OpenGL (GLFW).
 * [Phong lighting](https://en.m.wikipedia.org/wiki/Phong_reflection_model)
 * Custom text tendering using [FreeType](https://freetype.org/index.html) to rasterize TrueType (.ttf) vector fonts onto a texture atlas
 * GUI and real-time plots using [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot)
-* Screen recording using [FFmpeg](https://github.com/FFmpeg/FFmpeg), [x264](https://www.videolan.org/developers/x264.html) encoder, multithreading, and [asynchronous read-back with 2 PBOs](https://www.songho.ca/opengl/gl_pbo.html#pack). (Video heavily compressed to fit GitHub's 10MB filesize limit.)
+* Screen recording using [FFmpeg](https://github.com/FFmpeg/FFmpeg), [x264](https://www.videolan.org/developers/x264.html) encoder, multithreading, and [asynchronous DMA readback with 2 PBOs](https://www.songho.ca/opengl/gl_pbo.html#pack). (Video heavily compressed to fit GitHub's 10MB filesize limit).
+* Interactive lightweight web-browser using [Ultralight](https://ultralig.ht/), rendered to a floating 3D quad. (Only available on **Linux**, in ``web-browser`` branch. See [Progress Update 18](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder?tab=readme-ov-file#progress-update-18---add-ultralight-web-browser---220326)).
 
 ## How to run
 
-<details><summary>Beginner tutorial</summary>
+If you want to run the program quickly, just download and extract the latest [release](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/releases) ZIP which contains the precompiled executable. Or if you'd like to compile the source code yourself, follow the instructions below.
 
-* If you want to run the program quickly, just download and extract the latest [release](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder/releases) ZIP which contains the precompiled executable. Or if you'd like to compile the source code yourself, follow the instructions below.
+<details><summary> Guide for Windows </summary>
+
 * Install [MSYS2](https://www.msys2.org/) (install it directly to ``C:\msys64``)
 * Run the MSYS2 <ins>**MINGW64**</ins> shell and install the required packages (``git``, ``gcc``, ``cmake``, ``ninja``):
 
@@ -5967,14 +5969,1074 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   * To save and exit, type: ``:wq``
   * To quit without saving, type: ``:q!``
  
+</details>
+
+## Progress update 18 - Add Ultralight web browser - 22/03/26
+
+> [!IMPORTANT]
+> This update is only available on **Linux** in the ``web-browser`` branch.
+> 
+> I have no plans to implement it on Windows as that would require me installing Visual Studio.
+
+<details><summary> Add initial Ultralight web browser </summary>
+  
+  * After a long hiatus I decided to return back to adding updates to my real-time 3D OpenGL program. I have seen online people adding interactive web browsers inside their real-time 3D worlds and wanted to do the same.
+
+  * I decided to go with [Ultralight](https://ultralig.ht/) as it is lightweight compared to a full Chromium implementation (smaller binary size and much lower memory usage).
+
+  * To make my life even easier I decided to go with the Ultralight CPU implementation (Ultralight CPU Surfaces) rather than the GPU implementation (GPU Renderer) as it's much easier to implement.
+
+  * I initially wanted to test it on Windows first but unfortunately you need to have Visual Studio. So I abandoned the Windows implementation and moved to setting it up solely on Linux.
+
+  * After signing up you can download the Free Ultralight SDK for Linux AMD64. I made a new subfolder ``/ultralight`` inside my project's ``/include`` and ``/lib`` folder, and moved all the files inside the ``/include`` and ``lib`` folder in the ``.7z`` file into them.
+
+    ```
+    ├── include
+    │   ├── ...
+    │   └── ultralight
+    │       ├── AppCore/
+    │       ├── JavaScriptCore/
+    │       └── Ultralight/
+    └── lib
+        ├── ...
+        └── ultralight
+            ├── windows/
+            │   ├── bin
+            │   │   ├── AppCore.dll
+            │   │   ├── Ultralight.dll
+            │   │   ├── UltralightCore.dll
+            │   │   └── WebCore.dll
+            │   ├── lib
+            │   │   ├── AppCore.lib
+            │   │   ├── Ultralight.lib
+            │   │   ├── UltralightCore.lib
+            │   │   └── WebCore.lib
+            │   └── resources
+            │       ├── cacert.pem
+            │       └── icudt67l.dat
+            └── linux
+                ├── bin
+                │   ├── libAppCore.so
+                │   ├── libUltralight.so
+                │   ├── libUltralightCore.so
+                │   └── libWebCore.so
+                └── resources
+                    ├── cacert.pem
+                    └── icudt67l.dat
+    ```
+
+  * <details><summary> Additions to ``CMakeLists.txt`` </summary>
+
+    * Add to ``include_directories()``:
+      
+      ```
+      include_directories(
+        ...
+        ${CMAKE_SOURCE_DIR}/include/ultralight
+      )
+      ```
+
+    * Inside first ``if(UNIX)`` after syncing assets and shaders to ``/build`` folder:
+   
+      ```
+      # Set library folder
+      set(ULTRALIGHT_LIB_DIR ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/bin)
+      
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/bin
+          ${CMAKE_BINARY_DIR}/bin
+      )
+      
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/resources
+          ${CMAKE_BINARY_DIR}/bin/resources
+      )
+      ```
+
+    * Inside second ``if(UNIX)`` when linking libraries at the very end:
+   
+      ```
+      target_link_libraries(${PROJECT_NAME}
+          ...
+          # Linux OpenGL / system libs
+          -lpthread -ldl -lm
+
+          # Ultralight shared libs — use full paths
+          ${ULTRALIGHT_LIB_DIR}/libAppCore.so
+          ${ULTRALIGHT_LIB_DIR}/libWebCore.so
+          ${ULTRALIGHT_LIB_DIR}/libUltralightCore.so
+          ${ULTRALIGHT_LIB_DIR}/libUltralight.so
+      )
+      ```
+
+    </details>
+
+  * New Browser class:
+  
+    * <details><summary> include/learnopengl/browser.h </summary>
+  
+      ```hpp
+      #pragma once
+      
+      #include <Ultralight/Ultralight.h>
+      
+      class Browser {
+      public:
+          bool init(int width, int height, const char* url);
+      
+          void update();
+          void render();
+      
+          unsigned char* getPixels();
+          void unlockPixels();
+      
+          int getWidth() const { return width; }
+          int getHeight() const { return height; }
+      
+      private:
+          ultralight::RefPtr<ultralight::Renderer> renderer;
+          ultralight::RefPtr<ultralight::View> view;
+      
+          int width;
+          int height;
+      };
+      ```
+
+      </details>
+  
+    * <details><summary> src/browser.cpp </summary>
+   
+      ```cpp
+      #include <learnopengl/browser.h>
+      
+      using namespace ultralight;
+      
+      bool Browser::init(int w, int h, const char* url) {
+          width = w;
+          height = h;
+      
+          // Create renderer (NO config passed anymore)
+          renderer = Renderer::Create();
+      
+          // View config (new API requirement)
+          ViewConfig view_config;
+          view_config.is_accelerated = false; // CPU path
+      
+          // Create view (note new signature)
+          view = renderer->CreateView(width, height, view_config, nullptr);
+      
+          view->LoadURL(url);
+      
+          return true;
+      }
+      
+      void Browser::update() {
+          renderer->Update();
+      }
+      
+      void Browser::render() {
+          renderer->Render();
+      }
+      
+      unsigned char* Browser::getPixels() {
+          ultralight::Surface* surface = view->surface();
+          if (!surface) return nullptr;
+      
+          auto bitmap_surface = (ultralight::BitmapSurface*)surface;
+          ultralight::RefPtr<ultralight::Bitmap> bitmap = bitmap_surface->bitmap();
+      
+          return (unsigned char*)bitmap->LockPixels();  // <-- THIS is the fix
+      }
+      
+      void Browser::unlockPixels() {
+          ultralight::Surface* surface = view->surface();
+          if (!surface) return;
+      
+          auto bitmap_surface = (ultralight::BitmapSurface*)surface;
+          bitmap_surface->bitmap()->UnlockPixels();
+      }
+      ```
+
+      </details>
+
+  * Shaders to render 3D floating quad for the web browser:
+
+    * <details><summary> browser.vert </summary>
+   
+      ```glsl
+      #version 430 core
+      layout (location = 0) in vec3 aPos;
+      layout (location = 1) in vec2 aTexCoord;
+      
+      out vec2 TexCoord;
+      
+      uniform mat4 model;
+      uniform mat4 view;
+      uniform mat4 projection;
+      
+      void main() {
+          TexCoord = aTexCoord;
+          gl_Position = projection * view * model * vec4(aPos, 1.0);
+      }
+      ```
+
+      </details>
+
+    * <details><summary> browser.frag </summary>
+   
+      ```glsl
+      #version 430 core
+      in vec2 TexCoord;
+      out vec4 FragColor;
+      
+      uniform sampler2D browserTexture;
+      
+      void main() {
+          FragColor = texture(browserTexture, TexCoord);
+      }
+      ```
+
+      </details>
+
+  * Inside ``main.cpp``:
+
+    * <details><summary> Include Ultralight at the top of ``main.cpp`` </summary>
+  
+      ```cpp
+      // Ultralight
+      // ----------
+      #include <Ultralight/Ultralight.h>
+      #include <AppCore/Platform.h>
+      using namespace ultralight;
+      ```
+
+      </details>
+  
+    * <details><summary> Initialization inside ``main()`` just before the render loop </summary>
+  
+      ```cpp
+      // BROWSER
+      // -------
+      float quadVertices[] = {
+          // positions          // texCoords
+          -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+          -1.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+           1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+      
+          -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+           1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+           1.0f,  1.0f,  0.0f,  1.0f, 1.0f
+      };
+      
+      GLuint quadVAO, quadVBO;
+      
+      glGenVertexArrays(1, &quadVAO);
+      glGenBuffers(1, &quadVBO);
+      
+      glBindVertexArray(quadVAO);
+      
+      glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+      
+      // position
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+      glEnableVertexAttribArray(0);
+      
+      // texCoord
+      glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+      glEnableVertexAttribArray(1);
+      
+      glBindVertexArray(0);
+  
+      GLuint browserTex;
+      glGenTextures(1, &browserTex);
+      glBindTexture(GL_TEXTURE_2D, browserTex);
+      
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                   1024, 768,
+                   0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+      
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  
+  
+      Browser browser;
+      browser.init(1024, 768, "https://google.com");
+  
+      glm::mat4 model_browser = glm::mat4(1.0f);
+      
+      // Move in front of camera
+      model_browser = glm::translate(model_browser, glm::vec3(0.0f, 0.0f, -3.0f));
+      
+      // Scale to window-like shape
+      model_browser = glm::scale(model_browser, glm::vec3(1.6f, 1.0f, 1.0f));
+  
+      Shader browserShader("browser.vert", "browser.frag");   
+      ```
+
+      </details>
+  
+    * <details><summary> Inside the render loop </summary>
+  
+      ```cpp
+      // BROWSER
+      // --------------------------------------------
+      browser.update();
+      browser.render();
+    
+      unsigned char* pixels = browser.getPixels();
+    
+      if (pixels) {
+          glBindTexture(GL_TEXTURE_2D, browserTex);
+    
+          glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+                          browser.getWidth(),
+                          browser.getHeight(),
+                          GL_BGRA, GL_UNSIGNED_BYTE,
+                          pixels);
+    
+          browser.unlockPixels();
+      }
+      
+        // Render quad
+      browserShader.use();
+    
+      browserShader.setMat4("model", model_browser);
+      browserShader.setMat4("view", view);
+      browserShader.setMat4("projection", projection);
+    
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, browserTex);
+      browserShader.setInt("browserTexture", 0);
+    
+      glBindVertexArray(quadVAO);
+      glDrawArrays(GL_TRIANGLES, 0, 6);
+      glBindVertexArray(0);
+      // ----------------------------------------------
+      ```
+
+      </details>
+
+  * The result:
+
+    https://github.com/user-attachments/assets/14a90da8-7d5a-4e30-a3d0-c30c04a1dece
 
 </details>
+
+<details><summary> Complete Ultralight web browser implementation </summary>
+
+  * The browser is visible, however it appears upside down. This is expected as Ultralight CPU surfaces are top-left origin, whereas OpenGL textures are bottom-left origin. This is an easy fix to ``browser.frag``, flipping the Y-axis:
+
+    ```glsl
+    #version 430 core
+    in vec2 TexCoord;
+    out vec4 FragColor;
+    
+    uniform sampler2D browserTexture;
+    
+    void main() {
+        vec2 uv = vec2(TexCoord.x, 1.0 - TexCoord.y); // flip Y
+        FragColor = texture(browserTexture, uv);
+    }
+    ```
+
+  * To make the browser interactable we need to hook up mouse/keyboard input, and convert cursor position to browser position using the intersection point of a ray casted from the camera view.
+
+  * <details><summary> Updated Browser class </summary>
+
+    * ``browser.h``:
+   
+      ```hpp
+      #pragma once
+      
+      #include <Ultralight/Ultralight.h>
+      
+      class Browser {
+      public:
+          bool init(int width, int height, const char* url);
+      
+          void update();
+          void render();
+      
+          unsigned char* getPixels();
+          void unlockPixels();
+      
+          int getWidth() const { return width; }
+          int getHeight() const { return height; }
+      
+          void fireMouseEvent(const ultralight::MouseEvent& evt);
+          void fireKeyEvent(const ultralight::KeyEvent& evt);
+          void fireScrollEvent(const ultralight::ScrollEvent& evt);
+      
+          void GoBack();
+          void GoForward();
+      
+      private:
+          ultralight::RefPtr<ultralight::Renderer> renderer;
+          ultralight::RefPtr<ultralight::View> view;
+      
+          int width;
+          int height;
+      };
+      ```
+
+    * ``browser.cpp``:
+
+      ```cpp
+      #include <learnopengl/browser.h>
+      #include <Ultralight/Ultralight.h>
+      #include <Ultralight/platform/Platform.h>
+      #include <AppCore/AppCore.h>
+      #include <cstdio>
+      
+      using namespace ultralight;
+      
+      bool Browser::init(int w, int h, const char* url) {
+          width = w;
+          height = h;
+      
+          printf("[browser] STEP 1: create renderer\n");
+      
+          renderer = ultralight::Renderer::Create();
+      
+          printf("[browser] STEP 2: create view\n");
+      
+          ultralight::ViewConfig view_config;
+          view_config.is_accelerated = false; // CPU path
+          view_config.enable_javascript = true;
+      
+          view = renderer->CreateView(width, height, view_config, nullptr);
+      
+          printf("[browser] STEP 3: load URL\n");
+      
+          view->LoadURL(url);
+      
+          return true;
+      }
+      
+      void Browser::update() {
+          renderer->Update();
+      }
+      
+      void Browser::render() {
+          renderer->RefreshDisplay(0);
+          renderer->Render();
+      }
+      
+      unsigned char* Browser::getPixels() {
+          ultralight::Surface* surface = view->surface();
+          if (!surface) return nullptr;
+      
+          auto* bitmap_surface = (ultralight::BitmapSurface*)surface;
+          ultralight::RefPtr<ultralight::Bitmap> bitmap = bitmap_surface->bitmap();
+      
+          return (unsigned char*)bitmap->LockPixels();
+      }
+      
+      void Browser::unlockPixels() {
+          ultralight::Surface* surface = view->surface();
+          if (!surface) return;
+      
+          auto* bitmap_surface = (ultralight::BitmapSurface*)surface;
+          ultralight::RefPtr<ultralight::Bitmap> bitmap = bitmap_surface->bitmap();
+      
+          bitmap->UnlockPixels();
+      }
+      
+      void Browser::fireMouseEvent(const ultralight::MouseEvent& evt)
+      {
+          if (view)
+              view->FireMouseEvent(evt);
+      }
+      
+      void Browser::fireKeyEvent(const ultralight::KeyEvent& evt) {
+          if (view)
+              view->FireKeyEvent(evt);
+      }
+      
+      void Browser::fireScrollEvent(const ultralight::ScrollEvent& evt) {
+          if (view)
+              view->FireScrollEvent(evt);
+      }
+      
+      void Browser::GoBack() {
+          if (view)
+              view->GoBack();
+      }
+      
+      void Browser::GoForward() {
+          if (view)
+              view->GoForward();
+      }
+      ```
+
+    </details>
+
+  * In ``main.cpp``:
+
+    * <details><summary> Added a new global ``AppState`` struct (storing browser quad data) </summary>
+   
+      ```cpp
+      struct AppState {
+          Browser* browser;
+      
+          glm::mat4* view;
+          glm::mat4* projection;
+      
+          glm::vec3 planePoint;
+          glm::vec3 planeNormal;
+      
+          float quadWidth;
+          float quadHeight;
+      };
+      ```
+
+      </details>
+
+    * <details><summary> Added a new ``InputMode`` enum (for better input handling when switching between game and browser) </summary>
+   
+      ```cpp
+      enum InputMode {
+          INPUT_GAME,
+          INPUT_BROWSER
+      };
+      
+      InputMode inputMode = INPUT_GAME;
+      ```
+
+      </details>
+
+    * <details><summary> Mouse ray plane intersection logic </summary>
+
+      * ``glm::vec3 getMouseRay()`` function (converts 2D mouse position on-screen into a 3D direction vector ("ray") pointing into the game world. Essentially reversing the process the GPU uses to draw 3D objects onto a flat screen):
+    
+        ```cpp
+        glm::vec3 getMouseRay(float mouseX, float mouseY,
+                              glm::mat4 projection, glm::mat4 view)
+        {
+            using namespace Settings;
+        
+            float x = (2.0f * mouseX) / SCR_WIDTH - 1.0f;
+            float y = 1.0f - (2.0f * mouseY) / SCR_HEIGHT;
+        
+            glm::vec4 ray_clip = glm::vec4(x, y, -1.0f, 1.0f);
+            glm::vec4 ray_eye = glm::inverse(projection) * ray_clip;
+            ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0f, 0.0f);
+        
+            glm::vec3 ray_world = glm::normalize(glm::vec3(glm::inverse(view) * ray_eye));
+            
+            return ray_world;
+        }
+        ```
+    
+      * ``bool intersectRayPlane()`` function (returns ``false` if ray does not intersect plane; returns ``true`` if ray does intersect plane and stores intersection point in ``glm::vec3 &hitPoint``):
+    
+        ```cpp
+        bool intersectRayPlane(glm::vec3 rayOrigin,
+                               glm::vec3 rayDir,
+                               glm::vec3 planePoint,
+                               glm::vec3 planeNormal,
+                               glm::vec3& hitPoint)
+        {
+            float denom = glm::dot(rayDir, planeNormal);
+        
+            if (abs(denom) < 0.0001f) return false;
+        
+            float t = glm::dot(planePoint - rayOrigin, planeNormal) / denom;
+        
+            if (t < 0) return false;
+        
+            hitPoint = rayOrigin + t * rayDir;
+            return true;
+        }
+        ```
+
+      </details>
+  
+    * Callback functions:
+   
+      * <details><summary> Renamed (and updated) the mouse/cursor position callback function </summary>
+     
+        ```cpp
+        // glfw: whenever the mouse moves, this callback is called
+        // -------------------------------------------------------
+        void cursor_pos_callback(GLFWwindow* window, double xposIn, double yposIn) {
+            using namespace Settings;
+        
+            AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+            Browser* browser = state->browser;
+            
+            glm::mat4& view = *state->view;
+            glm::mat4& projection = *state->projection;
+            
+            glm::vec3 planePoint = state->planePoint;
+            glm::vec3 planeNormal = state->planeNormal;
+            
+            float quadWidth = state->quadWidth;
+            float quadHeight = state->quadHeight;
+        
+            // mouse pos
+            float xpos = static_cast<float>(xposIn);
+            float ypos = static_cast<float>(yposIn);
+        
+            // only update camera when unpaused
+            if (!paused)
+            {
+                if (firstMouse)
+                {
+                    lastX = xpos;
+                    lastY = ypos;
+                    firstMouse = false;
+                }
+        
+                float xoffset = xpos - lastX;
+                float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+        
+                lastX = xpos;
+                lastY = ypos;
+        
+                camera.ProcessMouseMovement(xoffset, yoffset);
+            }
+        
+            // only update cursor pos for browser when paused
+            if (paused)
+            {
+                glm::vec3 rayDir = getMouseRay(xpos, ypos, projection, view);
+                
+                glm::vec3 hitPoint;
+                if (intersectRayPlane(camera.Position, rayDir, planePoint, planeNormal, hitPoint))
+                {
+                    glm::vec3 local = hitPoint - planePoint;
+                
+                    float u = (local.x / quadWidth) + 0.5f;
+                    float v = (local.y / quadHeight) + 0.5f;
+                    v = 1.0f - v;
+                
+                    if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+                    {
+                        int px = (int)(u * browser->getWidth());
+                        int py = (int)(v * browser->getHeight());
+                
+                        ultralight::MouseEvent evt;
+                        evt.type = ultralight::MouseEvent::kType_MouseMoved;
+                        evt.x = px;
+                        evt.y = py;
+                        evt.button = ultralight::MouseEvent::kButton_None;
+                
+                        browser->fireMouseEvent(evt);
+                    }
+                }
+            }
+        }
+        ```
+   
+        </details>
+
+      * <details><summary> scroll_callback() </summary>
+     
+        ```cpp
+        // glfw: whenever the mouse scroll wheel scrolls, this callback is called
+        // ----------------------------------------------------------------------
+        void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+            // camera
+            if (inputMode == INPUT_GAME)
+                camera.ProcessMouseScroll(static_cast<float>(yoffset));
+        
+            // browser
+            if (inputMode != INPUT_GAME) {
+                AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+                Browser* browser = state->browser;
+                
+                if (inputMode != INPUT_BROWSER) return;
+                if (!browser) return;
+                
+                ultralight::ScrollEvent evt;
+                evt.type = ultralight::ScrollEvent::kType_ScrollByPixel;
+                evt.delta_x = (int)xoffset * 50;  // tweak sensitivity
+                evt.delta_y = (int)yoffset * 50;
+                
+                browser->fireScrollEvent(evt);
+            }
+        }
+        ```
+   
+        </details>
+
+      * <details><summary> mouse_button_callback() </summary>
+     
+        ```cpp
+        void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+        {
+            AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+            
+            Browser* browser = state->browser;
+            
+            glm::mat4& view = *state->view;
+            glm::mat4& projection = *state->projection;
+            
+            glm::vec3 planePoint = state->planePoint;
+            glm::vec3 planeNormal = state->planeNormal;
+            
+            float quadWidth = state->quadWidth;
+            float quadHeight = state->quadHeight;
+         
+        
+        
+            if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+            {
+                double mouseX, mouseY;
+                glfwGetCursorPos(window, &mouseX, &mouseY);
+            
+                glm::vec3 rayDir = getMouseRay(mouseX, mouseY, projection, view);
+            
+                glm::vec3 hitPoint;
+                
+                if (intersectRayPlane(camera.Position, rayDir, planePoint, planeNormal, hitPoint))
+                {
+                    // Convert to local quad space
+                    glm::vec3 local = hitPoint - planePoint;
+            
+                    float u = (local.x / quadWidth) + 0.5f;
+                    float v = (local.y / quadHeight) + 0.5f;
+            
+                    // Flip Y for Ultralight
+                    v = 1.0f - v;
+            
+                    // Check inside quad
+                    if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+                    {
+                        int px = (int)(u * browser->getWidth());
+                        int py = (int)(v * browser->getHeight());
+            
+                        ultralight::MouseEvent evt;
+                        evt.type = ultralight::MouseEvent::kType_MouseDown;
+                        evt.x = px;
+                        evt.y = py;
+                        evt.button = ultralight::MouseEvent::kButton_Left;
+            
+                        browser->fireMouseEvent(evt);
+                    }
+                }
+            }
+        
+            if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+            {
+                double mouseX, mouseY;
+                glfwGetCursorPos(window, &mouseX, &mouseY);
+            
+                glm::vec3 rayDir = getMouseRay(mouseX, mouseY,
+                                               projection, view);
+            
+                glm::vec3 hitPoint;
+                if (intersectRayPlane(camera.Position, rayDir, planePoint, planeNormal, hitPoint))
+                {
+                    glm::vec3 local = hitPoint - planePoint;
+            
+                    float u = (local.x / quadWidth) + 0.5f;
+                    float v = (local.y / quadHeight) + 0.5f;
+                    v = 1.0f - v;
+            
+                    if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+                    {
+                        int px = (int)(u * browser->getWidth());
+                        int py = (int)(v * browser->getHeight());
+            
+                        ultralight::MouseEvent evt;
+                        evt.type = ultralight::MouseEvent::kType_MouseUp;
+                        evt.x = px;
+                        evt.y = py;
+                        evt.button = ultralight::MouseEvent::kButton_Left;
+            
+                        browser->fireMouseEvent(evt);
+                    }
+                }
+            }
+        }
+        ```
+   
+        </details>
+
+      * <details><summary> key_callback() </summary>
+     
+        ```cpp
+        void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+        {
+            using namespace Settings;
+        
+            AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+            Browser* browser = state->browser;
+        
+            // --- GLOBAL KEYS (always work) ---
+            if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+                glfwSetWindowShouldClose(window, true);
+                return;
+            }
+        
+            if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+                inputMode = (inputMode == INPUT_GAME) ? INPUT_BROWSER : INPUT_GAME;
+                return;
+            }
+        
+            // Pause
+            // -----
+            if (key == GLFW_KEY_RIGHT_SHIFT && action == GLFW_PRESS && !pausePressed)
+            {
+                pausePressed = 1;
+        
+                // pause -> unpause
+                if (paused)
+                {
+                    firstMouse = true;
+                    lastXpos = static_cast<double>(lastX);
+                    lastYpos = static_cast<double>(lastY);
+                    glfwSetCursorPos(window, lastXpos, lastYpos);  // remove whiplash cursor jump
+                    // tell GLFW to capture our mouse
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    paused = 0;
+                }
+                // unpause -> pause
+                else
+                {
+                    // tell GLFW to uncapture our mouse
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                    paused = 1;
+                }
+            }
+            if (key == GLFW_KEY_RIGHT_SHIFT && action == GLFW_RELEASE && pausePressed) {
+                pausePressed = 0;
+            }
+        
+            
+            // --- ROUTE INPUT ---
+            if (inputMode == INPUT_BROWSER)
+            {
+                // Send to Ultralight
+                ultralight::KeyEvent evt;
+        
+                if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+                    evt.type = ultralight::KeyEvent::kType_RawKeyDown;
+                } else if (action == GLFW_RELEASE) {
+                    evt.type = ultralight::KeyEvent::kType_KeyUp;
+                } else return;
+        
+                evt.virtual_key_code = glfwToUltralightKey(key);
+                evt.native_key_code = scancode;
+                evt.modifiers = 0;
+        
+                ultralight::GetKeyIdentifierFromVirtualKeyCode(
+                    evt.virtual_key_code, evt.key_identifier);
+        
+                if (mods & GLFW_MOD_SHIFT) evt.modifiers |= ultralight::KeyEvent::kMod_ShiftKey;
+                if (mods & GLFW_MOD_CONTROL) evt.modifiers |= ultralight::KeyEvent::kMod_CtrlKey;
+                if (mods & GLFW_MOD_ALT) evt.modifiers |= ultralight::KeyEvent::kMod_AltKey;
+                if (key == GLFW_KEY_LEFT && (mods & GLFW_MOD_ALT)) {
+                    browser->GoBack();
+                }
+                if (key == GLFW_KEY_RIGHT && (mods & GLFW_MOD_ALT)) {
+                    browser->GoForward();
+                }
+        
+                browser->fireKeyEvent(evt);
+            }
+        }
+        ```
+   
+        </details>
+
+      * <details><summary> char_callback() </summary>
+     
+        ```cpp
+        void char_callback(GLFWwindow* window, unsigned int codepoint)
+        {
+            AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+            Browser* browser = state->browser;
+        
+            if (inputMode != INPUT_BROWSER) return;
+            if (!browser) return;
+        
+            char utf8[5] = {0};
+        
+            if (codepoint <= 0x7F) {
+                utf8[0] = (char)codepoint;
+            }
+        
+            ultralight::KeyEvent evt;
+            evt.type = ultralight::KeyEvent::kType_Char;
+            evt.text = ultralight::String(utf8);
+            evt.unmodified_text = ultralight::String(utf8);
+        
+            browser->fireKeyEvent(evt);
+        }
+        ```
+   
+        </details>
+
+      * <details><summary> glfwToUltralightKey() (maps command keys to Ultralight properly) </summary>
+     
+        ```cpp
+        int glfwToUltralightKey(int key)
+        {
+            switch (key)
+            {
+                case GLFW_KEY_BACKSPACE: return 0x08; // VK_BACK
+                case GLFW_KEY_TAB:       return 0x09; // VK_TAB
+                case GLFW_KEY_ENTER:     return 0x0D; // VK_RETURN
+                case GLFW_KEY_ESCAPE:    return 0x1B; // VK_ESCAPE
+                case GLFW_KEY_SPACE:     return 0x20; // VK_SPACE
+        
+                case GLFW_KEY_LEFT:      return 0x25; // VK_LEFT
+                case GLFW_KEY_UP:        return 0x26; // VK_UP
+                case GLFW_KEY_RIGHT:     return 0x27; // VK_RIGHT
+                case GLFW_KEY_DOWN:      return 0x28; // VK_DOWN
+        
+                case GLFW_KEY_DELETE:    return 0x2E; // VK_DELETE
+        
+                default:
+                    return key; // works for A-Z, 0-9
+            }
+        }
+        ```
+
+        </details>
+
+    * <details><summary> Updated browser initialization </summary>
+   
+      ```cpp
+      // BROWSER
+      // -------
+      float quadVertices[] = {
+          // positions          // texCoords
+          -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+          -1.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+           1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+  
+          -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+           1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+           1.0f,  1.0f,  0.0f,  1.0f, 1.0f
+      };
+  
+      GLuint quadVAO, quadVBO;
+  
+      glGenVertexArrays(1, &quadVAO);
+      glGenBuffers(1, &quadVBO);
+  
+      glBindVertexArray(quadVAO);
+  
+      glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+  
+      // position
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+      glEnableVertexAttribArray(0);
+  
+      // texCoord
+      glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+      glEnableVertexAttribArray(1);
+  
+      glBindVertexArray(0);
+  
+      GLuint browserTex;
+      glGenTextures(1, &browserTex);
+      glBindTexture(GL_TEXTURE_2D, browserTex);
+  
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                   1024, 768,
+                   0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+  
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  
+      // --- Ultralight Platform Setup (DO THIS ONCE) ---
+      {
+          Config config;
+          config.user_stylesheet = "body { background: white; }";
+      
+          Platform::instance().set_config(config);
+      
+          Platform::instance().set_font_loader(GetPlatformFontLoader());
+          Platform::instance().set_file_system(GetPlatformFileSystem("./"));
+          Platform::instance().set_logger(GetDefaultLogger("ultralight.log"));
+      }
+      
+      Browser browser;
+      browser.init(1024, 768, "https://google.com");
+  
+      glm::mat4 model_browser = glm::mat4(1.0f);
+  
+      glm::vec3 planePoint = glm::vec3(0.0f, 0.0f, 3.0f);
+      glm::vec3 planeNormal = glm::vec3(0.0f, 0.0f, 1.0f); // facing camera
+  
+      // Move in front of camera
+      model_browser = glm::translate(model_browser, planePoint);
+  
+      // Scale to window-like shape
+      float browser_width = 3.2f;
+      float browser_height = 2.0f;
+      model_browser = glm::scale(model_browser,
+                                 glm::vec3(browser_width/2,
+                                           browser_height/2,
+                                           1.0f));
+  
+      Shader browserShader("browser.vert", "browser.frag");
+  
+      AppState state;
+  
+      state.browser = &browser;
+      state.view = &view;
+      state.projection = &projection;
+      
+      state.planePoint = planePoint;
+      state.planeNormal = planeNormal;
+      
+      state.quadWidth = browser_width;
+      state.quadHeight = browser_height;
+  
+      // attach app state to window
+      glfwSetWindowUserPointer(window, &state);
+      ```
+
+      </details>
+  
+    * <details><summary> Updated processInput() to be disabled when inputMode != INPUT_GAME </summary>
+  
+      ```cpp
+      // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+      // ---------------------------------------------------------------------------------------------------------
+      void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::unique_ptr<Encoder> &encoder) {
+          
+          // disable game controls (exc. pause) when browser active
+          if (inputMode != INPUT_GAME)
+              return;
+  
+          ...
+      ```
+
+      </details>
+
+  * The result:
+
+    https://github.com/user-attachments/assets/42302c57-c271-4abd-94db-ce613ee547f0
+
+</details>
+
+
 
 <!-- ADD BIBLIOGRAPHY -->
 <!-- ADD CODE SHOWING FBO, RBO, PBO, etc. -->
 <!-- FINALLY SHOW RESULTS WITH TEXTURES -->
 <!-- EXPLAIN BETTER GOING FROM 2D to 3D WITH TRANSFORMATIONS AND SHADERS -->
+
+<!--
+## Progress update 17 - Merge branch 'encoder-feature' - 21/06/25
+
+<details><summary> Merge branch 'encoder-feature' </summary>
+</details>
+-->
+
 ## License
 GNU General Public License v3.0
+
 
 ## Citations
