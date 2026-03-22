@@ -29,6 +29,9 @@
 https://github.com/user-attachments/assets/fc8763bd-dcda-4dbf-9c60-3e322aa1a2ce
 
 Real-time 3D renderer in C++ with OpenGL (GLFW).
+
+## Features
+
 * [Phong lighting](https://en.m.wikipedia.org/wiki/Phong_reflection_model)
 * Custom text tendering using [FreeType](https://freetype.org/index.html) to rasterize TrueType (.ttf) vector fonts onto a texture atlas
 * GUI and real-time plots using [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot)
