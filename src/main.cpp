@@ -360,22 +360,33 @@ int main()
     glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
     // or set it via the shader class:
     ourShader.setInt("texture2", 1);
+    
+    // MODEL
+    // -----
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
     ourShader.setMat4("model", model);
+    
+    // VIEW
+    // ----
     glm::mat4 view = glm::mat4(1.0f);
     // note that we're translating the scene in the reverse direction of where we want to move
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); 
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
     ourShader.setMat4("view", view);
+    
+    // PROJECTION
+    // ----------
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH/(float)SCR_HEIGHT, 0.1f, 100.0f);
     // glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
+    ourShader.setMat4("projection", projection);
+    
     glm::vec3 lightPos(8.0f, 0.0f, 0.0f);
     glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
     glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
-    ourShader.setMat4("projection", projection);
     ourShader.setVec3("lightColor", lightColor);
     ourShader.setVec3("lightPos", lightPos);
     ourShader.setVec3("objectColor", objectColor);
+    
     ourShader.setVec3("viewPos", camera.Position);
 
     // bind Texture
@@ -1778,9 +1789,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         pausePressed = 0;
     }
 
-
-
-
+    
     // --- ROUTE INPUT ---
     if (inputMode == INPUT_BROWSER)
     {
@@ -1993,12 +2002,12 @@ int glfwToUltralightKey(int key)
         case GLFW_KEY_ESCAPE:    return 0x1B; // VK_ESCAPE
         case GLFW_KEY_SPACE:     return 0x20; // VK_SPACE
 
-        case GLFW_KEY_LEFT:  return 0x25; // VK_LEFT
-        case GLFW_KEY_UP:    return 0x26; // VK_UP
-        case GLFW_KEY_RIGHT: return 0x27; // VK_RIGHT
-        case GLFW_KEY_DOWN:  return 0x28; // VK_DOWN
+        case GLFW_KEY_LEFT:      return 0x25; // VK_LEFT
+        case GLFW_KEY_UP:        return 0x26; // VK_UP
+        case GLFW_KEY_RIGHT:     return 0x27; // VK_RIGHT
+        case GLFW_KEY_DOWN:      return 0x28; // VK_DOWN
 
-        case GLFW_KEY_DELETE: return 0x2E; // VK_DELETE
+        case GLFW_KEY_DELETE:    return 0x2E; // VK_DELETE
 
         default:
             return key; // works for A-Z, 0-9

@@ -12,7 +12,7 @@ bool Browser::init(int w, int h, const char* url) {
 
     printf("[browser] STEP 1: create renderer\n");
 
-    renderer = ultralight::Renderer::Create();   // ✅ correct
+    renderer = ultralight::Renderer::Create();
 
     printf("[browser] STEP 2: create view\n");
 
