@@ -36,9 +36,13 @@ Real-time 3D renderer in C++ with OpenGL (GLFW).
 * Custom text tendering using [FreeType](https://freetype.org/index.html) to rasterize TrueType (.ttf) vector fonts onto a texture atlas
 * GUI and real-time plots using [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot)
 * Screen recording using [FFmpeg](https://github.com/FFmpeg/FFmpeg), [x264](https://www.videolan.org/developers/x264.html) encoder, multithreading, and [asynchronous DMA readback with 2 PBOs](https://www.songho.ca/opengl/gl_pbo.html#pack). (Video heavily compressed to fit GitHub's 10MB filesize limit).
-* **NEW:** Interactive lightweight web-browser using [Ultralight](https://ultralig.ht/), rendered to a floating quad. (Only available on **Linux** in the ``web-browser`` branch. See [Progress Update 18](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder?tab=readme-ov-file#progress-update-18---add-ultralight-web-browser---220326)).
+* **NEW:** Interactive lightweight web-browser using [Ultralight](https://ultralig.ht/), rendered to a floating quad. (Only available on **Linux** in the ``web-browser`` branch. See [Progress Update 18](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder?tab=readme-ov-file#progress-update-18---ultralight-web-browser---220326)).
 
   https://github.com/user-attachments/assets/42302c57-c271-4abd-94db-ce613ee547f0
+
+* **NEW:** Interactive Chromium web-browser using [Chromium Embedded Framework (CEF)](https://cef-builds.spotifycdn.com/index.html#linux64), rendered to a floating quad. (Only available on **Linux** in the ``cef-browser`` branch. See [Progress Update 19](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder?tab=readme-ov-file#progress-update-19---chromium-embedded-framework-cef---250326)).
+
+  https://github.com/user-attachments/assets/aac100de-9699-4242-b60d-954dfa117417
 
 ## How to run
 
@@ -5976,7 +5980,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
  
 </details>
 
-## Progress update 18 - Add Ultralight web browser - 22/03/26
+## Progress update 18 - Ultralight web browser - 22/03/26
 
 > [!IMPORTANT]
 > This update is only available on **Linux** in the ``web-browser`` branch.
@@ -6034,7 +6038,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
     * Add to ``include_directories()``:
       
-      ```
+      ```cmake
       include_directories(
         ...
         ${CMAKE_SOURCE_DIR}/include/ultralight
@@ -6043,7 +6047,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
     * Inside first ``if(UNIX)`` after syncing assets and shaders to ``/build`` folder:
    
-      ```
+      ```cmake
       # Set library folder
       set(ULTRALIGHT_LIB_DIR ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/bin)
       
@@ -6062,7 +6066,7 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
 
     * Inside second ``if(UNIX)`` when linking libraries at the very end:
    
-      ```
+      ```cmake
       target_link_libraries(${PROJECT_NAME}
           ...
           # Linux OpenGL / system libs
@@ -7023,6 +7027,1052 @@ GLEW and GLAD also come with the OpenGL headers because you also need those alon
   * The result:
 
     https://github.com/user-attachments/assets/42302c57-c271-4abd-94db-ce613ee547f0
+
+</details>
+
+## Progress update 19 - Chromium Embedded Framework (CEF) web browser - 25/03/26
+
+> [!IMPORTANT]
+> This update is only available on **Linux** in the ``cef-browser`` branch.
+> 
+> In the future I may implement it on Windows (assuming it doesn't force me to use Visual Studio).
+
+<details><summary> Initial CEF implementation </summary>
+
+  * Ultralight web browser works, however it is very limited. A lot of websites don't work. Twitter barely works, and Jellyfin and YouTube do not work at all.
+  * I knew the alternative would be Chromium Embedded Framework (CEF). Ultralight is lightweight, CEF is heavy, but CEF is basically Chrome, meaning:
+    * modern JS engine ✅
+    * video decoding ✅
+    * HTML5 video ✅
+    * streaming support ✅
+   
+  * The pipeline for CEF is similar to Ultralight:
+
+    ```
+    CEF (Chromium)
+       ↓
+    pixel buffer (BGRA)
+       ↓
+    OpenGL texture
+       ↓
+    render on quad
+    ```
+   
+  * The first thing I did was switch to a new branch, branching off from the ``web-browser`` branch, NOT the ``main`` branch, so that we can reuse the quad rendering for browser, mouse ray → UV mapping, and keyboard input routing.
+
+    ```cmd
+    git checkout web-browser
+    git checkout -b cef-browser
+    ```
+
+  * The next thing I did was download CEF (prebuilt binary hosted by [Spotify](https://engineering.atspotify.com/2019/3/building-spotifys-new-web-player)): https://cef-builds.spotifycdn.com/index.html#linux64. Ensuring to pick:
+    * Linux 64-bit
+    * Standard Distribution (not minimal)
+   
+  * Instead of separating the headers and libraries, I had to keep them together as CEF's headers have **internal relative includes**. With ImGui I manually edited the header files so that I could separate the header files and the source files, but that was doable as it was only a handful of files to fix. CEF is a mammoth in comparison and to save me the hassle I will keep CEF's headers and library files together.
+  
+    ```
+    lib/
+      cef/
+        include/            ← KEEP AS-IS
+        Release/
+          libcef.so
+        Resources/
+          *.pak
+          locales/
+        libcef_dll/         ← needed for wrapper
+    ```
+  
+  * Additions to ``CMakeLists.txt``:
+  
+    * <details><summary> At the end of the first ``if(UNIX)`` block </summary>
+    
+      ```cmake
+      set(CEF_ROOT ${CMAKE_SOURCE_DIR}/lib/cef)
+      set(CEF_LIB_DIR ${CEF_ROOT}/Release)
+      # Copy libcef.so next to the binary
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy
+          ${CEF_LIB_DIR}/libcef.so
+          ${CMAKE_BINARY_DIR}/bin
+      )
+      # Copy ALL Release files (icudtl.dat, snapshot bins, etc.) FLAT next to binary
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${CEF_ROOT}/Resources
+          ${CMAKE_BINARY_DIR}/bin #<--FLAT, not bin/Resources/
+      )
+      # --- Also copy the other required Release files ---
+      # (snapshot_blob.bin, icudtl.dat, etc. live in Release too)
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_directory
+              ${CEF_LIB_DIR}
+              ${CMAKE_BINARY_DIR}/bin
+      )
+      # --- Recurse into ALL subdirectories of libcef_dll ---
+      file(GLOB_RECURSE CEF_WRAPPER_SOURCES
+          ${CEF_ROOT}/libcef_dll/*.cc
+      )
+      add_library(cef_dll_wrapper STATIC ${CEF_WRAPPER_SOURCES})
+      target_include_directories(cef_dll_wrapper PUBLIC
+          ${CEF_ROOT}
+          ${CEF_ROOT}/include
+      )
+      target_compile_definitions(cef_dll_wrapper PUBLIC
+          # Required by CEF wrapper on LI
+          LINUX
+          CEF_USE_SANDBOX=0
+          USING_CEF_SHARED
+          WRAPPING_CEF_SHARED
+      )
+      # --- Import the shared libcef.so ---
+      add_library(libcef SHARED IMPORTED)
+      set_target_properties(libcef PROPERTIES
+          IMPORTED_LOCATION "${CEF_LIB_DIR}/libcef.so"
+          INTERFACE_INCLUDE_DIRECTORIES "${CEF_ROOT}/include"
+      )
+      # Tell the linker where to find libcef.so at runtime
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN'")
+      ```
+  
+      </details>
+    
+    * <details><summary> At the end of the second ``if(UNIX)`` block </summary>
+    
+      ```cmake
+      target_link_libraries(${PROJECT_NAME}
+          ...
+          # CEF
+          cef_dll_wrapper
+          libcef
+          
+          # Linux OpenGL / system libs
+          X11 pthread dl m
+      )
+      ```
+  
+      </details>
+  
+  * In ``include/learnopengl`` I created two new header files:
+  
+    * <details><summary> cef_app.h </summary>
+   
+      ```hpp
+      #pragma once
+      
+      #include <cef_app.h>
+      
+      class SimpleApp : public CefApp {
+      public:
+          SimpleApp() = default;
+      
+          IMPLEMENT_REFCOUNTING(SimpleApp);
+      };
+      ```
+  
+      </details>
+  
+    * <details><summary> SimpleClient.h </summary>
+   
+      ```hpp
+      #pragma once
+      #include <cef_client.h>
+      #include <cef_render_handler.h>
+      #include <vector>
+      #include <cstring>
+      
+      class SimpleRenderHandler : public CefRenderHandler {
+      public:
+          int width, height;
+          std::vector<uint8_t> pixelBuffer;
+          bool dirty = false;
+      
+          SimpleRenderHandler(int w, int h) 
+              : width(w), height(h), pixelBuffer(w * h * 4, 0) {}
+      
+          void GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) override {
+              rect = CefRect(0, 0, width, height);
+          }
+      
+          void OnPaint(CefRefPtr<CefBrowser> browser,
+                       PaintElementType type,
+                       const RectList& dirtyRects,
+                       const void* buffer,
+                       int w, int h) override {
+              // Resize buffer if CEF gives us different dimensions than expected
+              if (w != width || h != height) {
+                  width = w;
+                  height = h;
+                  pixelBuffer.resize(w * h * 4);
+              }
+              memcpy(pixelBuffer.data(), buffer, w * h * 4);
+              dirty = true;
+          }
+      
+          IMPLEMENT_REFCOUNTING(SimpleRenderHandler);
+      };
+      
+      class SimpleClient : public CefClient, public CefLifeSpanHandler {
+      public:
+          CefRefPtr<SimpleRenderHandler> renderHandler;
+          CefRefPtr<CefBrowser> browser; // set when ready
+      
+          SimpleClient(int w, int h) {
+              renderHandler = new SimpleRenderHandler(w, h);
+          }
+      
+          CefRefPtr<CefRenderHandler> GetRenderHandler() override { return renderHandler; }
+          CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
+      
+          void OnAfterCreated(CefRefPtr<CefBrowser> b) override {
+              browser = b; // now safe to send input
+          }
+      
+          IMPLEMENT_REFCOUNTING(SimpleClient);
+      };
+      ```
+  
+      </details>
+  
+  * Changes to ``main.cpp``:
+  
+    * <details><summary> CEF includes at the top </summary>
+   
+      ```cpp
+      // CEF
+      // ---
+      #include <gtk/gtk.h>
+      #include <learnopengl/cef_app.h>
+      #include <learnopengl/SimpleClient.h>
+      #include <cef_command_line.h>
+      #if defined(_WIN32)
+          CefEnableHighDPISupport();
+      #endif
+      ```
+  
+      </details>
+  
+    * <details><summary> Modified struct AppState </summary>
+   
+      ```diff
+        // browser
+        // -------
+        struct AppState {
+            // Ultralight
+            Browser* browser;
+            glm::vec3 planePoint;
+            glm::vec3 planeNormal;
+            float quadWidth;
+            float quadHeight;
+            
+      +     // CEF
+      +     CefRefPtr<SimpleClient> cefClient;
+      +     CefRefPtr<CefBrowser> cefBrowser;
+      +     glm::vec3 cefPlanePoint;
+      +     glm::vec3 cefPlaneNormal;
+      +     float cefQuadWidth;
+      +     float cefQuadHeight;
+        
+            // Shared
+            glm::mat4* view;
+            glm::mat4* projection;
+        
+        };
+      ```
+  
+      </details>
+   
+    * <details><summary> Modified enum InputMode </summary>
+   
+      ```diff
+        enum InputMode {
+            INPUT_GAME,
+            INPUT_ULTRALIGHT,
+      +     INPUT_CEF
+        };
+        
+        InputMode inputMode = INPUT_GAME;
+      ```
+  
+      </details>
+  
+    * <details><summary> Modified int main() </summary>
+   
+      ```diff
+      - int main() {
+      + int main(int argc, char** argv) {
+      ```
+  
+      </details>
+  
+    * <details><summary> Add CEF init at the top of int main(...), before GLFW init </summary>
+   
+      ```cpp
+      int main(int argc, char** argv)
+      {
+          // CEF: initialization
+          // -------------------
+          // CEF main args
+          CefMainArgs main_args(argc, argv);
+      
+          // Create app instance
+          CefRefPtr<SimpleApp> app = new SimpleApp();
+      
+          // CRITICAL: subprocess handling
+          int exit_code = CefExecuteProcess(main_args, app, nullptr);
+          if (exit_code >= 0) {
+              return exit_code; // child process exits here
+          }
+      
+          gtk_disable_setlocale(); // must be first, before CefInitialize or any GTK call
+      
+          // CEF Settings
+          CefSettings settings;
+          auto exeDir = std::filesystem::canonical("/proc/self/exe").parent_path();
+      
+          settings.no_sandbox = true; // required on Linux unless sandbox setup
+          settings.windowless_rendering_enabled = true; // Optional but useful
+      
+          // Tell CEF to use our exe as the subprocess helper
+          CefString(&settings.root_cache_path)  = (exeDir / "cache").string();
+          CefString(&settings.cache_path)       = (exeDir / "cache/cache").string();
+          CefString(&settings.resources_dir_path) = exeDir.string();
+          CefString(&settings.locales_dir_path)   = (exeDir / "locales").string();
+          // Initialize CEF
+          if (!CefInitialize(main_args, settings, app, nullptr)) {
+              std::cerr << "CEF init failed\n";
+              return -1;
+          }
+      ```
+  
+      </details>
+  
+    * Separated quad, shader, and Ultralight and CEF browser init:
+   
+      * <details><summary> Quad init </summary>
+   
+        ```cpp
+        // Generic floating quad
+        // ---------------------
+        float quadVertices[] = {
+            // positions          // texCoords
+            -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+            -1.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+             1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+    
+            -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+             1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+             1.0f,  1.0f,  0.0f,  1.0f, 1.0f
+        };
+    
+        GLuint quadVAO, quadVBO;
+    
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+    
+        glBindVertexArray(quadVAO);
+    
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+    
+        // position
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+    
+        // texCoord
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+    
+        glBindVertexArray(0);
+        // ---------------------------------------------------
+        ```
+    
+        </details>
+  
+      * <details><summary> Browser shader init </summary>
+    
+        ```cpp
+        Shader browserShader("browser.vert", "browser.frag");
+        ```
+    
+        </details>
+    
+      * <details><summary> Ultralight browser init </summary>
+    
+        ```cpp
+        // ULTRALIGHT BROWSER
+        // ------------------
+        GLuint browserTex;
+        glGenTextures(1, &browserTex);
+        glBindTexture(GL_TEXTURE_2D, browserTex);
+    
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                     1024, 768,
+                     0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+    
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+        // --- Ultralight Platform Setup (DO THIS ONCE) ---
+        {
+            Config config;
+            config.user_stylesheet = "body { background: white; }";
+        
+            Platform::instance().set_config(config);
+        
+            Platform::instance().set_font_loader(GetPlatformFontLoader());
+            Platform::instance().set_file_system(GetPlatformFileSystem("./"));
+            Platform::instance().set_logger(GetDefaultLogger("ultralight.log"));
+        }
+        
+        Browser browser;
+        browser.init(1024, 768, "https://google.com");
+    
+        glm::mat4 model_browser = glm::mat4(1.0f);
+    
+        glm::vec3 planePoint = glm::vec3(0.0f, 0.0f, 3.0f);
+        glm::vec3 planeNormal = glm::vec3(0.0f, 0.0f, 1.0f); // facing camera
+    
+        // Move in front of camera
+        model_browser = glm::translate(model_browser, planePoint);
+    
+        // Scale to window-like shape
+        float browser_width = 3.6f;//3.2f;
+        float browser_height = 2.0f;
+        model_browser = glm::scale(model_browser,
+                                   glm::vec3(browser_width/2,
+                                             browser_height/2,
+                                             1.0f));
+    
+        AppState state;
+    
+        state.browser = &browser;
+        state.view = &view;
+        state.projection = &projection;
+        
+        state.planePoint = planePoint;
+        state.planeNormal = planeNormal;
+        
+        state.quadWidth = browser_width;
+        state.quadHeight = browser_height;
+    
+        // attach app state to window
+        glfwSetWindowUserPointer(window, &state);
+        // ---------------------------------------------------
+        ```
+    
+        </details>
+  
+      * <details><summary> CEF browser init </summary>
+  
+        ```cpp
+        // CEF BROWSER
+        // ---------------------------------------------------
+        GLuint cefTex;
+        glGenTextures(1, &cefTex);
+        glBindTexture(GL_TEXTURE_2D, cefTex);
+        // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 768, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        
+        // Create client
+        // CefRefPtr<SimpleClient> client = new SimpleClient(1024, 768);
+        CefRefPtr<SimpleClient> client = new SimpleClient(1280, 720);
+        CefWindowInfo window_info; // Create browser
+        window_info.SetAsWindowless(0); // 0 = no parent window, correct for offscreen
+        CefBrowserSettings browser_settings;
+        CefBrowserHost::CreateBrowser(
+            window_info,
+            client,                      // your SimpleClient
+            // "https://www.google.com",    // starting URL
+            "https://bortle.duckdns.org:8443",    // starting URL
+            browser_settings,
+            nullptr,                     // no extra info
+            nullptr                      // no request context, uses global
+        );
+        
+        
+        // Separate transform (different pos to Ultralight)
+        glm::vec3 cefPlanePoint = glm::vec3(4.0f, 0.0f, 3.0f); // offset so they don't overlap
+        glm::vec3 cefPlaneNormal = glm::vec3(0.0f, 0.0f, 1.0f); // facing camera
+        glm::mat4 model_cef = glm::mat4(1.0f);
+        model_cef = glm::translate(model_cef, cefPlanePoint); // different X
+        model_cef = glm::scale(model_cef, glm::vec3(browser_width / 2, browser_height / 2, 1.0f));
+    
+        state.cefClient = client;
+        state.cefPlanePoint  = cefPlanePoint;
+        state.cefPlaneNormal = cefPlaneNormal;
+        // state.cefBrowser is set async via OnAfterCreated
+        state.cefQuadWidth   = browser_width;
+        state.cefQuadHeight  = browser_height;
+        // ---------------------------------------------------
+        ```
+  
+        </details>
+  
+    * Inside the render loop:
+      * <details><summary> Top of the render loop </summary>
+        
+        * Moved ``glfwPollEvents()`` to the top of the render loop.
+        * Moved ``glfwSwapInterval(vsync)`` to the top of the render loop and added a check to see if ``vsync`` was toggled rather than calling the function every cycle unnecessarily.
+        * Added ``CefDoMessageLoopWork()`` to the top of the render loop.
+        * Removed ``glfwMakeContextCurrent(window)`` from the render loop.
+  
+        ```cpp
+        // RENDER LOOP
+        // -----------
+        while (!glfwWindowShouldClose(window))
+        {
+    
+            glfwPollEvents();           // take care of all GLFW events
+            
+            // Only update vsync when needed
+            if (vsync != lastVsync) {
+                glfwSwapInterval(vsync);    // vsync
+                lastVsync = vsync;
+            }
+    
+            CefDoMessageLoopWork();
+    
+            // glfwMakeContextCurrent(window);
+        ```
+  
+        </details>
+  
+      * <details><summary> Rendering the browser onto the quad </summary>
+  
+        ```cpp
+        // --- CEF (same VAO, different tex + transform) ---
+        auto& rh = client->renderHandler;
+        if (rh->dirty) {
+            rh->dirty = false;
+            glBindTexture(GL_TEXTURE_2D, cefTex);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+                            rh->width, rh->height,
+                            GL_BGRA, GL_UNSIGNED_BYTE,
+                            rh->pixelBuffer.data());
+        }
+        browserShader.use(); // same shader works fine too
+        browserShader.setMat4("model", model_cef);
+        browserShader.setMat4("view", view);
+        browserShader.setMat4("projection", projection);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, cefTex);
+        browserShader.setInt("browserTexture", 0);
+        glBindVertexArray(quadVAO); // reused again
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+        // -------------------------------------------------
+        ```
+    
+      * <details><summary> Handle CEF shutdown at the end of int main(...) just after render loop </summary>
+    
+        ```cpp
+        // CEF
+        // ---
+        CefShutdown();
+        ```
+    
+        </details>
+  
+    * Adjustments to callback functions:
+   
+      * <details><summary> cursor_pos_callback(...) </summary>
+     
+        ```cpp
+        // glfw: whenever the mouse moves, this callback is called
+        // -------------------------------------------------------
+        void cursor_pos_callback(GLFWwindow* window, double xposIn, double yposIn) {
+            using namespace Settings;
+            AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+            // mouse pos
+            float xpos = static_cast<float>(xposIn);
+            float ypos = static_cast<float>(yposIn);
+        
+            // only update camera when unpaused
+            if (!paused)
+            {
+                if (firstMouse)
+                {
+                    lastX = xpos;
+                    lastY = ypos;
+                    firstMouse = false;
+                }
+        
+                float xoffset = xpos - lastX;
+                float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+        
+                lastX = xpos;
+                lastY = ypos;
+        
+                camera.ProcessMouseMovement(xoffset, yoffset);
+            }
+        
+            // only update cursor pos for browser when paused
+            if (paused)
+            {
+                // --- Ultralight ---
+                if (inputMode == INPUT_ULTRALIGHT) {
+                    if (!state->browser) return;
+                
+                    glm::vec3 rayDir = getMouseRay(xpos, ypos, *state->projection, *state->view);
+                    
+                    glm::vec3 hitPoint;
+                    if (intersectRayPlane(camera.Position, rayDir, state->planePoint, state->planeNormal, hitPoint))
+                    {
+                        glm::vec3 local = hitPoint - state->planePoint;
+                    
+                        float u = (local.x / state->quadWidth) + 0.5f;
+                        float v = (local.y / state->quadHeight) + 0.5f;
+                        v = 1.0f - v;
+                    
+                        if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+                        {
+                            int px = (int)(u * state->browser->getWidth());
+                            int py = (int)(v * state->browser->getHeight());
+                    
+                            ultralight::MouseEvent evt;
+                            evt.type = ultralight::MouseEvent::kType_MouseMoved;
+                            evt.x = px;
+                            evt.y = py;
+                            evt.button = ultralight::MouseEvent::kButton_None;
+                    
+                            state->browser->fireMouseEvent(evt);
+                        }
+                    }
+                }
+        
+                // --- CEF ---
+                if (inputMode == INPUT_CEF) {
+                    if (!state->cefClient->browser) return;
+                    
+                    glm::vec3 rayDir = getMouseRay(xpos, ypos, *state->projection, *state->view);
+                    glm::vec3 hitPoint;
+                    
+                    if (intersectRayPlane(camera.Position, rayDir, state->cefPlanePoint, state->cefPlaneNormal, hitPoint)) {
+                        glm::vec3 local = hitPoint - state->cefPlanePoint;
+                        float u = (local.x / state->cefQuadWidth) + 0.5f;
+                        float v = 1.0f - ((local.y / state->cefQuadHeight) + 0.5f);
+                        if (u >= 0 && u <= 1 && v >= 0 && v <= 1) {
+                            int px = (int)(u * state->cefClient->renderHandler->width);
+                            int py = (int)(v * state->cefClient->renderHandler->height);
+                            CefMouseEvent evt;
+                            evt.x = px; evt.y = py; evt.modifiers = 0;
+                            state->cefClient->browser->GetHost()->SendMouseMoveEvent(evt, false);
+                        }
+                    }
+                }
+            }
+        }
+        ```
+   
+        </details>
+  
+      * <details><summary> scroll_callback(...) </summary>
+     
+        ```cpp
+        // glfw: whenever the mouse scroll wheel scrolls, this callback is called
+        // ----------------------------------------------------------------------
+        void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+            // camera
+            if (inputMode == INPUT_GAME)
+                camera.ProcessMouseScroll(static_cast<float>(yoffset));
+        
+            AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+            
+            // ULTRALIGHT
+            if (inputMode == INPUT_ULTRALIGHT) {
+                if (!state->browser) return;
+                
+                ultralight::ScrollEvent evt;
+                evt.type = ultralight::ScrollEvent::kType_ScrollByPixel;
+                evt.delta_x = (int)xoffset * 50;  // tweak sensitivity
+                evt.delta_y = (int)yoffset * 50;
+                
+                state->browser->fireScrollEvent(evt);
+            }
+        
+            // CEF
+            if (inputMode == INPUT_CEF) {
+                if (!state->cefClient->browser) return;
+                
+                CefMouseEvent evt;
+                evt.x = 0; evt.y = 0; evt.modifiers = 0; // position doesn't matter for scroll
+                state->cefClient->browser->GetHost()->SendMouseWheelEvent(evt,
+                    (int)(xoffset * 50),
+                    (int)(yoffset * 50));
+            }
+        }
+        ```
+   
+        </details>
+  
+      * <details><summary> key_callback(...) </summary>
+     
+        ```cpp
+        void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+        {
+            using namespace Settings;
+        
+            AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+            Browser* browser = state->browser;
+        
+            // --- GLOBAL KEYS (always work) ---
+            if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+                glfwSetWindowShouldClose(window, true);
+                return;
+            }
+        
+            // Cycle input mode: GAME -> ULTRALIGHT -> CEF -> GAME
+            if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+                if (inputMode == INPUT_GAME)       inputMode = INPUT_ULTRALIGHT;
+                else if (inputMode == INPUT_ULTRALIGHT) inputMode = INPUT_CEF;
+                else                               inputMode = INPUT_GAME;
+                return;
+            }
+        
+            // Pause
+            // -----
+            if (key == GLFW_KEY_RIGHT_SHIFT && action == GLFW_PRESS && !pausePressed)
+            {
+                pausePressed = 1;
+        
+                // pause -> unpause
+                if (paused)
+                {
+                    firstMouse = true;
+                    lastXpos = static_cast<double>(lastX);
+                    lastYpos = static_cast<double>(lastY);
+                    glfwSetCursorPos(window, lastXpos, lastYpos);  // remove whiplash cursor jump
+                    // tell GLFW to capture our mouse
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    paused = 0;
+                }
+                // unpause -> pause
+                else
+                {
+                    // tell GLFW to uncapture our mouse
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                    paused = 1;
+                }
+            }
+            if (key == GLFW_KEY_RIGHT_SHIFT && action == GLFW_RELEASE && pausePressed) {
+                pausePressed = 0;
+            }
+        
+            
+            // --- ROUTE INPUT ---
+            if (inputMode == INPUT_ULTRALIGHT)
+            {
+                // Send to Ultralight
+                ultralight::KeyEvent evt;
+        
+                if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+                    evt.type = ultralight::KeyEvent::kType_RawKeyDown;
+                } else if (action == GLFW_RELEASE) {
+                    evt.type = ultralight::KeyEvent::kType_KeyUp;
+                } else return;
+        
+                evt.virtual_key_code = glfwToUltralightKey(key);
+                evt.native_key_code = scancode;
+                evt.modifiers = 0;
+        
+                ultralight::GetKeyIdentifierFromVirtualKeyCode(
+                    evt.virtual_key_code, evt.key_identifier);
+        
+                if (mods & GLFW_MOD_SHIFT) evt.modifiers |= ultralight::KeyEvent::kMod_ShiftKey;
+                if (mods & GLFW_MOD_CONTROL) evt.modifiers |= ultralight::KeyEvent::kMod_CtrlKey;
+                if (mods & GLFW_MOD_ALT) evt.modifiers |= ultralight::KeyEvent::kMod_AltKey;
+                if (key == GLFW_KEY_LEFT && (mods & GLFW_MOD_ALT)) {
+                    browser->GoBack();
+                }
+                if (key == GLFW_KEY_RIGHT && (mods & GLFW_MOD_ALT)) {
+                    browser->GoForward();
+                }
+        
+                browser->fireKeyEvent(evt);
+            }
+        
+            if (inputMode == INPUT_CEF) {
+                if (!state->cefClient->browser) return;
+                if (action == GLFW_REPEAT && key != GLFW_KEY_BACKSPACE) return;
+        
+                CefKeyEvent evt;
+                evt.windows_key_code = glfwToUltralightKey(key);
+                evt.native_key_code  = scancode;
+                evt.modifiers        = 0;
+                if (mods & GLFW_MOD_SHIFT)   evt.modifiers |= EVENTFLAG_SHIFT_DOWN;
+                if (mods & GLFW_MOD_CONTROL) evt.modifiers |= EVENTFLAG_CONTROL_DOWN;
+                if (mods & GLFW_MOD_ALT)     evt.modifiers |= EVENTFLAG_ALT_DOWN;
+        
+                if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+                    evt.type = KEYEVENT_RAWKEYDOWN;
+                    state->cefClient->browser->GetHost()->SendKeyEvent(evt);
+                } else if (action == GLFW_RELEASE) {
+                    evt.type = KEYEVENT_KEYUP;
+                    state->cefClient->browser->GetHost()->SendKeyEvent(evt);
+                }
+        
+        
+                if (key == GLFW_KEY_LEFT && (mods & GLFW_MOD_ALT)) {
+                    state->cefClient->browser->GoBack();
+                }
+                if (key == GLFW_KEY_RIGHT && (mods & GLFW_MOD_ALT)) {
+                    state->cefClient->browser->GoForward();
+                }
+            }
+        }
+        ```
+   
+        </details>
+  
+      * <details><summary> char_callback(...) </summary>
+     
+        ```cpp
+        void char_callback(GLFWwindow* window, unsigned int codepoint)
+        {
+            AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+            
+            if (inputMode == INPUT_ULTRALIGHT) {
+                if (!state->browser) return;
+        
+                char utf8[5] = {0};
+        
+                if (codepoint <= 0x7F) {
+                    utf8[0] = (char)codepoint;
+                }
+        
+                ultralight::KeyEvent evt;
+                evt.type = ultralight::KeyEvent::kType_Char;
+                evt.text = ultralight::String(utf8);
+                evt.unmodified_text = ultralight::String(utf8);
+        
+                state->browser->fireKeyEvent(evt);
+            }
+        
+            if (inputMode == INPUT_CEF) {
+                if (!state->cefClient->browser) return;
+        
+                CefKeyEvent evt;
+                evt.type                = KEYEVENT_CHAR;
+                evt.character           = (char16_t)codepoint;
+                evt.unmodified_character= (char16_t)codepoint;
+                evt.windows_key_code    = 0; // Do NOT set this to codepoint
+                evt.modifiers           = 0;
+                state->cefClient->browser->GetHost()->SendKeyEvent(evt);
+            }
+        }
+        ```
+  
+        </details>
+  
+      * <details><summary> Rename glfwToUltralightKey() to glfwToVirtualKey() and small addition </summary>
+  
+        * Added ``case GLFW_KEY_PERIOD;    return 0XBE; //VK_OEM_PERIOD``
+  
+        ```cpp
+        int glfwToVirtualKey(int key)
+        {
+            switch (key)
+            {
+                case GLFW_KEY_BACKSPACE: return 0x08; // VK_BACK
+                case GLFW_KEY_TAB:       return 0x09; // VK_TAB
+                case GLFW_KEY_ENTER:     return 0x0D; // VK_RETURN
+                case GLFW_KEY_ESCAPE:    return 0x1B; // VK_ESCAPE
+                case GLFW_KEY_SPACE:     return 0x20; // VK_SPACE
+        
+                case GLFW_KEY_LEFT:      return 0x25; // VK_LEFT
+                case GLFW_KEY_UP:        return 0x26; // VK_UP
+                case GLFW_KEY_RIGHT:     return 0x27; // VK_RIGHT
+                case GLFW_KEY_DOWN:      return 0x28; // VK_DOWN
+        
+                case GLFW_KEY_DELETE:    return 0x2E; // VK_DELETE
+                
+                case GLFW_KEY_PERIOD:    return 0xBE; // VK_OEM_PERIOD
+        
+                default:
+                    return key; // works for A-Z, 0-9
+            }
+        }
+        ```
+  
+        </details>
+      
+  * Adjustment to CMakeLists.txt
+  
+    * CEF is heavy, the ``libcef.so`` library in ``lib/cef/Release`` is **1.3GB!** This makes storing it in the GitHub repo not possible or ideal.
+    * The better approach would be to have CMake automatically download the tarball for CEF from the Spotify hosted website, extract it, store the necessary files in ``lib/cef``, and then copy the files needed at runtime into ``build/bin``.
+    * <details><summary> Inside the first if(UNIX) </summary>
+  
+      ```cmake
+      # CEF
+      # ---
+      set(CEF_VERSION "146.0.6+g68649e2+chromium-146.0.7680.154" CACHE STRING "CEF version")
+      set(CEF_ROOT ${CMAKE_SOURCE_DIR}/lib/cef)
+      set(CEF_DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/cef_download)
+      set(CEF_ARCHIVE ${CMAKE_BINARY_DIR}/cef.tar.bz2)
+      set(CEF_EXTRACTED_DIR ${CEF_DOWNLOAD_DIR}/extracted)
+  
+  
+      set(CEF_URL "https://cef-builds.spotifycdn.com/cef_binary_${CEF_VERSION}_linux64.tar.bz2")
+      
+      # -----------------------------------
+      # DOWNLOAD + EXTRACT (only if needed)
+      # -----------------------------------
+      if(NOT EXISTS ${CEF_ROOT}/Release/libcef.so)
+          message(STATUS "CEF NOT found. Downloading CEF...")
+      
+          file(MAKE_DIRECTORY ${CEF_DOWNLOAD_DIR})
+          
+          file(DOWNLOAD
+              ${CEF_URL}
+              ${CEF_ARCHIVE}
+              SHOW_PROGRESS
+          )
+      
+          message(STATUS "Extracting CEF...")
+      
+          file(ARCHIVE_EXTRACT
+              INPUT ${CEF_ARCHIVE}
+              DESTINATION ${CEF_EXTRACTED_DIR}
+          )
+      
+          # CEF extracts into a versioned folder
+          file(GLOB CEF_EXTRACTED_SUBDIR
+              ${CEF_EXTRACTED_DIR}/cef_binary_*
+          )
+  
+          list(GET CEF_EXTRACTED_SUBDIR 0 CEF_SRC_DIR)
+  
+          message(STATUS "Installing CEF to ${CEF_ROOT}...")
+  
+          file(MAKE_DIRECTORY ${CEF_ROOT})
+  
+          file(COPY
+              ${CEF_SRC_DIR}/include
+              ${CEF_SRC_DIR}/Release
+              ${CEF_SRC_DIR}/Resources
+              ${CEF_SRC_DIR}/libcef_dll
+              DESTINATION ${CEF_ROOT}
+          )
+      else()
+          message(STATUS "CEF found: ${CEF_ROOT}/Release/libcef.so")
+      endif()
+  
+      # -------------------------
+      # COPY lib/cef TO build/bin
+      # -------------------------
+      set(CEF_LIB_DIR ${CEF_ROOT}/Release)
+      
+      # Copy ALL runtime files (Release + Resources)
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_directory
+              ${CEF_ROOT}/Release
+              $<TARGET_FILE_DIR:${PROJECT_NAME}>
+      )
+      
+      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_directory
+              ${CEF_ROOT}/Resources
+              $<TARGET_FILE_DIR:${PROJECT_NAME}>
+      )
+      
+      # -----------------------------------------------------------
+      # CEF WRAPPER (recurse into ALL subdirectories of libcef_dll)
+      # -----------------------------------------------------------
+      file(GLOB_RECURSE CEF_WRAPPER_SOURCES CONFIGURE_DEPENDS
+          ${CEF_ROOT}/libcef_dll/*.cc
+      )
+      
+      add_library(cef_dll_wrapper STATIC ${CEF_WRAPPER_SOURCES})
+      
+      target_include_directories(cef_dll_wrapper PUBLIC
+          ${CEF_ROOT}
+          ${CEF_ROOT}/include
+      )
+      
+      target_compile_definitions(cef_dll_wrapper PUBLIC
+          LINUX
+          CEF_USE_SANDBOX=0
+          USING_CEF_SHARED
+          WRAPPING_CEF_SHARED
+      )
+  
+      # ----------------
+      # IMPORT libcef.so
+      # ----------------
+      add_library(libcef SHARED IMPORTED)
+      set_target_properties(libcef PROPERTIES
+          IMPORTED_LOCATION "${CEF_LIB_DIR}/libcef.so"
+          INTERFACE_INCLUDE_DIRECTORIES "${CEF_ROOT}/include"
+      )
+  
+      # --------------------------------------------------
+      # Tell the linker where to find libcef.so at runtime
+      # --------------------------------------------------
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN'")
+      ```
+  
+      </details>
+  
+    * Now CMake will check if CEF has been downloaded, if not, it will download it from the internet, extract it, and do all the linking and runtime handling.
+    * The last thing to do is add ``lib/cef`` to ``.gitignore``:
+   
+      ```
+      /lib/cef/
+      ```
+
+  * The result:
+
+    https://github.com/user-attachments/assets/aac100de-9699-4242-b60d-954dfa117417
+
+
+  * <details><summary> One last note on FFmpeg </summary>
+    
+    * I just remembered that I am setting FFmpeg's ``preset`` to ``ultrafast`` when doing real-time screen recording, as that prevents screen recording from being laggy. However this leads to the recordings being quite large, as ``ultrafast`` means FFmpeg sacrifices efficiency for speed.
+    * When storing videos on GitHub, they need to be <10MB. I previously just used HandBrake, but then I realized why not use FFmpeg, so I did:
+   
+      ```cmd
+      ffmpeg -i input.mp4 -crf 23 output.mp4
+      ```
+
+      and I noticed the video file went from 32MB straight down to 6MB which made me wonder why, considering the recording was using crf 23 initially too.
+
+    * Then I learned that FFmpeg's default ``preset`` is ``medium``. Which is why the the filesize was much smaller.
+    * Not only should you use ``crf`` to determine the level of compression, you should also specify the ``preset`` to determine the speed-efficiency trade-off.
+   
+    * So for storing videos on GitHub, I use this command:
+   
+      ```cmd
+      ffmpeg -i input.mp4 -crf 25 -preset slow output.mp4
+      ```
+
+      which means FFmpeg uses a compression level of ``crf 25`` and a ``slow`` preset, meaning it takes a while but is more efficient at storing the data.
+
+    </details>
+
+  * And finally when pushing to GitHub:
+
+    ```
+    git branch                       <-- check I am on the right branch
+    git status                       <-- check I am not tracking lib/cef/
+    git add .
+    git commit
+    git push -u origin cef-browser   <-- create remote branch, push to remote, and set upstream
+    ```
+    
+    
+</details>
+  
+<details><summary> Future additions </summary>
+
+  * Make it work on Windows
+  * Add audio to FFmpeg recording (stereo)
+  * Add toggle to make audio spatially correct (eminating from browser quad in 3D space)
+  * Add real-time eye tracking to move camera a slight angle. Or maybe track the nose (so that the user's eyes can focus on the screen, and increase sensitivity so user does not have to move face too far).
+  * Fix anti-aliasing when not recording (make it so that the toggle affects both recording ON and OFF, and make the toggle accessible at runtime).
+  * Add multiplayer with UDP/TCP networking, hosted on my home server?
 
 </details>
 
