@@ -21,6 +21,16 @@
 #include <AppCore/Platform.h>
 using namespace ultralight;
 
+// CEF
+// ---
+#include <gtk/gtk.h>
+#include <learnopengl/cef_app.h>
+#include <learnopengl/SimpleClient.h>
+#include <cef_command_line.h>
+#if defined(_WIN32)
+    CefEnableHighDPISupport();
+#endif
+
 // I/O and filesystem
 // ------------------
 #include <iostream>                     // for std::cin/cout/cerr
@@ -67,7 +77,7 @@ bool intersectRayPlane(glm::vec3 rayOrigin,
                        glm::vec3 planePoint,
                        glm::vec3 planeNormal,
                        glm::vec3& hitPoint);
-int glfwToUltralightKey(int key);
+int glfwToVirtualKey(int key);
 
 
 #define IMGUI               1
@@ -118,29 +128,73 @@ int lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY = 0;
 // browser
 // -------
 struct AppState {
+    // Ultralight
     Browser* browser;
+    glm::vec3 planePoint;
+    glm::vec3 planeNormal;
+    float quadWidth;
+    float quadHeight;
+    
+    // CEF
+    CefRefPtr<SimpleClient> cefClient;
+    CefRefPtr<CefBrowser> cefBrowser;
+    glm::vec3 cefPlanePoint;
+    glm::vec3 cefPlaneNormal;
+    float cefQuadWidth;
+    float cefQuadHeight;
 
+    // Shared
     glm::mat4* view;
     glm::mat4* projection;
 
-    glm::vec3 planePoint;
-    glm::vec3 planeNormal;
-
-    float quadWidth;
-    float quadHeight;
 };
 
 enum InputMode {
     INPUT_GAME,
-    INPUT_BROWSER
+    INPUT_ULTRALIGHT,
+    INPUT_CEF
 };
 
 InputMode inputMode = INPUT_GAME;
 
 
-
-int main()
+int main(int argc, char** argv)
 {
+    // CEF: initialization
+    // -------------------
+    // CEF main args
+    CefMainArgs main_args(argc, argv);
+
+    // Create app instance
+    CefRefPtr<SimpleApp> app = new SimpleApp();
+
+    // CRITICAL: subprocess handling
+    int exit_code = CefExecuteProcess(main_args, app, nullptr);
+    if (exit_code >= 0) {
+        return exit_code; // child process exits here
+    }
+
+    gtk_disable_setlocale(); // must be first, before CefInitialize or any GTK call
+
+    // CEF Settings
+    CefSettings settings;
+    auto exeDir = std::filesystem::canonical("/proc/self/exe").parent_path();
+
+    settings.no_sandbox = true; // required on Linux unless sandbox setup
+    settings.windowless_rendering_enabled = true; // Optional but useful
+
+    // Tell CEF to use our exe as the subprocess helper
+    CefString(&settings.root_cache_path)  = (exeDir / "cache").string();
+    CefString(&settings.cache_path)       = (exeDir / "cache/cache").string();
+    CefString(&settings.resources_dir_path) = exeDir.string();
+    CefString(&settings.locales_dir_path)   = (exeDir / "locales").string();
+    // Initialize CEF
+    if (!CefInitialize(main_args, settings, app, nullptr)) {
+        std::cerr << "CEF init failed\n";
+        return -1;
+    }
+
+    
     // glfw: initialize and configure
     // ------------------------------
     if( !glfwInit() ) {
@@ -617,9 +671,9 @@ int main()
     float encodeDiff, encodeTime = 0.0f;    // for encoding frames
     float crntTime = 0.0f;                  // current time (used by all)
 
-    
-    // BROWSER
-    // -------
+
+    // Generic floating quad
+    // ---------------------
     float quadVertices[] = {
         // positions          // texCoords
         -1.0f,  1.0f,  0.0f,  0.0f, 1.0f,
@@ -650,7 +704,12 @@ int main()
     glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
+    // ---------------------------------------------------
 
+    Shader browserShader("browser.vert", "browser.frag");
+
+    // ULTRALIGHT BROWSER
+    // ------------------
     GLuint browserTex;
     glGenTextures(1, &browserTex);
     glBindTexture(GL_TEXTURE_2D, browserTex);
@@ -686,14 +745,12 @@ int main()
     model_browser = glm::translate(model_browser, planePoint);
 
     // Scale to window-like shape
-    float browser_width = 3.2f;
+    float browser_width = 3.6f;//3.2f;
     float browser_height = 2.0f;
     model_browser = glm::scale(model_browser,
                                glm::vec3(browser_width/2,
                                          browser_height/2,
                                          1.0f));
-
-    Shader browserShader("browser.vert", "browser.frag");
 
     AppState state;
 
@@ -709,20 +766,82 @@ int main()
 
     // attach app state to window
     glfwSetWindowUserPointer(window, &state);
+    // ---------------------------------------------------
 
 
-    // render loop
+    // CEF BROWSER
+    // ---------------------------------------------------
+    GLuint cefTex;
+    glGenTextures(1, &cefTex);
+    glBindTexture(GL_TEXTURE_2D, cefTex);
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 768, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    // Create client
+    // CefRefPtr<SimpleClient> client = new SimpleClient(1024, 768);
+    CefRefPtr<SimpleClient> client = new SimpleClient(1280, 720);
+    CefWindowInfo window_info; // Create browser
+    window_info.SetAsWindowless(0); // 0 = no parent window, correct for offscreen
+    CefBrowserSettings browser_settings;
+    CefBrowserHost::CreateBrowser(
+        window_info,
+        client,                      // your SimpleClient
+        "https://www.google.com",    // starting URL
+        browser_settings,
+        nullptr,                     // no extra info
+        nullptr                      // no request context, uses global
+    );
+    
+    
+    // Separate transform (different pos to Ultralight)
+    glm::vec3 cefPlanePoint = glm::vec3(4.0f, 0.0f, 3.0f); // offset so they don't overlap
+    glm::vec3 cefPlaneNormal = glm::vec3(0.0f, 0.0f, 1.0f); // facing camera
+    glm::mat4 model_cef = glm::mat4(1.0f);
+    model_cef = glm::translate(model_cef, cefPlanePoint); // different X
+    model_cef = glm::scale(model_cef, glm::vec3(browser_width / 2, browser_height / 2, 1.0f));
+
+    state.cefClient = client;
+    state.cefPlanePoint  = cefPlanePoint;
+    state.cefPlaneNormal = cefPlaneNormal;
+    // state.cefBrowser is set async via OnAfterCreated
+    state.cefQuadWidth   = browser_width;
+    state.cefQuadHeight  = browser_height;
+    // ---------------------------------------------------
+
+
+    // vsync
+    int lastVsync = vsync;
+    glfwSwapInterval(vsync);    // vsync
+
+
+    // RENDER LOOP
     // -----------
     while (!glfwWindowShouldClose(window))
     {
-        glfwMakeContextCurrent(window);
-		crntTime = static_cast<float>(glfwGetTime()); // Updates counter and times
+
+        glfwPollEvents();           // take care of all GLFW events
+        
+        // Only update vsync when needed
+        if (vsync != lastVsync) {
+            glfwSwapInterval(vsync);    // vsync
+            lastVsync = vsync;
+        }
+
+        CefDoMessageLoopWork();
+
+        // glfwMakeContextCurrent(window);
+		
+        crntTime = static_cast<float>(glfwGetTime()); // Updates counter and times
         timeDiff = crntTime - prevTime; // for movement (time between frames)
         prevTime = crntTime;
+        
         // input
         // -----
         // glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         processInput(window, timeDiff, crntTime, encoder);
+        
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
             std::cerr << "[main] OpenGL Error: " << error << std::endl;
@@ -822,7 +941,30 @@ int main()
             	glDrawArrays(GL_TRIANGLES, 0, 6);
             	glBindVertexArray(0);
             	// ----------------------------------------------
-                
+            
+
+                // --- CEF (same VAO, different tex + transform) ---
+                auto& rh = client->renderHandler;
+                if (rh->dirty) {
+                    rh->dirty = false;
+                    glBindTexture(GL_TEXTURE_2D, cefTex);
+                    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+                                    rh->width, rh->height,
+                                    GL_BGRA, GL_UNSIGNED_BYTE,
+                                    rh->pixelBuffer.data());
+                }
+                browserShader.use(); // same shader works fine too
+                browserShader.setMat4("model", model_cef);
+                browserShader.setMat4("view", view);
+                browserShader.setMat4("projection", projection);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, cefTex);
+                browserShader.setInt("browserTexture", 0);
+                glBindVertexArray(quadVAO); // reused again
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+                glBindVertexArray(0);
+                // -------------------------------------------------
+
             
                 // draw the light cube object
                 lightShader.use();
@@ -1071,6 +1213,29 @@ int main()
         	glBindVertexArray(0);
         	// ----------------------------------------------
 
+            // --- CEF (same VAO, different tex + transform) ---
+            auto& rh = client->renderHandler;
+            if (rh->dirty) {
+                rh->dirty = false;
+                glBindTexture(GL_TEXTURE_2D, cefTex);
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+                                rh->width, rh->height,
+                                GL_BGRA, GL_UNSIGNED_BYTE,
+                                rh->pixelBuffer.data());
+            }
+            browserShader.use(); // same shader works fine too
+            browserShader.setMat4("model", model_cef);
+            browserShader.setMat4("view", view);
+            browserShader.setMat4("projection", projection);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cefTex);
+            browserShader.setInt("browserTexture", 0);
+            glBindVertexArray(quadVAO); // reused again
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindVertexArray(0);
+            // -------------------------------------------------
+
+
             // Render text in front: https://stackoverflow.com/a/5527249
             // glClear(GL_DEPTH_BUFFER_BIT);
             if (currentTextMode == TextTriState::TextAndAtlasON || currentTextMode == TextTriState::TextONAtlasOFF)
@@ -1110,8 +1275,6 @@ int main()
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);    // swap the BACK buffer with the FRONT buffer
-        glfwPollEvents();           // take care of all GLFW events
-        glfwSwapInterval(vsync);    // vsync
     }
 
     // std::cout << "[main] Setting recording to false\n";
@@ -1146,6 +1309,10 @@ int main()
     GUI::Exit();
     #endif
 
+    // CEF
+    // ---
+    CefShutdown();
+
     // Delete window before ending the program
 	glfwDestroyWindow(window);
 
@@ -1165,7 +1332,6 @@ int main()
 void processInput(GLFWwindow *window, float timeDiff, float crntTime, std::unique_ptr<Encoder> &encoder) {
     
     // disable game controls (exc. pause) when browser active
-    // if ((inputMode != INPUT_GAME) && (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) != GLFW_PRESS))
     if (inputMode != INPUT_GAME)
         return; 
 
@@ -1560,19 +1726,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // -------------------------------------------------------
 void cursor_pos_callback(GLFWwindow* window, double xposIn, double yposIn) {
     using namespace Settings;
-
     AppState* state = (AppState*)glfwGetWindowUserPointer(window);
-    Browser* browser = state->browser;
-    
-    glm::mat4& view = *state->view;
-    glm::mat4& projection = *state->projection;
-    
-    glm::vec3 planePoint = state->planePoint;
-    glm::vec3 planeNormal = state->planeNormal;
-    
-    float quadWidth = state->quadWidth;
-    float quadHeight = state->quadHeight;
-
     // mouse pos
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
@@ -1599,29 +1753,55 @@ void cursor_pos_callback(GLFWwindow* window, double xposIn, double yposIn) {
     // only update cursor pos for browser when paused
     if (paused)
     {
-        glm::vec3 rayDir = getMouseRay(xpos, ypos, projection, view);
+        // --- Ultralight ---
+        if (inputMode == INPUT_ULTRALIGHT) {
+            if (!state->browser) return;
         
-        glm::vec3 hitPoint;
-        if (intersectRayPlane(camera.Position, rayDir, planePoint, planeNormal, hitPoint))
-        {
-            glm::vec3 local = hitPoint - planePoint;
-        
-            float u = (local.x / quadWidth) + 0.5f;
-            float v = (local.y / quadHeight) + 0.5f;
-            v = 1.0f - v;
-        
-            if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+            glm::vec3 rayDir = getMouseRay(xpos, ypos, *state->projection, *state->view);
+            
+            glm::vec3 hitPoint;
+            if (intersectRayPlane(camera.Position, rayDir, state->planePoint, state->planeNormal, hitPoint))
             {
-                int px = (int)(u * browser->getWidth());
-                int py = (int)(v * browser->getHeight());
-        
-                ultralight::MouseEvent evt;
-                evt.type = ultralight::MouseEvent::kType_MouseMoved;
-                evt.x = px;
-                evt.y = py;
-                evt.button = ultralight::MouseEvent::kButton_None;
-        
-                browser->fireMouseEvent(evt);
+                glm::vec3 local = hitPoint - state->planePoint;
+            
+                float u = (local.x / state->quadWidth) + 0.5f;
+                float v = (local.y / state->quadHeight) + 0.5f;
+                v = 1.0f - v;
+            
+                if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+                {
+                    int px = (int)(u * state->browser->getWidth());
+                    int py = (int)(v * state->browser->getHeight());
+            
+                    ultralight::MouseEvent evt;
+                    evt.type = ultralight::MouseEvent::kType_MouseMoved;
+                    evt.x = px;
+                    evt.y = py;
+                    evt.button = ultralight::MouseEvent::kButton_None;
+            
+                    state->browser->fireMouseEvent(evt);
+                }
+            }
+        }
+
+        // --- CEF ---
+        if (inputMode == INPUT_CEF) {
+            if (!state->cefClient->browser) return;
+            
+            glm::vec3 rayDir = getMouseRay(xpos, ypos, *state->projection, *state->view);
+            glm::vec3 hitPoint;
+            
+            if (intersectRayPlane(camera.Position, rayDir, state->cefPlanePoint, state->cefPlaneNormal, hitPoint)) {
+                glm::vec3 local = hitPoint - state->cefPlanePoint;
+                float u = (local.x / state->cefQuadWidth) + 0.5f;
+                float v = 1.0f - ((local.y / state->cefQuadHeight) + 0.5f);
+                if (u >= 0 && u <= 1 && v >= 0 && v <= 1) {
+                    int px = (int)(u * state->cefClient->renderHandler->width);
+                    int py = (int)(v * state->cefClient->renderHandler->height);
+                    CefMouseEvent evt;
+                    evt.x = px; evt.y = py; evt.modifiers = 0;
+                    state->cefClient->browser->GetHost()->SendMouseMoveEvent(evt, false);
+                }
             }
         }
     }
@@ -1635,20 +1815,29 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     if (inputMode == INPUT_GAME)
         camera.ProcessMouseScroll(static_cast<float>(yoffset));
 
-    // browser
-    if (inputMode != INPUT_GAME) {
-        AppState* state = (AppState*)glfwGetWindowUserPointer(window);
-        Browser* browser = state->browser;
-        
-        if (inputMode != INPUT_BROWSER) return;
-        if (!browser) return;
+    AppState* state = (AppState*)glfwGetWindowUserPointer(window);
+    
+    // ULTRALIGHT
+    if (inputMode == INPUT_ULTRALIGHT) {
+        if (!state->browser) return;
         
         ultralight::ScrollEvent evt;
         evt.type = ultralight::ScrollEvent::kType_ScrollByPixel;
         evt.delta_x = (int)xoffset * 50;  // tweak sensitivity
         evt.delta_y = (int)yoffset * 50;
         
-        browser->fireScrollEvent(evt);
+        state->browser->fireScrollEvent(evt);
+    }
+
+    // CEF
+    if (inputMode == INPUT_CEF) {
+        if (!state->cefClient->browser) return;
+        
+        CefMouseEvent evt;
+        evt.x = 0; evt.y = 0; evt.modifiers = 0; // position doesn't matter for scroll
+        state->cefClient->browser->GetHost()->SendMouseWheelEvent(evt,
+            (int)(xoffset * 50),
+            (int)(yoffset * 50));
     }
 }
 
@@ -1739,6 +1928,38 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             }
         }
     }
+
+
+    // --- CEF ---
+    // if (inputMode == INPUT_CEF) {
+    if (1) {
+        if (!state->cefClient->browser) return;
+        if (button != GLFW_MOUSE_BUTTON_LEFT) return;
+
+        double mouseX, mouseY;
+        glfwGetCursorPos(window, &mouseX, &mouseY);
+        glm::vec3 rayDir = getMouseRay(mouseX, mouseY, *state->projection, *state->view);
+        glm::vec3 hitPoint;
+
+        if (intersectRayPlane(camera.Position, rayDir, state->cefPlanePoint, state->cefPlaneNormal, hitPoint)) {
+            glm::vec3 local = hitPoint - state->cefPlanePoint;
+            float u = (local.x / state->cefQuadWidth) + 0.5f;
+            float v = 1.0f - ((local.y / state->cefQuadHeight) + 0.5f);
+
+            if (u >= 0 && u <= 1 && v >= 0 && v <= 1) {
+                int px = (int)(u * state->cefClient->renderHandler->width);
+                int py = (int)(v * state->cefClient->renderHandler->height);
+
+                CefMouseEvent evt;
+                evt.x = px; evt.y = py; evt.modifiers = 0;
+
+                CefBrowserHost::MouseButtonType btnType = MBT_LEFT;
+                bool mouseUp = (action == GLFW_RELEASE);
+                state->cefClient->browser->GetHost()->SendMouseClickEvent(evt, btnType, mouseUp, 1);
+            }
+        }
+    }
+
 }
 
 
@@ -1755,8 +1976,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         return;
     }
 
+    // Cycle input mode: GAME -> ULTRALIGHT -> CEF -> GAME
     if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
-        inputMode = (inputMode == INPUT_GAME) ? INPUT_BROWSER : INPUT_GAME;
+        if (inputMode == INPUT_GAME)       inputMode = INPUT_ULTRALIGHT;
+        else if (inputMode == INPUT_ULTRALIGHT) inputMode = INPUT_CEF;
+        else                               inputMode = INPUT_GAME;
         return;
     }
 
@@ -1791,7 +2015,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
     
     // --- ROUTE INPUT ---
-    if (inputMode == INPUT_BROWSER)
+    if (inputMode == INPUT_ULTRALIGHT)
     {
         // Send to Ultralight
         ultralight::KeyEvent evt;
@@ -1802,7 +2026,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             evt.type = ultralight::KeyEvent::kType_KeyUp;
         } else return;
 
-        evt.virtual_key_code = glfwToUltralightKey(key);
+        evt.virtual_key_code = glfwToVirtualKey(key);
         evt.native_key_code = scancode;
         evt.modifiers = 0;
 
@@ -1821,29 +2045,70 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
         browser->fireKeyEvent(evt);
     }
+
+    if (inputMode == INPUT_CEF) {
+        if (!state->cefClient->browser) return;
+        if (action == GLFW_REPEAT && key != GLFW_KEY_BACKSPACE) return;
+
+        CefKeyEvent evt;
+        evt.windows_key_code = glfwToVirtualKey(key);
+        evt.native_key_code  = scancode;
+        evt.modifiers        = 0;
+        if (mods & GLFW_MOD_SHIFT)   evt.modifiers |= EVENTFLAG_SHIFT_DOWN;
+        if (mods & GLFW_MOD_CONTROL) evt.modifiers |= EVENTFLAG_CONTROL_DOWN;
+        if (mods & GLFW_MOD_ALT)     evt.modifiers |= EVENTFLAG_ALT_DOWN;
+
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+            evt.type = KEYEVENT_RAWKEYDOWN;
+            state->cefClient->browser->GetHost()->SendKeyEvent(evt);
+        } else if (action == GLFW_RELEASE) {
+            evt.type = KEYEVENT_KEYUP;
+            state->cefClient->browser->GetHost()->SendKeyEvent(evt);
+        }
+
+
+        if (key == GLFW_KEY_LEFT && (mods & GLFW_MOD_ALT)) {
+            state->cefClient->browser->GoBack();
+        }
+        if (key == GLFW_KEY_RIGHT && (mods & GLFW_MOD_ALT)) {
+            state->cefClient->browser->GoForward();
+        }
+    }
 }
 
 
 void char_callback(GLFWwindow* window, unsigned int codepoint)
 {
     AppState* state = (AppState*)glfwGetWindowUserPointer(window);
-    Browser* browser = state->browser;
+    
+    if (inputMode == INPUT_ULTRALIGHT) {
+        if (!state->browser) return;
 
-    if (inputMode != INPUT_BROWSER) return;
-    if (!browser) return;
+        char utf8[5] = {0};
 
-    char utf8[5] = {0};
+        if (codepoint <= 0x7F) {
+            utf8[0] = (char)codepoint;
+        }
 
-    if (codepoint <= 0x7F) {
-        utf8[0] = (char)codepoint;
+        ultralight::KeyEvent evt;
+        evt.type = ultralight::KeyEvent::kType_Char;
+        evt.text = ultralight::String(utf8);
+        evt.unmodified_text = ultralight::String(utf8);
+
+        state->browser->fireKeyEvent(evt);
     }
 
-    ultralight::KeyEvent evt;
-    evt.type = ultralight::KeyEvent::kType_Char;
-    evt.text = ultralight::String(utf8);
-    evt.unmodified_text = ultralight::String(utf8);
+    if (inputMode == INPUT_CEF) {
+        if (!state->cefClient->browser) return;
 
-    browser->fireKeyEvent(evt);
+        CefKeyEvent evt;
+        evt.type                = KEYEVENT_CHAR;
+        evt.character           = (char16_t)codepoint;
+        evt.unmodified_character= (char16_t)codepoint;
+        evt.windows_key_code    = 0; // Do NOT set this to codepoint
+        evt.modifiers           = 0;
+        state->cefClient->browser->GetHost()->SendKeyEvent(evt);
+    }
 }
 
 
@@ -1992,7 +2257,7 @@ bool intersectRayPlane(glm::vec3 rayOrigin,
     return true;
 }
 
-int glfwToUltralightKey(int key)
+int glfwToVirtualKey(int key)
 {
     switch (key)
     {
@@ -2008,6 +2273,8 @@ int glfwToUltralightKey(int key)
         case GLFW_KEY_DOWN:      return 0x28; // VK_DOWN
 
         case GLFW_KEY_DELETE:    return 0x2E; // VK_DELETE
+        
+        case GLFW_KEY_PERIOD:    return 0xBE; // VK_OEM_PERIOD
 
         default:
             return key; // works for A-Z, 0-9

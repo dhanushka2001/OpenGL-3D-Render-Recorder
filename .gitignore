@@ -17,6 +17,11 @@
 /lib/imgui/
 /lib/implot/
 /lib/learnopengl/
+/lib/cef/
 
 # Ignore temp folder
 /temp/
+
+# Miscellaneous
+/build old/
+/lib/cef old/

@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.31)
 project(OpenGL-3D-Render-Recorder VERSION 1.2.0)
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 		 17)
+set(CMAKE_CXX_STANDARD 		 20)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS	 ON)
 
@@ -30,6 +30,8 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/freetype2
     ${CMAKE_SOURCE_DIR}/include/ultralight
+    # ${CMAKE_SOURCE_DIR}/lib/cef/include
+    # ${CMAKE_SOURCE_DIR}/lib/cef/libcef_dll
 )
 if(WIN32)
 include_directories(
@@ -62,20 +64,125 @@ if(UNIX)
         COMMENT "Syncing assets and shaders using rsync"
     )
     
-    # Set library folder
+    # ULTRALIGHT
     set(ULTRALIGHT_LIB_DIR ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/bin)
-    
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/bin
         ${CMAKE_BINARY_DIR}/bin
     )
-    
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/resources
         ${CMAKE_BINARY_DIR}/bin/resources
     )
+
+    # CEF
+    # ---
+    set(CEF_VERSION "146.0.6+g68649e2+chromium-146.0.7680.154" CACHE STRING "CEF version")
+    set(CEF_ROOT ${CMAKE_SOURCE_DIR}/lib/cef)
+    set(CEF_DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/cef_download)
+    set(CEF_ARCHIVE ${CMAKE_BINARY_DIR}/cef.tar.bz2)
+    set(CEF_EXTRACTED_DIR ${CEF_DOWNLOAD_DIR}/extracted)
+
+
+    set(CEF_URL "https://cef-builds.spotifycdn.com/cef_binary_${CEF_VERSION}_linux64.tar.bz2")
+    
+    # -----------------------------------
+    # DOWNLOAD + EXTRACT (only if needed)
+    # -----------------------------------
+    if(NOT EXISTS ${CEF_ROOT}/Release/libcef.so)
+        message(STATUS "CEF NOT found. Downloading CEF...")
+    
+        file(MAKE_DIRECTORY ${CEF_DOWNLOAD_DIR})
+        
+        file(DOWNLOAD
+            ${CEF_URL}
+            ${CEF_ARCHIVE}
+            SHOW_PROGRESS
+        )
+    
+        message(STATUS "Extracting CEF...")
+    
+        file(ARCHIVE_EXTRACT
+            INPUT ${CEF_ARCHIVE}
+            DESTINATION ${CEF_EXTRACTED_DIR}
+        )
+    
+        # CEF extracts into a versioned folder
+        file(GLOB CEF_EXTRACTED_SUBDIR
+            ${CEF_EXTRACTED_DIR}/cef_binary_*
+        )
+
+        list(GET CEF_EXTRACTED_SUBDIR 0 CEF_SRC_DIR)
+
+        message(STATUS "Installing CEF to ${CEF_ROOT}...")
+
+        file(MAKE_DIRECTORY ${CEF_ROOT})
+
+        file(COPY
+            ${CEF_SRC_DIR}/include
+            ${CEF_SRC_DIR}/Release
+            ${CEF_SRC_DIR}/Resources
+            ${CEF_SRC_DIR}/libcef_dll
+            DESTINATION ${CEF_ROOT}
+        )
+    else()
+        message(STATUS "CEF found: ${CEF_ROOT}/Release/libcef.so")
+    endif()
+
+    # -------------------------
+    # COPY lib/cef TO build/bin
+    # -------------------------
+    set(CEF_LIB_DIR ${CEF_ROOT}/Release)
+    
+    # Copy ALL runtime files (Release + Resources)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CEF_ROOT}/Release
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    )
+    
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CEF_ROOT}/Resources
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    )
+    
+    # -----------------------------------------------------------
+    # CEF WRAPPER (recurse into ALL subdirectories of libcef_dll)
+    # -----------------------------------------------------------
+    file(GLOB_RECURSE CEF_WRAPPER_SOURCES CONFIGURE_DEPENDS
+        ${CEF_ROOT}/libcef_dll/*.cc
+    )
+    
+    add_library(cef_dll_wrapper STATIC ${CEF_WRAPPER_SOURCES})
+    
+    target_include_directories(cef_dll_wrapper PUBLIC
+        ${CEF_ROOT}
+        ${CEF_ROOT}/include
+    )
+    
+    target_compile_definitions(cef_dll_wrapper PUBLIC
+        LINUX
+        CEF_USE_SANDBOX=0
+        USING_CEF_SHARED
+        WRAPPING_CEF_SHARED
+    )
+
+    # ----------------
+    # IMPORT libcef.so
+    # ----------------
+    add_library(libcef SHARED IMPORTED)
+    set_target_properties(libcef PROPERTIES
+        IMPORTED_LOCATION "${CEF_LIB_DIR}/libcef.so"
+        INTERFACE_INCLUDE_DIRECTORIES "${CEF_ROOT}/include"
+    )
+
+    # --------------------------------------------------
+    # Tell the linker where to find libcef.so at runtime
+    # --------------------------------------------------
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN'")
 endif(UNIX)
 
 if(WIN32)
@@ -150,6 +257,8 @@ if(WIN32)
     #     VERBATIM
     # )
 endif(WIN32)
+
+
 
 # # Add the browser function library
 # add_library(browser STATIC
@@ -263,13 +372,18 @@ if(UNIX)
     pkg_check_modules(FREETYPE2 REQUIRED IMPORTED_TARGET
         freetype2
     )
+    pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET
+        gtk+-3.0
+    )
     target_include_directories(${PROJECT_NAME} PRIVATE
         ${X264_INCLUDE_DIRS}
         ${FFMPEG_INCLUDE_DIRS}
         ${FREETYPE2_INCLUDE_DIRS}
+        ${GTK3_INCLUDE_DIRS}
     )
     message(STATUS "FFMPEG include dirs: ${FFMPEG_INCLUDE_DIRS}")
     message(STATUS "X264 include dirs: ${X264_INCLUDE_DIRS}")
+    message(STATUS "FREETYPE2 include dirs: ${FREETYPE2_INCLUDE_DIRS}")
     target_link_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_SOURCE_DIR}/lib/ultralight/linux/lib
     )
@@ -288,14 +402,21 @@ if(UNIX)
         PkgConfig::X264
         PkgConfig::FREETYPE2
     
-        # Linux OpenGL / system libs
-        -lpthread -ldl -lm
-
         # Ultralight shared libs — use full paths
         ${ULTRALIGHT_LIB_DIR}/libAppCore.so
         ${ULTRALIGHT_LIB_DIR}/libWebCore.so
         ${ULTRALIGHT_LIB_DIR}/libUltralightCore.so
         ${ULTRALIGHT_LIB_DIR}/libUltralight.so
+
+        # GTK
+        ${GTK3_LIBRARIES}
+        
+        # CEF
+        cef_dll_wrapper
+        libcef
+        
+        # Linux OpenGL / system libs
+        X11 pthread dl m
     )
 endif(UNIX)
 
