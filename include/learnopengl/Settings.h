@@ -5,6 +5,7 @@
 #include <string>
 #include <atomic>
 #include <mutex>
+#include <learnopengl/camera.h>
 
 namespace Settings {
     // possibly add sub-namespaces like Screen, Camera, etc.
@@ -59,6 +60,51 @@ namespace Settings {
 
     // inline std::mutex coutMutex;
     extern std::mutex coutMutex;
+
+
+
+    // uniform variables
+    // -----------------
+    extern float   mixValue;
+    extern float   xOffset ;
+    extern float   yOffset ;
+    extern float   zOffset ;
+    extern float   fov     ;
+    extern float   camX    ;
+    extern float   camY    ;
+    extern float   camZ    ;
+
+    // camera
+    // ------
+    extern Camera camera;
+    extern float   lastX;
+    extern float   lastY;
+    extern double lastXpos;
+    extern double lastYpos;
+    extern bool    firstMouse;
+
+    // button press
+    // ------------
+    extern bool pboPressed ;
+    extern bool flipPressed;
+    extern bool pausePressed;
+    extern bool vsyncPressed;
+    extern bool f11Pressed  ;
+    extern bool wireframePressed;
+    extern bool imguiPressed    ;
+    extern bool atlasPressed    ;
+    extern bool recordPressed   ;
+    extern bool encoderPressed  ;
+
+    // window
+    // ------
+    extern int window_xPos, window_yPos;
+    extern int window_width, window_height;
+    extern int left, top, right, bottom;
+
+    // viewport
+    // --------
+    extern int lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY;
 }
 
 #endif /* SETTINGS_H */

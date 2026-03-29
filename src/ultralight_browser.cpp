@@ -1,4 +1,4 @@
-#include <learnopengl/browser.h>
+#include <learnopengl/ultralight_browser.h>
 #include <Ultralight/Ultralight.h>
 #include <Ultralight/platform/Platform.h>
 #include <AppCore/AppCore.h>
@@ -6,15 +6,15 @@
 
 using namespace ultralight;
 
-bool Browser::init(int w, int h, const char* url) {
+bool UltralightBrowser::init(int w, int h, const char* url) {
     width = w;
     height = h;
 
-    printf("[browser] STEP 1: create renderer\n");
+    printf("[UltralightBrowser] STEP 1: create renderer\n");
 
     renderer = ultralight::Renderer::Create();
 
-    printf("[browser] STEP 2: create view\n");
+    printf("[UltralightBrowser] STEP 2: create view\n");
 
     ultralight::ViewConfig view_config;
     view_config.is_accelerated = false; // CPU path
@@ -22,23 +22,23 @@ bool Browser::init(int w, int h, const char* url) {
 
     view = renderer->CreateView(width, height, view_config, nullptr);
 
-    printf("[browser] STEP 3: load URL\n");
+    printf("[UltralightBrowser] STEP 3: load URL\n");
 
     view->LoadURL(url);
 
     return true;
 }
 
-void Browser::update() {
+void UltralightBrowser::update() {
     renderer->Update();
 }
 
-void Browser::render() {
+void UltralightBrowser::render() {
     renderer->RefreshDisplay(0);
     renderer->Render();
 }
 
-unsigned char* Browser::getPixels() {
+unsigned char* UltralightBrowser::getPixels() {
     ultralight::Surface* surface = view->surface();
     if (!surface) return nullptr;
 
@@ -48,7 +48,7 @@ unsigned char* Browser::getPixels() {
     return (unsigned char*)bitmap->LockPixels();
 }
 
-void Browser::unlockPixels() {
+void UltralightBrowser::unlockPixels() {
     ultralight::Surface* surface = view->surface();
     if (!surface) return;
 
@@ -58,28 +58,27 @@ void Browser::unlockPixels() {
     bitmap->UnlockPixels();
 }
 
-void Browser::fireMouseEvent(const ultralight::MouseEvent& evt)
-{
+void UltralightBrowser::fireMouseEvent(const ultralight::MouseEvent& evt) {
     if (view)
         view->FireMouseEvent(evt);
 }
 
-void Browser::fireKeyEvent(const ultralight::KeyEvent& evt) {
+void UltralightBrowser::fireKeyEvent(const ultralight::KeyEvent& evt) {
     if (view)
         view->FireKeyEvent(evt);
 }
 
-void Browser::fireScrollEvent(const ultralight::ScrollEvent& evt) {
+void UltralightBrowser::fireScrollEvent(const ultralight::ScrollEvent& evt) {
     if (view)
         view->FireScrollEvent(evt);
 }
 
-void Browser::GoBack() {
+void UltralightBrowser::GoBack() {
     if (view)
         view->GoBack();
 }
 
-void Browser::GoForward() {
+void UltralightBrowser::GoForward() {
     if (view)
         view->GoForward();
 }

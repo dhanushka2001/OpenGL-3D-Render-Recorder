@@ -1,6 +1,11 @@
 #pragma once
+
 #include <cef_client.h>
 #include <cef_render_handler.h>
+// #include <cef_command_line.h>
+#if defined(_WIN32)
+    CefEnableHighDPISupport();
+#endif
 #include <vector>
 #include <cstring>
 
@@ -34,21 +39,6 @@ public:
 
     IMPLEMENT_REFCOUNTING(SimpleRenderHandler);
 };
-
-// class SimpleClient : public CefClient {
-// public:
-//     CefRefPtr<SimpleRenderHandler> renderHandler;
-//
-//     SimpleClient(int w, int h) {
-//         renderHandler = new SimpleRenderHandler(w, h);
-//     }
-//
-//     CefRefPtr<CefRenderHandler> GetRenderHandler() override {
-//         return renderHandler;
-//     }
-//
-//     IMPLEMENT_REFCOUNTING(SimpleClient);
-// };
 
 class SimpleClient : public CefClient, public CefLifeSpanHandler {
 public:

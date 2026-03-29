@@ -10,7 +10,7 @@
 
 TextRenderer::TextRenderer(FontManager &fm)
     : fontManager(fm),
-      textShader("text_shader.vert", "text_shader.frag"),
+      textShader("text.vert", "text.frag"),
       atlasShader("atlas.vert", "atlas.frag")
 {
     // set up vertex data (and buffer(s)) and configure vertex attributes for text

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <Ultralight/Ultralight.h>
+#include <AppCore/Platform.h>
+using namespace ultralight;
 
-class Browser {
+class UltralightBrowser {
 public:
     bool init(int width, int height, const char* url);
 

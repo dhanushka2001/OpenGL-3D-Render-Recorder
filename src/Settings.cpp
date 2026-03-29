@@ -29,4 +29,49 @@ namespace Settings {
     std::string             g_preset        = "ultrafast";
     std::string             g_crf           = "23";
     std::mutex 		        coutMutex;
+
+
+    // uniform variables
+    // -----------------
+    float   mixValue    =   0.3f;
+    float   xOffset     =   0.0f;
+    float   yOffset     =   0.0f;
+    float   zOffset     =   0.0f;
+    float   fov         =  45.0f;
+    float   camX        =   0.0f;
+    float   camY        =   0.0f;
+    float   camZ        =  -4.5f;
+
+    // camera
+    // ------
+    Camera camera(glm::vec3(0.0f, 0.0f, 10.0f));
+    float   lastX       = 0;
+    float   lastY       = 0;
+    double lastXpos     = 0;
+    double lastYpos     = 0;
+    bool    firstMouse  = true;
+
+    // button press
+    // ------------
+    bool pboPressed         = false;
+    bool flipPressed        = false;
+    bool pausePressed       = false;
+    bool vsyncPressed       = false;
+    bool f11Pressed         = false;
+    bool wireframePressed   = false;
+    bool imguiPressed       = false;
+    bool atlasPressed       = false;
+    bool recordPressed      = false;
+    bool encoderPressed     = false;
+
+    // window
+    // ------
+    int window_xPos, window_yPos = 0;
+    int window_width, window_height;
+    int left, top, right, bottom;
+
+    // viewport
+    // --------
+    int lowerLeftCornerOfViewportX, lowerLeftCornerOfViewportY = 0;
+
 }

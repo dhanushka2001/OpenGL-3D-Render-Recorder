@@ -22,7 +22,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(SOURCES
     src/main.cpp
     src/third_party/glad.c
-    src/browser.cpp
+    src/ultralight_browser.cpp
+    #src/cef_integration.cpp
+    src/input_callbacks.cpp
 )
 
 # Include headers for FFmpeg and others
