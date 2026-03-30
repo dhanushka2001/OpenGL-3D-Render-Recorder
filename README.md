@@ -40,7 +40,7 @@ Real-time 3D renderer in C++ with OpenGL (GLFW).
 
   https://github.com/user-attachments/assets/42302c57-c271-4abd-94db-ce613ee547f0
 
-* **NEW:** Interactive Chromium web-browser using [Chromium Embedded Framework (CEF)](https://cef-builds.spotifycdn.com/index.html#linux64), rendered to a floating quad. (Only available on **Linux** in the ``cef-browser`` branch. See [Progress Update 19](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder?tab=readme-ov-file#progress-update-19---chromium-embedded-framework-cef---250326)).
+* **NEW:** Interactive Chromium web-browser using [Chromium Embedded Framework (CEF)](https://cef-builds.spotifycdn.com/index.html#linux64), rendered to a floating quad. (Only available on **Linux** in the ``cef-browser`` branch. See [Progress Update 19](https://github.com/dhanushka2001/OpenGL-3D-Render-Recorder?tab=readme-ov-file#progress-update-19---chromium-embedded-framework-cef-web-browser---250326)).
 
   https://github.com/user-attachments/assets/aac100de-9699-4242-b60d-954dfa117417
 
