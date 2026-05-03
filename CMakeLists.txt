@@ -6,6 +6,9 @@ cmake_minimum_required(VERSION 3.31)
 # Project name and version
 project(OpenGL-3D-Render-Recorder VERSION 1.2.0)
 
+# for LazyVim
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 		 20)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
@@ -25,6 +28,7 @@ set(SOURCES
     src/ultralight_browser.cpp
     #src/cef_integration.cpp
     src/input_callbacks.cpp
+    src/third_party/miniaudio_impl.cpp
 )
 
 # Include headers for FFmpeg and others
