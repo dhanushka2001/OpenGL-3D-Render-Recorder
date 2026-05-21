@@ -1,6 +1,8 @@
 BasedOnStyle: LLVM
 IndentWidth: 4
+TabWidth: 4
+UseTab: Never # Ensures tabs are converted to spaces
 NamespaceIndentation: All
-ColumnLimit: 80
+ColumnLimit: 90
 IndentPPDirectives: BeforeHash
 SortIncludes: false

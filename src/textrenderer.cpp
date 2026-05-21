@@ -9,19 +9,17 @@
 #include <vector>
 
 TextRenderer::TextRenderer(FontManager &fm)
-    : fontManager(fm),
-      textShader("text.vert", "text.frag"),
-      atlasShader("atlas.vert", "atlas.frag")
-{
+    : fontManager(fm), textShader("text.vert", "text.frag"),
+      atlasShader("atlas.vert", "atlas.frag") {
     // set up vertex data (and buffer(s)) and configure vertex attributes for text
     glGenVertexArrays(1, &textVAO);
     glGenBuffers(1, &textVBO);
 
     glBindVertexArray(textVAO);
-    
+
     glBindBuffer(GL_ARRAY_BUFFER, textVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
-    
+
     // Position and texture attribute
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
     glEnableVertexAttribArray(0);
@@ -30,8 +28,7 @@ TextRenderer::TextRenderer(FontManager &fm)
     glGenVertexArrays(1, &dummyVAO);
 }
 
-TextRenderer::~TextRenderer()
-{
+TextRenderer::~TextRenderer() {
     textShader.Delete();
     atlasShader.Delete();
     glDeleteVertexArrays(1, &textVAO);
@@ -40,7 +37,8 @@ TextRenderer::~TextRenderer()
 }
 
 // multiple draw calls for each character in text
-void TextRenderer::renderText(const std::string &text, float x, float y, float scale, glm::vec3 color, const std::string &fontName) {
+void TextRenderer::renderText(const std::string &text, float x, float y, float scale,
+                              glm::vec3 color, const std::string &fontName) {
     using namespace Settings;
 
     Font *font = fontManager.getFont(fontName);
@@ -64,7 +62,9 @@ void TextRenderer::renderText(const std::string &text, float x, float y, float s
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Set up the transformation matrix for the text position
-    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
+    glm::mat4 projection = glm::ortho(
+        0.0f, static_cast<float>(SCR_WIDTH), 0.0f,
+        static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
     textShader.setMat4("projection", projection);
 
     glBindVertexArray(textVAO);
@@ -88,29 +88,32 @@ void TextRenderer::renderText(const std::string &text, float x, float y, float s
 
         // Update VBO
         float tx = glyph.textureX;
-        float ty = glyph.textureY; 
+        float ty = glyph.textureY;
         float tw = glyph.width / atlasWidth;
         float th = glyph.height / atlasHeight;
 
         float vertices[6][4] = {
-        // positions          // texture coords
-            { xpos,     ypos + h,   tx,      ty + th }, // Top-left
-            { xpos,     ypos,       tx,      ty      }, // Bottom-left
-            { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
+            // positions          // texture coords
+            {xpos, ypos + h, tx, ty + th}, // Top-left
+            {xpos, ypos, tx, ty},          // Bottom-left
+            {xpos + w, ypos, tx + tw, ty}, // Bottom-right
 
-            { xpos,     ypos + h,   tx,      ty + th }, // Top-left
-            { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
-            { xpos + w, ypos + h,   tx + tw, ty + th }  // Top-right
+            {xpos, ypos + h, tx, ty + th},         // Top-left
+            {xpos + w, ypos, tx + tw, ty},         // Bottom-right
+            {xpos + w, ypos + h, tx + tw, ty + th} // Top-right
         };
 
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);            // ideal for small subset updates
-        // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW); // better for reallocating and initializing large buffers
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices),
+                        vertices); // ideal for small subset updates
+        // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW); //
+        // better for reallocating and initializing large buffers
 
         // Render quad
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         // Advance cursor
-        x += (glyph.advanceX >> 6) * scale; // Advance in pixels (1/64th units) to next character
+        x += (glyph.advanceX >> 6) *
+             scale; // Advance in pixels (1/64th units) to next character
     }
 
     // Cleanup
@@ -120,7 +123,8 @@ void TextRenderer::renderText(const std::string &text, float x, float y, float s
 }
 
 // single draw call (~10x faster)
-void TextRenderer::renderTextFast(const std::string &text, float x, float y, float scale, glm::vec3 color, const std::string &fontName) {
+void TextRenderer::renderTextFast(const std::string &text, float x, float y, float scale,
+                                  glm::vec3 color, const std::string &fontName) {
     using namespace Settings;
 
     Font *font = fontManager.getFont(fontName);
@@ -144,7 +148,9 @@ void TextRenderer::renderTextFast(const std::string &text, float x, float y, flo
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Set up the transformation matrix for the text position
-    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
+    glm::mat4 projection = glm::ortho(
+        0.0f, static_cast<float>(SCR_WIDTH), 0.0f,
+        static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D rendering
     textShader.setMat4("projection", projection);
 
     std::vector<float> vertexData;
@@ -171,36 +177,40 @@ void TextRenderer::renderTextFast(const std::string &text, float x, float y, flo
 
         // Update VBO
         float tx = glyph.textureX;
-        float ty = glyph.textureY; 
+        float ty = glyph.textureY;
         float tw = glyph.width / atlasWidth;
         float th = glyph.height / atlasHeight;
 
         float quad[6][4] = {
-        // positions          // texture coords
-            { xpos,     ypos + h,   tx,      ty + th }, // Top-left
-            { xpos,     ypos,       tx,      ty      }, // Bottom-left
-            { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
+            // positions          // texture coords
+            {xpos, ypos + h, tx, ty + th}, // Top-left
+            {xpos, ypos, tx, ty},          // Bottom-left
+            {xpos + w, ypos, tx + tw, ty}, // Bottom-right
 
-            { xpos,     ypos + h,   tx,      ty + th }, // Top-left
-            { xpos + w, ypos,       tx + tw, ty      }, // Bottom-right
-            { xpos + w, ypos + h,   tx + tw, ty + th }  // Top-right
+            {xpos, ypos + h, tx, ty + th},         // Top-left
+            {xpos + w, ypos, tx + tw, ty},         // Bottom-right
+            {xpos + w, ypos + h, tx + tw, ty + th} // Top-right
         };
 
         for (auto &v : quad)
             vertexData.insert(vertexData.end(), v, v + 4);
 
-        // glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);            // ideal for small subset updates
-        // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW); // better for reallocating and initializing large buffers
+        // glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);            //
+        // ideal for small subset updates glBufferData(GL_ARRAY_BUFFER, sizeof(vertices),
+        // vertices, GL_DYNAMIC_DRAW); // better for reallocating and initializing large
+        // buffers
 
         // Render quad
         // glDrawArrays(GL_TRIANGLES, 0, 6);
 
         // Advance cursor
-        x += (glyph.advanceX >> 6) * scale; // Advance in pixels (1/64th units) to next character
+        x += (glyph.advanceX >> 6) *
+             scale; // Advance in pixels (1/64th units) to next character
     }
 
     // Upload vertex buffer data in one call
-    glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(),
+                 GL_DYNAMIC_DRAW);
 
     // Draw all characters with a single draw call
     glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertexData.size() / 4));
@@ -227,7 +237,9 @@ void TextRenderer::renderAtlas(const std::string &fontName) {
 
     // Bind the texture (the texture atlas in this case)
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, font->getTextureAtlas()); // atlasTextureId is the texture containing the atlas
+    glBindTexture(
+        GL_TEXTURE_2D,
+        font->getTextureAtlas()); // atlasTextureId is the texture containing the atlas
     atlasShader.setInt("screenTexture", 0);
     glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
     atlasShader.setVec3("textColor", color);

@@ -12,7 +12,8 @@
 #include <learnopengl/encoder.h>
 
 namespace GUI {
-    namespace { // anonymous namespace (encapsulation) evaluated once at program startup
+    namespace { // anonymous namespace (encapsulation) evaluated once at program
+                // startup
         constexpr const char *Title = "My name is window, ImGUI window";
         const std::string MainBody =
             "Hello there adventurer!\n"
@@ -27,7 +28,7 @@ namespace GUI {
             "atlas and text, text only, or all OFF.\n"
             "\nClick T when recording to enable multithreading.\n"
             "Click P when recording to enable PBOs for asynchronous "
-            "read-back.\n"
+            "DMA read-back.\n"
             "Click F to toggle frame flipping on the GPU with shaders.\n"
             "Click V to toggle Vsync.\n"
             "\nScreen recording is ";
@@ -48,8 +49,8 @@ namespace GUI {
             "h264_mf is a hardware encoder designed for speed and\n"
             "low CPU use.";
         const std::string recordingInfo =
-            "\nPress R to turn recording ON/OFF. You can find the recordings "
-            "in /build/output/.";
+            "\nPress R to turn recording ON/OFF."
+            "\nYou can find the recordings in /build/output/.";
         constexpr const char *ExitText = "\nPress ESC to exit.";
         // imgui (height can change at runtime)
         constexpr const int padding = 30;
@@ -105,7 +106,7 @@ namespace GUI {
 
         const std::string isRecording = Settings::recording ? "ON." : "OFF.";
         std::string MainText = MainBody + isRecording + recordingInfo;
-        ImGui::Text(MainText.c_str());
+        ImGui::Text("%s", MainText.c_str());
 
         ImGui::Text("%s", HeaderText);
         bool isEncoding = encoder->isEncoding.load(std::memory_order_acquire);

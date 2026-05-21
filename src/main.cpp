@@ -1,10 +1,12 @@
 // glad & GLFW
 // -----------
+// #include "GLFW/glfw3.h"
 #include <glad/glad.h>  // glad
 #include <GLFW/glfw3.h> // GLFW (includes stdint.h)
 
 // Custom headers
 // --------------
+#include <internal/cef_types.h>
 #include <learnopengl/shader_s.h>           // Shader class
 #include <learnopengl/camera.h>             // Camera class
 #include <learnopengl/encoder.h>            // FFmpeg Encoder class
@@ -25,6 +27,7 @@
 // ------------------
 #include <iostream>   // for std::cin/cout/cerr
 #include <filesystem> // for std::filesystem
+#include <sstream>
 
 // stb
 // ---
@@ -38,6 +41,8 @@
 // -------------
 #include <array>
 // #include <vector>
+#include <span>     // required for std::span
+#include <iterator> // required for std::size
 
 // glm
 // ---
@@ -54,9 +59,13 @@ std::string GetFPSText(float fps, float ms, float crntTime);
 void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime,
                int &frameCountFPS);
 void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans,
-                 GLuint crateTexture, GLuint awesomeTexture,
-                 const std::array<glm::vec3, 10> &cubePositions,
-                 glm::vec3 &lightPos, float crntTime);
+                 GLuint crateTexture, GLuint awesomeTexture, GLuint specularMap,
+                 GLuint emissionMap, const std::array<glm::vec3, 10> &cubePositions,
+                 std::span<const glm::vec3> lightPos,
+                 std::span<const glm::vec3> lightColor, float crntTime);
+void RenderLight(Shader &lightShader, GLuint lightVAO, std::span<glm::vec3> lightPos,
+                 std::span<glm::vec3> lightColor, float crntTime);
+GLuint loadTexture(char const *path, GLuint &textureID);
 
 #define IMGUI 1
 
@@ -79,8 +88,7 @@ int main(int argc, char **argv) {
 
     // CEF Settings
     CefSettings settings;
-    auto exeDir =
-        std::filesystem::canonical("/proc/self/exe").parent_path();
+    auto exeDir = std::filesystem::canonical("/proc/self/exe").parent_path();
 
     settings.no_sandbox = true; // required on Linux unless sandbox setup
     settings.windowless_rendering_enabled = true; // Optional but useful
@@ -123,8 +131,8 @@ int main(int argc, char **argv) {
     // FPS could get too high (~1000fps) and program will crash
     // SetScreenResolution(800, 450);
 
-    lastX = SCR_WIDTH / 2;
-    lastY = SCR_HEIGHT / 2;
+    lastX = SCR_WIDTH / 2.0f;
+    lastY = SCR_HEIGHT / 2.0f;
     window_width = SCR_WIDTH;
     window_height = SCR_HEIGHT;
 
@@ -140,19 +148,17 @@ int main(int argc, char **argv) {
     // glfw window creation
     // --------------------
     GLFWwindow *window;
-    std::cout << "[main] Creating window with size: " << SCR_WIDTH << "x"
-              << SCR_HEIGHT << "\n";
+    std::cout << "[main] Creating window with size: " << SCR_WIDTH << "x" << SCR_HEIGHT
+              << "\n";
     if (!fullscreen)
-        window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL",
-                                  NULL, NULL); // windowed
+        window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL,
+                                  NULL); // windowed
     else
-        window =
-            glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL",
-                             glfwGetPrimaryMonitor(), NULL); // fullscreen
+        window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL",
+                                  glfwGetPrimaryMonitor(), NULL); // fullscreen
 
     if (window == NULL) {
-        std::cout << "[main] ERROR: Failed to create GLFW window"
-                  << std::endl;
+        std::cout << "[main] ERROR: Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
@@ -173,16 +179,14 @@ int main(int argc, char **argv) {
     // glad: load all OpenGL function pointers
     // ---------------------------------------
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cout << "[main] ERROR: Failed to initialize GLAD"
-                  << std::endl;
+        std::cout << "[main] ERROR: Failed to initialize GLAD" << std::endl;
         return -1;
     }
 
     // build and compile our shader program to render the crates
     // ---------------------------------------------------------
-    Shader ourShader(
-        "crates.vert",
-        "crates.frag"); // you can name your shader files however you like
+    Shader ourShader("crates.vert",
+                     "crates.frag"); // you can name your shader files however you like
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
@@ -196,7 +200,7 @@ int main(int argc, char **argv) {
     //    |/ Z   |/
     //    4------5
     float vertices[] = {
-        // positions            normal             texture coords
+        // positions            normals            texture coords
         // -Z face
         -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // (-,-,-) 0
         0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,  // (+,-,-) 1
@@ -257,12 +261,10 @@ int main(int argc, char **argv) {
 
     // copy our vertices array in a buffer for OpenGL to use
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
-                 GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                          (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
     // normal attribute
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
@@ -282,67 +284,24 @@ int main(int argc, char **argv) {
 
     // load and create textures
     // ------------------------
-    GLuint crateTexture, awesomeTexture;
+    GLuint crateTexture, awesomeTexture, specularMap, emissionMap;
 
     // texture 1
     // ---------
-    glGenTextures(1, &crateTexture);
-    glBindTexture(GL_TEXTURE_2D, crateTexture);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                    GL_REPEAT); // set texture wrapping to GL_REPEAT
-                                // (default wrapping method)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    int width, height, nrChannels;
-    stbi_set_flip_vertically_on_load(
-        true); // tell stb_image.h to flip loaded texture's on the y-axis.
-    namespace fs = std::filesystem;
-    const char *containerfilePath = "../assets/textures/container.jpg";
-    unsigned char *data =
-        stbi_load(containerfilePath, &width, &height, &nrChannels, 0);
-    if (data) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    } else {
-        std::cout << "[main] WARNING: Failed to load texture: "
-                  << fs::path(containerfilePath).filename() << '\n';
-    }
-    stbi_image_free(data);
+    // crateTexture = loadTexture("../assets/textures/container.jpg", crateTexture);
+    crateTexture = loadTexture("../assets/textures/container2.png", crateTexture);
 
     // texture 2
     // ---------
-    glGenTextures(1, &awesomeTexture);
-    glBindTexture(GL_TEXTURE_2D, awesomeTexture);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                    GL_REPEAT); // set texture wrapping to GL_REPEAT
-                                // (default wrapping method)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    const char *awesomefacefilePath =
-        "../assets/textures/awesomeface.png";
-    data =
-        stbi_load(awesomefacefilePath, &width, &height, &nrChannels, 0);
-    if (data) {
-        // note that the awesomeface.png has transparency and thus an
-        // alpha channel, so make sure to tell OpenGL the data type is of
-        // GL_RGBA
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-                     GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    } else {
-        std::cout << "[main] WARNING: Failed to load texture: "
-                  << fs::path(awesomefacefilePath).filename() << '\n';
-    }
-    stbi_image_free(data);
+    awesomeTexture = loadTexture("../assets/textures/awesomeface.png", awesomeTexture);
+
+    // specular map
+    // ------------
+    specularMap = loadTexture("../assets/textures/container2_specular.png", specularMap);
+
+    // emission map
+    // ------------
+    emissionMap = loadTexture("../assets/textures/matrix.jpg", emissionMap);
 
     // tell opengl for each sampler to which texture unit it belongs to
     // (only has to be done once)
@@ -353,12 +312,18 @@ int main(int argc, char **argv) {
     glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
     // or set it via the shader class:
     ourShader.setInt("texture2", 1);
+    ourShader.setInt("material.specular", 2);
+    ourShader.setInt("material.emission", 3);
+    // ourShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+    // ourShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
+    // ourShader.setInt("material.diffuse", 0);
+    // ourShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+    ourShader.setFloat("material.shininess", 64.0f);
 
     // MODEL
     // -----
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::rotate(model, glm::radians(-55.0f),
-                        glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     ourShader.setMat4("model", model);
 
     // VIEW
@@ -372,8 +337,7 @@ int main(int argc, char **argv) {
     // PROJECTION
     // ----------
     glm::mat4 projection = glm::perspective(
-        glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f,
-        100.0f);
+        glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
     // glm::mat4 projection = glm::ortho(0.0f,
     // static_cast<float>(SCR_WIDTH), 0.0f,
     // static_cast<float>(SCR_HEIGHT)); // Orthogonal projection for 2D
@@ -382,18 +346,92 @@ int main(int argc, char **argv) {
 
     glm::vec3 lightPos(8.0f, 0.0f, 0.0f);
     glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
-    glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
-    ourShader.setVec3("lightColor", lightColor);
-    ourShader.setVec3("lightPos", lightPos);
-    ourShader.setVec3("objectColor", objectColor);
+    // glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
+    // ourShader.setVec3("lightColor", lightColor);
+    // ourShader.setVec3("lightPos", lightPos);
+    // ourShader.setVec3("objectColor", objectColor);
+
+    // point light
+    // ourShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+    // ourShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f); // darken diffuse light a bit
+    // ourShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+
+    // positions of the point lights
+    glm::vec3 pointLightPositions[] = {
+        glm::vec3(0.7f, 0.2f, 2.0f),    glm::vec3(2.3f, -3.3f, -4.0f),
+        glm::vec3(-4.0f, 2.0f, -12.0f), glm::vec3(0.0f, 0.0f, -3.0f),
+        glm::vec3(0.7f, 0.2f, 2.0f),    glm::vec3(2.3f, -3.3f, -4.0f),
+        glm::vec3(-4.0f, 2.0f, -12.0f), glm::vec3(0.0f, 0.0f, -3.0f),
+        glm::vec3(0.7f, 0.2f, 2.0f),    glm::vec3(2.3f, -3.3f, -4.0f),
+        glm::vec3(-4.0f, 2.0f, -12.0f), glm::vec3(0.0f, 0.0f, -3.0f),
+        glm::vec3(0.7f, 0.2f, 2.0f),    glm::vec3(2.3f, -3.3f, -4.0f),
+        glm::vec3(-4.0f, 2.0f, -12.0f), glm::vec3(0.0f, 0.0f, -3.0f)};
+
+    // colors of the point lights
+    glm::vec3 pointLightColors[] = {
+        glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f)};
+
+    // directional light
+    ourShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+    ourShader.setVec3("dirLight.ambient", 0.2f, 0.2f, 0.2f);
+    ourShader.setVec3("dirLight.diffuse", 0.5f, 0.5f, 0.5f); // darken diffuse light a
+    ourShader.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
+
+    // ourShader.setVec3("dirLight.ambient", 0.0f, 0.0f, 0.0f);
+    // ourShader.setVec3("dirLight.diffuse", 0.0f, 0.0f, 0.0f); // darken diffuse light a
+    // ourShader.setVec3("dirLight.specular", 0.0f, 0.0f, 0.0f);
+
+    // point light 1
+    ourShader.setVec3("pointLights[0].position", pointLightPositions[0]);
+    ourShader.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
+    ourShader.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
+    ourShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+    ourShader.setFloat("pointLights[0].constant", 1.0f);
+    ourShader.setFloat("pointLights[0].linear", 0.09f);
+    ourShader.setFloat("pointLights[0].quadratic", 0.032f);
+    // point light 2
+    ourShader.setVec3("pointLights[1].position", pointLightPositions[1]);
+    ourShader.setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
+    ourShader.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
+    ourShader.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
+    ourShader.setFloat("pointLights[1].constant", 1.0f);
+    ourShader.setFloat("pointLights[1].linear", 0.09f);
+    ourShader.setFloat("pointLights[1].quadratic", 0.032f);
+    // point light 3
+    ourShader.setVec3("pointLights[2].position", pointLightPositions[2]);
+    ourShader.setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
+    ourShader.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
+    ourShader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
+    ourShader.setFloat("pointLights[2].constant", 1.0f);
+    ourShader.setFloat("pointLights[2].linear", 0.09f);
+    ourShader.setFloat("pointLights[2].quadratic", 0.032f);
+    // point light 4
+    ourShader.setVec3("pointLights[3].position", pointLightPositions[3]);
+    ourShader.setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
+    ourShader.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
+    ourShader.setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
+    ourShader.setFloat("pointLights[3].constant", 1.0f);
+    ourShader.setFloat("pointLights[3].linear", 0.09f);
+    ourShader.setFloat("pointLights[3].quadratic", 0.032f);
 
     ourShader.setVec3("viewPos", camera.Position);
 
-    // bind Texture
+    // bind textures
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, crateTexture);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, awesomeTexture);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, specularMap);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, emissionMap);
 
     std::array<glm::vec3, 10> cubePositions = {{{0.0f, 0.0f, -2.0f},
                                                 {2.0f, 5.0f, -15.0f},
@@ -454,34 +492,30 @@ int main(int argc, char **argv) {
         /* Storage must be one of: */
         /* GL_RGBA4, GL_RGB565, GL_RGB5_A1, GL_DEPTH_COMPONENT16,
          * GL_STENCIL_INDEX8. */
-        glRenderbufferStorageMultisample(GL_RENDERBUFFER, MSAA, GL_RGBA4,
-                                         SCR_WIDTH, SCR_HEIGHT);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, MSAA, GL_RGBA4, SCR_WIDTH,
+                                         SCR_HEIGHT);
         // attach colorbuffer image to FBO
-        glFramebufferRenderbuffer(
-            GL_FRAMEBUFFER,       // 1. fbo target: GL_FRAMEBUFFER
-            GL_COLOR_ATTACHMENT0, // 2. color attachment point
-            GL_RENDERBUFFER,      // 3. rbo target: GL_RENDERBUFFER
-            rboMsaaColorId);      // 4. rbo ID
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER,       // 1. fbo target: GL_FRAMEBUFFER
+                                  GL_COLOR_ATTACHMENT0, // 2. color attachment point
+                                  GL_RENDERBUFFER,      // 3. rbo target: GL_RENDERBUFFER
+                                  rboMsaaColorId);      // 4. rbo ID
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
         /* 4x MSAA renderbuffer object for depthbuffer */
         glGenRenderbuffers(1, &rboMsaaDepthId);
         glBindRenderbuffer(GL_RENDERBUFFER, rboMsaaDepthId);
-        glRenderbufferStorageMultisample(GL_RENDERBUFFER, MSAA,
-                                         GL_DEPTH_COMPONENT, SCR_WIDTH,
-                                         SCR_HEIGHT);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, MSAA, GL_DEPTH_COMPONENT,
+                                         SCR_WIDTH, SCR_HEIGHT);
 
         // attach depthbuffer image to FBO
-        glFramebufferRenderbuffer(
-            GL_FRAMEBUFFER,      // 1. fbo target: GL_FRAMEBUFFER
-            GL_DEPTH_ATTACHMENT, // 2. depth attachment point
-            GL_RENDERBUFFER,     // 3. rbo target: GL_RENDERBUFFER
-            rboMsaaDepthId);     // 4. rbo ID
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER,      // 1. fbo target: GL_FRAMEBUFFER
+                                  GL_DEPTH_ATTACHMENT, // 2. depth attachment point
+                                  GL_RENDERBUFFER,     // 3. rbo target: GL_RENDERBUFFER
+                                  rboMsaaDepthId);     // 4. rbo ID
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
         // Check if the MSAA FBO is complete
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) !=
-            GL_FRAMEBUFFER_COMPLETE) {
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             std::cout << "[main] ERROR::FRAMEBUFFER:: Framebuffer "
                          "fboMsaaId is not complete!\n"
                       << std::endl;
@@ -494,27 +528,24 @@ int main(int argc, char **argv) {
 
         // create a texture object
         glGenTextures(1, &fboTexture);
-        glActiveTexture(GL_TEXTURE2);
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, fboTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0,
-                     GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB,
+                     GL_UNSIGNED_BYTE, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                        GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                        GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
         // Before drawing
         glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 
         // attach the texture to FBO color attachment point
-        glFramebufferTexture2D(
-            GL_FRAMEBUFFER,       // 1. fbo target: GL_FRAMEBUFFER
-            GL_COLOR_ATTACHMENT0, // 2. attachment point
-            GL_TEXTURE_2D,        // 3. tex target: GL_TEXTURE_2D
-            fboTexture,           // 4. tex ID
-            0);                   // 5. mipmap level: 0(base)
+        glFramebufferTexture2D(GL_FRAMEBUFFER,       // 1. fbo target: GL_FRAMEBUFFER
+                               GL_COLOR_ATTACHMENT0, // 2. attachment point
+                               GL_TEXTURE_2D,        // 3. tex target: GL_TEXTURE_2D
+                               fboTexture,           // 4. tex ID
+                               0);                   // 5. mipmap level: 0(base)
 
         // Set the list of draw buffers.
         GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
@@ -536,8 +567,7 @@ int main(int argc, char **argv) {
         //                           rbo ID
 
         // Check if the FBO is complete
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) !=
-            GL_FRAMEBUFFER_COMPLETE) {
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             std::cout << "[main] ERROR::FRAMEBUFFER:: Framebuffer fboId "
                          "is not complete!\n"
                       << std::endl;
@@ -557,8 +587,7 @@ int main(int argc, char **argv) {
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     // glBufferData(GL_ARRAY_BUFFER, sizeof(light_cube), light_cube,
     // GL_STATIC_DRAW); position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                          (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
     model = glm::mat4(1.0f);
     model = glm::translate(model, lightPos);
@@ -577,15 +606,14 @@ int main(int argc, char **argv) {
     // Create the texture to attach to fboFlip
     glGenTextures(1, &fboFlipTexture);
     glBindTexture(GL_TEXTURE_2D, fboFlipTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0,
-                 GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB,
+                 GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_2D, fboFlipTexture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           fboFlipTexture, 0);
     // Check framebuffer status
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) !=
-        GL_FRAMEBUFFER_COMPLETE) {
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         std::cerr << "[main] ERROR: fboFlip is not complete!\n";
         return -1;
     }
@@ -607,10 +635,9 @@ int main(int argc, char **argv) {
     float scale = static_cast<float>(SCR_WIDTH) * 0.146f / 800.0f;
     // Position on the screen
     float x = lowerLeftCornerOfViewportX;
-    float y =
-        lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) -
-        35.0f * scale * fontSize /
-            48.0f; // Invert Y-axis since OpenGL origin is bottom-left
+    float y = lowerLeftCornerOfViewportY + static_cast<float>(SCR_HEIGHT) -
+              35.0f * scale * fontSize /
+                  48.0f;               // Invert Y-axis since OpenGL origin is bottom-left
     glm::vec3 color(1.0f, 1.0f, 1.0f); // White text
     std::string font = "Arial";
     FontManager fontManager;
@@ -621,6 +648,7 @@ int main(int argc, char **argv) {
     std::chrono::high_resolution_clock::time_point t;
 
     // create output directory
+    namespace fs = std::filesystem;
     fs::path outputDir = "../output";
     if (!fs::exists(outputDir)) {
         fs::create_directories(outputDir);
@@ -628,33 +656,32 @@ int main(int argc, char **argv) {
 
     std::unique_ptr<Encoder> encoder = std::make_unique<Encoder>();
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE); // Hidden window
-    GLFWwindow *sharedContextWindow = glfwCreateWindow(
-        1, 1, "", nullptr,
-        window); // Pass window as 5th param = share context
+    GLFWwindow *sharedContextWindow =
+        glfwCreateWindow(1, 1, "", nullptr,
+                         window); // Pass window as 5th param = share context
 
     encoder->start(window, sharedContextWindow); // encoder thread
 
     // timings
     // -------
-    unsigned int counter = 0; // tracks amount of frames for window title
-    int frameCountFPS = 0;    // tracks amount of frames for FPS text
-    float fps = 0.0f;         // for FPS text
-    float ms = 0.0f;          // for FPS text
-    float timeDiff, prevTime = 0.0f; // for movement (time between frames)
-    float deltaTime, oldTime = 0.0f; // for window title FPS counter
-    float lastTime = 0.0f;           // for FPS text
+    unsigned int counter = 0;            // tracks amount of frames for window title
+    int frameCountFPS = 0;               // tracks amount of frames for FPS text
+    float fps = 0.0f;                    // for FPS text
+    float ms = 0.0f;                     // for FPS text
+    float timeDiff, prevTime = 0.0f;     // for movement (time between frames)
+    float deltaTime, oldTime = 0.0f;     // for window title FPS counter
+    float lastTime = 0.0f;               // for FPS text
     float encodeDiff, encodeTime = 0.0f; // for encoding frames
     float crntTime = 0.0f;               // current time (used by all)
 
     // Generic floating quad
     // ---------------------
-    float quadVertices[] = {
-        // positions          // texCoords
-        -1.0f, 1.0f, 0.0f, 0.0f,  1.0f, -1.0f, -1.0f, 0.0f,
-        0.0f,  0.0f, 1.0f, -1.0f, 0.0f, 1.0f,  0.0f,
+    float quadVertices[] = {// positions          // texCoords
+                            -1.0f, 1.0f, 0.0f, 0.0f,  1.0f, -1.0f, -1.0f, 0.0f,
+                            0.0f,  0.0f, 1.0f, -1.0f, 0.0f, 1.0f,  0.0f,
 
-        -1.0f, 1.0f, 0.0f, 0.0f,  1.0f, 1.0f,  -1.0f, 0.0f,
-        1.0f,  0.0f, 1.0f, 1.0f,  0.0f, 1.0f,  1.0f};
+                            -1.0f, 1.0f, 0.0f, 0.0f,  1.0f, 1.0f,  -1.0f, 0.0f,
+                            1.0f,  0.0f, 1.0f, 1.0f,  0.0f, 1.0f,  1.0f};
 
     GLuint quadVAO, quadVBO;
 
@@ -664,12 +691,10 @@ int main(int argc, char **argv) {
     glBindVertexArray(quadVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices,
-                 GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
 
     // position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                          (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
     // texCoord
@@ -688,8 +713,8 @@ int main(int argc, char **argv) {
     glGenTextures(1, &browserTex);
     glBindTexture(GL_TEXTURE_2D, browserTex);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 768, 0, GL_BGRA,
-                 GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 768, 0, GL_BGRA, GL_UNSIGNED_BYTE,
+                 nullptr);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -703,8 +728,7 @@ int main(int argc, char **argv) {
 
         Platform::instance().set_font_loader(GetPlatformFontLoader());
         Platform::instance().set_file_system(GetPlatformFileSystem("./"));
-        Platform::instance().set_logger(
-            GetDefaultLogger("ultralight.log"));
+        Platform::instance().set_logger(GetDefaultLogger("ultralight.log"));
     }
 
     UltralightBrowser browser;
@@ -722,8 +746,7 @@ int main(int argc, char **argv) {
     float browser_width = 3.6f; // 3.2f;
     float browser_height = 2.0f;
     model_browser =
-        glm::scale(model_browser, glm::vec3(browser_width / 2,
-                                            browser_height / 2, 1.0f));
+        glm::scale(model_browser, glm::vec3(browser_width / 2, browser_height / 2, 1.0f));
 
     AppState state;
 
@@ -748,19 +771,20 @@ int main(int argc, char **argv) {
     glBindTexture(GL_TEXTURE_2D, cefTex);
     // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 768, 0, GL_BGRA,
     // GL_UNSIGNED_BYTE, nullptr);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_BGRA,
-                 GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_BGRA, GL_UNSIGNED_BYTE,
+                 nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // Create client
     // CefRefPtr<SimpleClient> client = new SimpleClient(1024, 768);
-    CefRefPtr<SimpleClient> client =
-        new SimpleClient(1280, 720, encoder.get());
-    CefWindowInfo window_info; // Create browser
-    window_info.SetAsWindowless(
-        0); // 0 = no parent window, correct for offscreen
+    CefRefPtr<SimpleClient> client = new SimpleClient(1280, 720, encoder.get());
+    CefWindowInfo window_info;      // Create browser
+    window_info.SetAsWindowless(0); // 0 = no parent window, correct for offscreen
     CefBrowserSettings browser_settings;
+
+    // NORMAL MODE
+    // -----------
     // CefBrowserHost::CreateBrowser(
     //     window_info,
     //     client,                      // CEF SimpleClient
@@ -783,21 +807,17 @@ int main(int argc, char **argv) {
 
     // 3. Create the browser with the new context
     CefBrowserHost::CreateBrowser(
-        window_info, client, "https://www.google.com", browser_settings,
-        nullptr,
+        window_info, client, "https://www.google.com", browser_settings, nullptr,
         request_context // Use our incognito context instead of nullptr
     );
 
     // Separate transform (different pos to Ultralight)
-    glm::vec3 cefPlanePoint =
-        glm::vec3(4.0f, 0.0f, 3.0f); // offset so they don't overlap
-    glm::vec3 cefPlaneNormal =
-        glm::vec3(0.0f, 0.0f, 1.0f); // facing camera
+    glm::vec3 cefPlanePoint = glm::vec3(4.0f, 0.0f, 3.0f); // offset so they don't overlap
+    glm::vec3 cefPlaneNormal = glm::vec3(0.0f, 0.0f, 1.0f); // facing camera
     glm::mat4 model_cef = glm::mat4(1.0f);
     model_cef = glm::translate(model_cef, cefPlanePoint); // different X
     model_cef =
-        glm::scale(model_cef, glm::vec3(browser_width / 2,
-                                        browser_height / 2, 1.0f));
+        glm::scale(model_cef, glm::vec3(browser_width / 2, browser_height / 2, 1.0f));
 
     state.cefClient = client;
     state.cefPlanePoint = cefPlanePoint;
@@ -825,10 +845,8 @@ int main(int argc, char **argv) {
 
         CefDoMessageLoopWork();
 
-        crntTime = static_cast<float>(
-            glfwGetTime()); // Updates counter and times
-        timeDiff =
-            crntTime - prevTime; // for movement (time between frames)
+        crntTime = static_cast<float>(glfwGetTime()); // Updates counter and times
+        timeDiff = crntTime - prevTime; // for movement (time between frames)
         prevTime = crntTime;
 
         // input
@@ -864,8 +882,7 @@ int main(int argc, char **argv) {
             // Creates new title
             std::string FPS = std::to_string((1.0 / deltaTime) * counter);
             std::string ms = std::to_string((deltaTime / counter) * 1000);
-            std::string newTitle =
-                "LearnOpenGL - " + FPS + "FPS / " + ms + "ms";
+            std::string newTitle = "LearnOpenGL - " + FPS + "FPS / " + ms + "ms";
             glfwSetWindowTitle(window, newTitle.c_str());
 
             // Resets times and counter
@@ -892,16 +909,17 @@ int main(int argc, char **argv) {
                 Timer::startTimer(t);
                 // static crate
                 glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
-                RenderCrate(ourShader, VAO, translatenew, crateTexture,
-                            awesomeTexture, cubePositions, lightPos,
-                            crntTime);
+                RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture,
+                            specularMap, emissionMap, cubePositions, pointLightPositions,
+                            pointLightColors, crntTime);
 
                 // controllable crate
-                glm::vec3 translate =
-                    glm::vec3(xOffset, yOffset, zOffset);
-                RenderCrate(ourShader, VAO, translate, crateTexture,
-                            awesomeTexture, cubePositions, lightPos,
-                            crntTime);
+                glm::vec3 translate = glm::vec3(xOffset, yOffset, zOffset);
+                RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture,
+                            specularMap, emissionMap, cubePositions, pointLightPositions,
+                            pointLightColors, crntTime);
+
+                view = camera.GetViewMatrix(); // for browsers
 
                 // ULTRALIGHT
                 // --------------------------------------------
@@ -913,10 +931,9 @@ int main(int argc, char **argv) {
                 if (pixels) {
                     glBindTexture(GL_TEXTURE_2D, browserTex);
 
-                    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-                                    browser.getWidth(),
-                                    browser.getHeight(), GL_BGRA,
-                                    GL_UNSIGNED_BYTE, pixels);
+                    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, browser.getWidth(),
+                                    browser.getHeight(), GL_BGRA, GL_UNSIGNED_BYTE,
+                                    pixels);
 
                     browser.unlockPixels();
                 }
@@ -942,9 +959,8 @@ int main(int argc, char **argv) {
                 if (rh->dirty) {
                     rh->dirty = false;
                     glBindTexture(GL_TEXTURE_2D, cefTex);
-                    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rh->width,
-                                    rh->height, GL_BGRA, GL_UNSIGNED_BYTE,
-                                    rh->pixelBuffer.data());
+                    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rh->width, rh->height,
+                                    GL_BGRA, GL_UNSIGNED_BYTE, rh->pixelBuffer.data());
                 }
                 browserShader.use(); // same shader works fine too
                 browserShader.setMat4("model", model_cef);
@@ -959,17 +975,9 @@ int main(int argc, char **argv) {
                 // -------------------------------------------------
 
                 // draw the light cube object
-                lightShader.use();
-                lightShader.setMat4("projection", projection);
-                view = camera.GetViewMatrix();
-                lightShader.setMat4("view", view);
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, lightPos);
-                model =
-                    glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-                lightShader.setMat4("model", model);
-                glBindVertexArray(lightVAO);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
+                // RenderLight(lightShader, lightVAO, lightPos, lightColor, crntTime);
+                RenderLight(lightShader, lightVAO, pointLightPositions, pointLightColors,
+                            crntTime);
                 {
                     // std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::RENDER_SCENE, t);
@@ -998,18 +1006,17 @@ int main(int argc, char **argv) {
                     currentTextMode == TextTriState::TextONAtlasOFF)
                     // textRenderer.renderText(fpsText, x, y, scale,
                     // color, font);
-                    textRenderer.renderTextFast(fpsText, x, y, scale,
-                                                color, font);
+                    textRenderer.renderTextFast(fpsText, x, y, scale, color, font);
                 if (currentTextMode == TextTriState::TextAndAtlasON)
                     textRenderer.renderAtlas(font);
                 {
                     // std::lock_guard<std::mutex> lock(coutMutex);
                     Timer::endTimer(Timer::RENDER_TEXT, t);
                 }
-// -----------------------------------------------
+                // -----------------------------------------------
 
-// IMGUI (visible in screen recording, messes up when window is resized)
-// ---------------------------------------------------------------------
+                // IMGUI (visible in screen recording, messes up when window is resized)
+                // ---------------------------------------------------------------------
 #if IMGUI == 1
                 if (imgui) {
                     Timer::startTimer(t);
@@ -1074,63 +1081,54 @@ int main(int argc, char **argv) {
                                           GL_LINE); // Restore wireframe
                     }
                     if (!pbo) { // PBO off
-                        uint8_t *buffer = frameBuffers[currentWriteIndex]
-                                              .get(); // get raw pointer
+                        uint8_t *buffer =
+                            frameBuffers[currentWriteIndex].get(); // get raw pointer
                         Timer::startTimer(t);
                         glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB,
                                      GL_UNSIGNED_BYTE, buffer);
                         {
                             // std::lock_guard<std::mutex>
                             // lock(coutMutex);
-                            Timer::endTimer(Timer::GLREADPIXELS_PBO_OFF,
-                                            t);
+                            Timer::endTimer(Timer::GLREADPIXELS_PBO_OFF, t);
                         }
                         if (!flip_shader) {
                             Timer::startTimer(t);
                             encoder->flipFrameVertically(buffer);
                             {
-                                std::lock_guard<std::mutex> coutLock(
-                                    coutMutex);
+                                std::lock_guard<std::mutex> coutLock(coutMutex);
                                 Timer::endTimer(Timer::FLIP_FUNCTION, t);
                             }
                         }
                         if (encoder_thread) {
-                            encoder->pushFrame(buffer, crntTime,
-                                               DATA_SIZE);
+                            encoder->pushFrame(buffer, crntTime, DATA_SIZE);
                         } else {
                             Timer::startTimer(t);
                             encoder->encodeFrame(buffer, crntTime);
                             {
-                                std::lock_guard<std::mutex> coutLock(
-                                    coutMutex);
+                                std::lock_guard<std::mutex> coutLock(coutMutex);
                                 Timer::endTimer(Timer::ENCODE, t);
                             }
                         }
                     } else { // PBO on
                         Timer::startTimer(t);
-                        glBindBuffer(GL_PIXEL_PACK_BUFFER,
-                                     pboIds[firstIndex]);
-                        glBufferData(
-                            GL_PIXEL_PACK_BUFFER, DATA_SIZE, nullptr,
-                            GL_STREAM_READ); // Orphan first to ensure a
-                                             // new backing store is
-                                             // created
+                        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[firstIndex]);
+                        glBufferData(GL_PIXEL_PACK_BUFFER, DATA_SIZE, nullptr,
+                                     GL_STREAM_READ); // Orphan first to ensure
+                                                      // a new backing store is
+                                                      // created
                         glReadPixels(0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB,
                                      GL_UNSIGNED_BYTE, 0);
                         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
                         {
                             // std::lock_guard<std::mutex>
                             // lock(coutMutex);
-                            Timer::endTimer(Timer::GLREADPIXELS_PBO_ON,
-                                            t);
+                            Timer::endTimer(Timer::GLREADPIXELS_PBO_ON, t);
                         }
 
-                        glBindBuffer(GL_PIXEL_PACK_BUFFER,
-                                     pboIds[nextIndex]);
+                        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboIds[nextIndex]);
                         GLubyte *ptr = pboBuffers[currentWriteIndex];
-                        ptr = (GLubyte *)glMapBufferRange(
-                            GL_PIXEL_PACK_BUFFER, 0, DATA_SIZE,
-                            GL_MAP_READ_BIT);
+                        ptr = (GLubyte *)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0,
+                                                          DATA_SIZE, GL_MAP_READ_BIT);
 
                         if (ptr) {
                             glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -1140,21 +1138,17 @@ int main(int argc, char **argv) {
                                 Timer::startTimer(t);
                                 encoder->flipFrameVertically(ptr);
                                 {
-                                    std::lock_guard<std::mutex> coutLock(
-                                        coutMutex);
-                                    Timer::endTimer(Timer::FLIP_FUNCTION,
-                                                    t);
+                                    std::lock_guard<std::mutex> coutLock(coutMutex);
+                                    Timer::endTimer(Timer::FLIP_FUNCTION, t);
                                 }
                             }
                             if (encoder_thread) {
-                                encoder->pushFrame(ptr, crntTime,
-                                                   DATA_SIZE);
+                                encoder->pushFrame(ptr, crntTime, DATA_SIZE);
                             } else {
                                 Timer::startTimer(t);
                                 encoder->encodeFrame(ptr, crntTime);
                                 {
-                                    std::lock_guard<std::mutex> coutLock(
-                                        coutMutex);
+                                    std::lock_guard<std::mutex> coutLock(coutMutex);
                                     Timer::endTimer(Timer::ENCODE, t);
                                 }
                             }
@@ -1163,8 +1157,7 @@ int main(int argc, char **argv) {
                         firstIndex = (firstIndex + 1) % PBO_COUNT;
                         nextIndex = (firstIndex + 1) % PBO_COUNT;
                     }
-                    currentWriteIndex =
-                        (currentWriteIndex + 1) % BUFFER_COUNT;
+                    currentWriteIndex = (currentWriteIndex + 1) % BUFFER_COUNT;
                     encodeTime = crntTime;
                 }
             }
@@ -1182,31 +1175,26 @@ int main(int argc, char **argv) {
             Timer::startTimer(t);
             // static crate
             glm::vec3 translatenew = glm::vec3(0.0f, 0.0f, 0.0f);
-            RenderCrate(ourShader, VAO, translatenew, crateTexture,
-                        awesomeTexture, cubePositions, lightPos,
-                        crntTime);
+            RenderCrate(ourShader, VAO, translatenew, crateTexture, awesomeTexture,
+                        specularMap, emissionMap, cubePositions, pointLightPositions,
+                        pointLightColors, crntTime);
 
             // controllable crate
             glm::vec3 translate = glm::vec3(xOffset, yOffset, zOffset);
-            RenderCrate(ourShader, VAO, translate, crateTexture,
-                        awesomeTexture, cubePositions, lightPos,
-                        crntTime);
+            RenderCrate(ourShader, VAO, translate, crateTexture, awesomeTexture,
+                        specularMap, emissionMap, cubePositions, pointLightPositions,
+                        pointLightColors, crntTime);
 
             // draw the light cube object
-            lightShader.use();
-            lightShader.setMat4("projection", projection);
-            view = camera.GetViewMatrix();
-            lightShader.setMat4("view", view);
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, lightPos);
-            model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-            lightShader.setMat4("model", model);
-            glBindVertexArray(lightVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            // RenderLight(lightShader, lightVAO, lightPos, lightColor, crntTime);
+            RenderLight(lightShader, lightVAO, pointLightPositions, pointLightColors,
+                        crntTime);
             {
                 // std::lock_guard<std::mutex> lock(coutMutex);
                 Timer::endTimer(Timer::RENDER_SCENE, t);
             }
+
+            view = camera.GetViewMatrix(); // for browsers
 
             // ULTRALIGHT
             // --------------------------------------------
@@ -1218,9 +1206,8 @@ int main(int argc, char **argv) {
             if (pixels) {
                 glBindTexture(GL_TEXTURE_2D, browserTex);
 
-                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-                                browser.getWidth(), browser.getHeight(),
-                                GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, browser.getWidth(),
+                                browser.getHeight(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
 
                 browser.unlockPixels();
             }
@@ -1246,14 +1233,17 @@ int main(int argc, char **argv) {
             if (rh->dirty) {
                 rh->dirty = false;
                 glBindTexture(GL_TEXTURE_2D, cefTex);
-                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rh->width,
-                                rh->height, GL_BGRA, GL_UNSIGNED_BYTE,
-                                rh->pixelBuffer.data());
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rh->width, rh->height, GL_BGRA,
+                                GL_UNSIGNED_BYTE, rh->pixelBuffer.data());
             }
             browserShader.use(); // same shader works fine too
             browserShader.setMat4("model", model_cef);
             browserShader.setMat4("view", view);
-            browserShader.setMat4("projection", projection);
+            glm::mat4 cam_projection = glm::perspective(
+                glm::radians(camera.Zoom),
+                static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f,
+                100.0f);
+            browserShader.setMat4("projection", cam_projection);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, cefTex);
             browserShader.setInt("browserTexture", 0);
@@ -1268,8 +1258,7 @@ int main(int argc, char **argv) {
                 currentTextMode == TextTriState::TextONAtlasOFF)
                 // textRenderer.renderText(fpsText, x, y, scale, color,
                 // font);
-                textRenderer.renderTextFast(fpsText, x, y, scale, color,
-                                            font);
+                textRenderer.renderTextFast(fpsText, x, y, scale, color, font);
             if (currentTextMode == TextTriState::TextAndAtlasON)
                 textRenderer.renderAtlas(font);
 
@@ -1305,8 +1294,7 @@ int main(int argc, char **argv) {
         // glfw: swap buffers and poll IO events (keys pressed/released,
         // mouse moved etc.)
         // -------------------------------------------------------------------------------
-        glfwSwapBuffers(
-            window); // swap the BACK buffer with the FRONT buffer
+        glfwSwapBuffers(window); // swap the BACK buffer with the FRONT buffer
     }
 
     // std::cout << "[main] Setting recording to false\n";
@@ -1365,9 +1353,9 @@ std::string GetFPSText(float fps, float ms, float crntTime) {
     char buffer[250]; // small stack-allocated array (extremely fast, in
                       // CPU cache)
 
-    bool press = pboPressed || flipPressed || pausePressed ||
-                 vsyncPressed || wireframePressed || imguiPressed ||
-                 atlasPressed || recordPressed || encoderPressed;
+    bool press = pboPressed || flipPressed || pausePressed || vsyncPressed ||
+                 wireframePressed || imguiPressed || atlasPressed || recordPressed ||
+                 encoderPressed;
 
     snprintf(buffer, sizeof(buffer),
              "FPS: %u | %.3f ms | Time: %.1f s | mix(Q/E)=%.1f | "
@@ -1377,10 +1365,9 @@ std::string GetFPSText(float fps, float ms, float crntTime) {
              "PITCH=%.1f | %s",
              static_cast<int>(fps), ms, crntTime, mixValue, camera.Zoom,
              encoder_thread ? "ON" : "OFF", pbo ? "ON" : "OFF",
-             flip_shader ? "ON" : "OFF", vsync ? "ON" : "OFF",
-             fullscreen ? "ON" : "OFF", press ? "YES" : "NO", xOffset,
-             yOffset, zOffset, camera.Position.x, camera.Position.y,
-             camera.Position.z, camera.Yaw, camera.Pitch,
+             flip_shader ? "ON" : "OFF", vsync ? "ON" : "OFF", fullscreen ? "ON" : "OFF",
+             press ? "YES" : "NO", xOffset, yOffset, zOffset, camera.Position.x,
+             camera.Position.y, camera.Position.z, camera.Yaw, camera.Pitch,
              paused ? "PAUSED" : "");
 
     return std::string(buffer);
@@ -1400,9 +1387,10 @@ void UpdateFPS(float &fps, float &ms, float crntTime, float &lastTime,
 }
 
 void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans,
-                 GLuint crateTexture, GLuint awesomeTexture,
-                 const std::array<glm::vec3, 10> &cubePositions,
-                 glm::vec3 &lightPos, float crntTime) {
+                 GLuint crateTexture, GLuint awesomeTexture, GLuint specularMap,
+                 GLuint emissionMap, const std::array<glm::vec3, 10> &cubePositions,
+                 std::span<const glm::vec3> lightPos,
+                 std::span<const glm::vec3> lightColor, float crntTime) {
     using namespace Settings;
 
     ourShader.use();
@@ -1413,10 +1401,16 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans,
     // need to rebind every time in render loop
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, crateTexture);
-    ourShader.setInt("texture1", 0);
+    // ourShader.setInt("texture1", 0);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, awesomeTexture);
-    ourShader.setInt("texture2", 1);
+    // ourShader.setInt("texture2", 1);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, specularMap);
+    // ourShader.setInt("material.specular", 2);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, emissionMap);
+    // ourShader.setInt("material.emission", 3);
 
     // transform
     // ---------
@@ -1447,33 +1441,31 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans,
     // change every frame)
     glm::mat4 projection = glm::perspective(
         glm::radians(camera.Zoom),
-        static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT),
-        0.1f, 100.0f);
+        static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f);
     ourShader.setMat4("projection", projection);
 
     // light
     // -----
-    float radius = 8.0f;
-    float theta = crntTime * 0.5f; // slower rotation (Y-axis)
-    float phi =
-        glm::radians(90.0f + sin(crntTime * 0.6f) *
-                                 90.0f); // varies between 0° and 180°
+    for (int i = 0; i < std::size(lightColor); i++) {
+        // glm::vec3 diffuseColor = glm::vec3(0.0f);
+        glm::vec3 ambientColor = glm::vec3(0.0f); // diffuseColor * glm::vec3(0.7f);
+        glm::vec3 diffuseColor = lightColor[i] * glm::vec3(5.0f);
+        // glm::vec3 ambientColor = diffuseColor * glm::vec3(0.7f);
+        // ourShader.setVec3("light.ambient", ambientColor);
+        // ourShader.setVec3("light.diffuse", diffuseColor);
+        // ourShader.setVec3("light.specular", diffuseColor);
+        // ourShader.setVec3("lightPos", lightPos);
 
-    lightPos.x = radius * sin(phi) * cos(theta);
-    // lightPos.y = radius * cos(phi);
-    lightPos.y =
-        1.5f + glm::sin(crntTime * 0.7f) * 2.0f; // modulate the height
-    lightPos.z = radius * sin(phi) * sin(theta);
+        std::ostringstream ostr;
+        ostr << "pointLights[" << i << "]";
+        ourShader.setVec3(ostr.str() + ".ambient", ambientColor);
+        ourShader.setVec3(ostr.str() + ".diffuse", diffuseColor);
+        ourShader.setVec3(ostr.str() + ".specular", diffuseColor);
+    }
 
-    // simple circle in XZ plane
-    // lightPos.x = glm::cos(crntTime) * 8.0f;
-    // lightPos.y = 1.5f;
-    // lightPos.z = glm::sin(crntTime) * 8.0f;
-
-    ourShader.setVec3("lightPos", lightPos);
-    ourShader.setVec3(
-        "viewPos",
-        camera.Position); // for world-space, not needed for view-space
+    ourShader.setVec3("viewPos",
+                      camera.Position); // for world-space, not needed for view-space
+    ourShader.setFloat("time", glfwGetTime());
 
     glBindVertexArray(VAO);
     // glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -1484,9 +1476,8 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans,
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, cubePositions[i]);
         float angle = 20.0f * i;
-        model = glm::rotate(
-            model, crntTime * glm::radians(angle),
-            cubePositions[i]); // glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::rotate(model, crntTime * glm::radians(angle),
+                            cubePositions[i]); // glm::vec3(1.0f, 0.0f, 0.0f));
         ourShader.setMat4("model", model);
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -1495,4 +1486,115 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans,
     // Cleanup
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+// draw the light cube object
+void RenderLight(Shader &lightShader, GLuint lightVAO, std::span<glm::vec3> lightPos,
+                 std::span<glm::vec3> lightColor, float crntTime) {
+    using namespace Settings;
+    lightShader.use();
+
+    // projection
+    // ----------
+    glm::mat4 projection = glm::perspective(
+        glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+    lightShader.setMat4("projection", projection);
+
+    // view
+    // ----
+    glm::mat4 view = camera.GetViewMatrix();
+    lightShader.setMat4("view", view);
+
+    // model
+    // -----
+    for (int i = 0; i < std::size(lightColor); i++) {
+        glm::mat4 model = glm::mat4(1.0f);
+        float radius = 8.0f;
+        float theta = (crntTime + i) * 0.5f; // slower rotation (Y-axis)
+        float phi = glm::radians(90.0f + sin((crntTime + i) * 0.6f) *
+                                             90.0f); // varies between 0° and 180°
+
+        lightPos[i].x = radius * sin(phi) * cos(theta);
+        // lightPos.y = radius * cos(phi);
+        lightPos[i].y =
+            1.5f + glm::sin((crntTime + i) * 0.7f) * 2.0f; // modulate the height
+        lightPos[i].z = radius * sin(phi) * sin(theta) - 3.0f;
+
+        // simple circle in XZ plane
+        // lightPos.x = glm::cos(crntTime) * 8.0f;
+        // lightPos.y = 1.5f;
+        // lightPos.z = glm::sin(crntTime) * 8.0f;
+
+        model = glm::translate(model, lightPos[i]);
+        model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
+        lightShader.setMat4("model", model);
+
+        // white
+        // -----
+        // lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+
+        // simple RGB
+        // ----------
+        // lightColor.x = sin(glfwGetTime() * 2.0f); // R
+        // lightColor.y = sin(glfwGetTime() * 0.7f); // G
+        // lightColor.z = sin(glfwGetTime() * 1.3f); // B
+
+        // sinebow
+        // -------
+        float speed = 0.2;
+        float t = (glfwGetTime() + i) * speed;
+        t = t - std::floor(t); // keep t between 0.0 and 1.0
+        float h = (t + 0.5f) * -1.0f;
+        const float PI = 3.14159265f;
+
+        float r = std::sin(PI * h);
+        float g = std::sin(PI * (h + 1.0f / 3.0f));
+        float b = std::sin(PI * (h + 2.0f / 3.0f));
+
+        lightColor[i].x = r * r;
+        lightColor[i].y = g * g;
+        lightColor[i].z = b * b;
+
+        lightShader.setVec3("lightColor", lightColor[i]);
+
+        glBindVertexArray(lightVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+}
+
+// utility function for loading a 2D texture from file
+// ---------------------------------------------------
+GLuint loadTexture(char const *path, GLuint &textureID) {
+    // GLuint textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    // tell stb_image.h to flip loaded texture's on the y-axis.
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data) {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE,
+                     data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    } else {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+    }
+    stbi_image_free(data);
+
+    return textureID;
 }
