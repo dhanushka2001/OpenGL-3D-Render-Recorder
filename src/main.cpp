@@ -318,7 +318,7 @@ int main(int argc, char **argv) {
     // ourShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
     // ourShader.setInt("material.diffuse", 0);
     // ourShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-    ourShader.setFloat("material.shininess", 64.0f);
+    ourShader.setFloat("material.shininess", 256.0f);
 
     // MODEL
     // -----
@@ -388,38 +388,21 @@ int main(int argc, char **argv) {
     // ourShader.setVec3("dirLight.diffuse", 0.0f, 0.0f, 0.0f); // darken diffuse light a
     // ourShader.setVec3("dirLight.specular", 0.0f, 0.0f, 0.0f);
 
-    // point light 1
-    ourShader.setVec3("pointLights[0].position", pointLightPositions[0]);
-    ourShader.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
-    ourShader.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
-    ourShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
-    ourShader.setFloat("pointLights[0].constant", 1.0f);
-    ourShader.setFloat("pointLights[0].linear", 0.09f);
-    ourShader.setFloat("pointLights[0].quadratic", 0.032f);
-    // point light 2
-    ourShader.setVec3("pointLights[1].position", pointLightPositions[1]);
-    ourShader.setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
-    ourShader.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
-    ourShader.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
-    ourShader.setFloat("pointLights[1].constant", 1.0f);
-    ourShader.setFloat("pointLights[1].linear", 0.09f);
-    ourShader.setFloat("pointLights[1].quadratic", 0.032f);
-    // point light 3
-    ourShader.setVec3("pointLights[2].position", pointLightPositions[2]);
-    ourShader.setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
-    ourShader.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
-    ourShader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
-    ourShader.setFloat("pointLights[2].constant", 1.0f);
-    ourShader.setFloat("pointLights[2].linear", 0.09f);
-    ourShader.setFloat("pointLights[2].quadratic", 0.032f);
-    // point light 4
-    ourShader.setVec3("pointLights[3].position", pointLightPositions[3]);
-    ourShader.setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
-    ourShader.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
-    ourShader.setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
-    ourShader.setFloat("pointLights[3].constant", 1.0f);
-    ourShader.setFloat("pointLights[3].linear", 0.09f);
-    ourShader.setFloat("pointLights[3].quadratic", 0.032f);
+    ourShader.setInt("NR_POINT_LIGHTS", std::size(pointLightColors));
+
+    for (int i = 0; i < std::size(pointLightColors); i++) {
+        std::ostringstream ostr;
+        ostr << "pointLights[" << i << "]";
+        ourShader.setVec3(ostr.str() + ".position", pointLightPositions[i]);
+        ourShader.setVec3(ostr.str() + ".ambient", 0.05f, 0.05f, 0.05f);
+        ourShader.setVec3(ostr.str() + ".diffuse", 0.8f, 0.8f, 0.8f);
+        ourShader.setVec3(ostr.str() + ".specular", 1.0f, 1.0f, 1.0f);
+        ourShader.setFloat(ostr.str() + ".constant", 1.0f);
+        // ourShader.setFloat(ostr.str() + ".linear", 0.09f);
+        // ourShader.setFloat(ostr.str() + ".quadratic", 0.032f);
+        ourShader.setFloat(ostr.str() + ".linear", 0.014f);
+        ourShader.setFloat(ostr.str() + ".quadratic", 0.0007f);
+    }
 
     ourShader.setVec3("viewPos", camera.Position);
 
@@ -1449,7 +1432,8 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans,
     for (int i = 0; i < std::size(lightColor); i++) {
         // glm::vec3 diffuseColor = glm::vec3(0.0f);
         glm::vec3 ambientColor = glm::vec3(0.0f); // diffuseColor * glm::vec3(0.7f);
-        glm::vec3 diffuseColor = lightColor[i] * glm::vec3(5.0f);
+        glm::vec3 diffuseColor = lightColor[i] * glm::vec3(0.5f);
+        glm::vec3 specularColor = diffuseColor * glm::vec3(10.5f);
         // glm::vec3 ambientColor = diffuseColor * glm::vec3(0.7f);
         // ourShader.setVec3("light.ambient", ambientColor);
         // ourShader.setVec3("light.diffuse", diffuseColor);
@@ -1458,9 +1442,12 @@ void RenderCrate(Shader &ourShader, GLuint VAO, const glm::vec3 &trans,
 
         std::ostringstream ostr;
         ostr << "pointLights[" << i << "]";
+        ourShader.setVec3(ostr.str() + ".position", lightPos[i]);
         ourShader.setVec3(ostr.str() + ".ambient", ambientColor);
         ourShader.setVec3(ostr.str() + ".diffuse", diffuseColor);
-        ourShader.setVec3(ostr.str() + ".specular", diffuseColor);
+        ourShader.setVec3(ostr.str() + ".specular", specularColor);
+        ourShader.setFloat(ostr.str() + ".linear", 0.0014f);
+        ourShader.setFloat(ostr.str() + ".quadratic", 0.000007f);
     }
 
     ourShader.setVec3("viewPos",
@@ -1531,7 +1518,8 @@ void RenderLight(Shader &lightShader, GLuint lightVAO, std::span<glm::vec3> ligh
 
         // white
         // -----
-        // lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+        // lightColor[i] = glm::vec3(1.0f, 1.0f, 1.0f);
+        // lightColor[i] = glm::vec3(1.0f, 0.0f, 0.0f); // red
 
         // simple RGB
         // ----------
@@ -1542,7 +1530,8 @@ void RenderLight(Shader &lightShader, GLuint lightVAO, std::span<glm::vec3> ligh
         // sinebow
         // -------
         float speed = 0.2;
-        float t = (glfwGetTime() + i) * speed;
+        float t = (glfwGetTime() + 2.24 * i) * speed;
+        // float t = (glfwGetTime()) * speed;
         t = t - std::floor(t); // keep t between 0.0 and 1.0
         float h = (t + 0.5f) * -1.0f;
         const float PI = 3.14159265f;

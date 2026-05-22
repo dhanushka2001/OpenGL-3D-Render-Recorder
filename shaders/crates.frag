@@ -39,7 +39,8 @@ struct PointLight {
     vec3 diffuse;
     vec3 specular;
 };
-#define NR_POINT_LIGHTS 4
+#define NR_POINT_LIGHTS 16
+// uniform int NR_POINT_LIGHTS;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 
 in vec3 FragPos;
